@@ -7,6 +7,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Crimson+Pro:ital,wght@0,300;0,400;0,600;1,300;1,400&family=JetBrains+Mono:wght@300;400;500&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
+
 <style>
   :root {
     --bg: #0f0f0f;
@@ -331,6 +332,7 @@
     animation: spin 0.7s linear infinite;
   }
   @keyframes spin { to { transform: rotate(360deg); } }
+  @keyframes pulse { 0%,100% { opacity:1; } 50% { opacity:0.4; } }
 
   /* ── CARD ── */
   .card {
@@ -408,6 +410,21 @@
     .diff-container { grid-template-columns: 1fr; }
     .free-grid { grid-template-columns: 1fr; }
   }
+
+  /* ── CHECKLIST ── */
+  .check-item {
+    display: flex; align-items: flex-start; gap: 12px;
+    padding: 10px 14px; background: var(--surface);
+    border: 1px solid var(--border); border-radius: var(--radius);
+    cursor: pointer; transition: all 0.15s; user-select: none;
+  }
+  .check-item:hover { border-color: var(--border-active); background: var(--surface2); }
+  .check-item.checked { border-color: var(--green); background: rgba(110,201,138,0.06); }
+  .check-box { font-family: 'JetBrains Mono', monospace; font-size: 14px; color: var(--text-dim); flex-shrink:0; line-height:1.4; }
+  .check-item.checked .check-box { color: var(--green); }
+  .check-text { font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--text-mid); line-height: 1.6; }
+  .check-item.checked .check-text { color: var(--text); }
+
 </style>
 </head>
 <body>
@@ -592,35 +609,108 @@
     <!-- ═══ STEP 3: ANONYMIZATION ═══ -->
     <div class="panel" id="panel2">
       <div class="panel-title">Revisione Anonimizzazione</div>
-      <div class="panel-subtitle">// step 03 — verifica prima di inviare all'API</div>
+      <div class="panel-subtitle">// step 03 — tre livelli: checklist → regex → Claude Haiku</div>
 
-      <div class="infobox red">
-        ⚠ Revisiona attentamente. L'anonimizzazione automatica può essere imperfetta. Modifica manualmente il testo anonimizzato se necessario prima di procedere.
-      </div>
-
-      <div id="replacementsList"></div>
-
-      <div class="diff-container">
-        <div class="diff-box">
-          <div class="diff-label">Testo originale (solo locale)</div>
-          <div class="diff-text" id="origText">—</div>
+      <!-- LAYER EXPLANATION -->
+      <div class="card" style="margin-bottom:16px;">
+        <div style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--accent);text-transform:uppercase;letter-spacing:0.1em;margin-bottom:12px;">Architettura Privacy — 3 Livelli</div>
+        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;">
+          <div style="background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius);padding:12px;">
+            <div style="font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--text-dim);margin-bottom:6px;">LIVELLO 1</div>
+            <div style="font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--text);margin-bottom:4px;">Checklist manuale</div>
+            <div style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--text-dim);">Tu rimuovi i dati più evidenti prima di qualsiasi elaborazione. Zero rete.</div>
+          </div>
+          <div style="background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius);padding:12px;">
+            <div style="font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--text-dim);margin-bottom:6px;">LIVELLO 2</div>
+            <div style="font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--text);margin-bottom:4px;">Regex locale</div>
+            <div style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--text-dim);">CF, telefoni, DOB, titoli+nomi strutturati. Gira nel browser, istantaneo.</div>
+          </div>
+          <div style="background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius);padding:12px;">
+            <div style="font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--text-dim);margin-bottom:6px;">LIVELLO 3</div>
+            <div style="font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--text);margin-bottom:4px;">Claude Haiku</div>
+            <div style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--text-dim);">Rileva nomi liberi nel testo residuo. DPA + SCCs EU. ~€0.001/paziente.</div>
+          </div>
         </div>
-        <div class="diff-box">
-          <div class="diff-label">Testo anonimizzato ✏ modificabile</div>
-          <textarea id="anonText" class="diff-text" style="height:400px;font-size:11px;resize:vertical;"></textarea>
+      </div>
+
+      <!-- LAYER 1: MANUAL CHECKLIST — shown before anonymization runs -->
+      <div id="checklistPanel">
+        <div style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--accent);text-transform:uppercase;letter-spacing:0.1em;margin-bottom:12px;">① Checklist Pre-Invio — completa prima di procedere</div>
+        <div class="infobox" style="margin-bottom:14px;">
+          Rimuovi manualmente i dati più sensibili <strong style="color:var(--text);">direttamente nei campi dello Step 1</strong> prima di cliccare "Avanti". Questa checklist conferma che tu abbia fatto questa verifica.
         </div>
+
+        <div style="display:flex;flex-direction:column;gap:10px;margin-bottom:20px;">
+          <label class="check-item" onclick="toggleCheck(this)">
+            <span class="check-box" id="chk0">☐</span>
+            <span class="check-text">Ho rimosso o sostituito il <strong>cognome del paziente</strong> nei campi di testo</span>
+          </label>
+          <label class="check-item" onclick="toggleCheck(this)">
+            <span class="check-box" id="chk1">☐</span>
+            <span class="check-text">Ho rimosso o sostituito i <strong>nomi dei medici curanti</strong> (es. "dott.ssa Giovanna", "con Sara")</span>
+          </label>
+          <label class="check-item" onclick="toggleCheck(this)">
+            <span class="check-box" id="chk2">☐</span>
+            <span class="check-text">Ho rimosso o sostituito i <strong>nomi specifici di reparti/strutture</strong> identificabili</span>
+          </label>
+          <label class="check-item" onclick="toggleCheck(this)">
+            <span class="check-box" id="chk3">☐</span>
+            <span class="check-text">Ho rimosso <strong>codice fiscale, data di nascita, numero di telefono</strong> se presenti</span>
+          </label>
+          <label class="check-item" onclick="toggleCheck(this)">
+            <span class="check-box" id="chk4">☐</span>
+            <span class="check-text">Ho rimosso <strong>indirizzi, numeri cartella clinica, ID ospedalieri</strong></span>
+          </label>
+        </div>
+
+        <div id="checklistError" style="font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--red);margin-bottom:12px;display:none;">
+          ✗ Completa tutte le voci della checklist prima di procedere.
+        </div>
+
+        <button class="btn btn-primary" onclick="proceedToAnonymize()">
+          ✓ Checklist completata — Avvia Anonimizzazione
+        </button>
       </div>
 
-      <div style="display:flex;align-items:center;gap:12px;margin-top:8px;">
-        <input type="checkbox" id="confirmAnon" style="accent-color:var(--accent);">
-        <label style="margin:0;font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--text-mid);text-transform:none;letter-spacing:0;">
-          Confermo di aver verificato che nessun dato identificativo è rimasto nel testo anonimizzato
-        </label>
-      </div>
+      <!-- LAYER 2+3: ANONYMIZATION RESULT — shown after anonymization runs -->
+      <div id="anonResultPanel" style="display:none;">
+        <!-- Status bar -->
+        <div id="anonStatus" style="font-family:'JetBrains Mono',monospace;font-size:11px;padding:10px 14px;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);margin-bottom:14px;display:flex;align-items:center;gap:10px;">
+          <span class="spinner" id="anonSpinner"></span>
+          <span id="anonStatusText">Elaborazione...</span>
+        </div>
 
-      <div class="btn-row">
-        <button class="btn btn-ghost" onclick="goTo(1)">← Indietro</button>
-        <button class="btn btn-primary" onclick="proceedToGenerate()">Avanti → Genera</button>
+        <!-- Replacements list -->
+        <div id="replacementsList" style="margin-bottom:14px;"></div>
+
+        <!-- Diff view -->
+        <div class="diff-container">
+          <div class="diff-box">
+            <div class="diff-label">Testo originale (solo locale — non inviato)</div>
+            <div class="diff-text" id="origText" style="max-height:380px;overflow-y:auto;">—</div>
+          </div>
+          <div class="diff-box">
+            <div class="diff-label">Testo anonimizzato ✏ modificabile</div>
+            <textarea id="anonText" class="diff-text" style="height:380px;font-size:11px;resize:vertical;"></textarea>
+          </div>
+        </div>
+
+        <!-- Final confirmation -->
+        <div class="infobox red" style="margin-top:14px;">
+          ⚠ Revisiona attentamente ogni riga. Correggi manualmente qualsiasi nome o dato rimasto nel testo a destra prima di confermare.
+        </div>
+
+        <div style="display:flex;align-items:center;gap:12px;margin-top:12px;">
+          <input type="checkbox" id="confirmAnon" style="accent-color:var(--accent);width:16px;height:16px;flex-shrink:0;">
+          <label style="margin:0;font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--text-mid);text-transform:none;letter-spacing:0;cursor:pointer;" for="confirmAnon">
+            Confermo di aver revisionato manualmente il testo e che nessun dato identificativo è rimasto
+          </label>
+        </div>
+
+        <div class="btn-row">
+          <button class="btn btn-ghost" onclick="resetToChecklist()">← Torna alla checklist</button>
+          <button class="btn btn-primary" onclick="proceedToGenerate()">Avanti → Genera Lettera</button>
+        </div>
       </div>
     </div>
 
@@ -662,8 +752,48 @@
       </div>
 
       <div class="card">
-        <div style="font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--text-dim);margin-bottom:8px;text-transform:uppercase;letter-spacing:0.1em;">Preview testo inviato all'API</div>
-        <div id="apiPreview" style="background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius);padding:14px;font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--text-dim);max-height:200px;overflow-y:auto;white-space:pre-wrap;">—</div>
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;flex-wrap:wrap;gap:8px;">
+          <div style="font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--text-dim);text-transform:uppercase;letter-spacing:0.1em;">Prompt Completo — Copia per qualsiasi AI</div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;">
+            <button class="btn btn-ghost" style="font-size:10px;" onclick="refreshFullPrompt()">↺ Aggiorna</button>
+            <button class="btn btn-ghost" style="font-size:10px;" onclick="copyFullPrompt()" id="copyPromptBtn">⎘ Copia tutto</button>
+            <button class="btn btn-ghost" style="font-size:10px;" onclick="copyUserPromptOnly()" >⎘ Solo user prompt</button>
+          </div>
+        </div>
+        <div class="infobox" style="margin-bottom:10px;">
+          Questo è l'esatto prompt inviato all'API. Puoi copiarlo e incollarlo su ChatGPT, Gemini, o qualsiasi altro AI. Il <strong style="color:var(--accent);">System Prompt</strong> va nel campo "Istruzioni di sistema", lo <strong style="color:var(--accent);">User Prompt</strong> nel campo messaggio.
+        </div>
+
+        <!-- Tab switcher -->
+        <div style="display:flex;gap:4px;margin-bottom:8px;">
+          <button class="btn" id="tabFull" onclick="showPromptTab('full')"
+            style="font-size:10px;background:var(--accent-glow);color:var(--accent);border-color:var(--accent-dim);padding:6px 14px;">
+            Prompt Completo
+          </button>
+          <button class="btn btn-ghost" id="tabSystem" onclick="showPromptTab('system')"
+            style="font-size:10px;padding:6px 14px;">
+            System
+          </button>
+          <button class="btn btn-ghost" id="tabUser" onclick="showPromptTab('user')"
+            style="font-size:10px;padding:6px 14px;">
+            User
+          </button>
+        </div>
+
+        <div style="position:relative;">
+          <textarea id="fullPromptView" readonly
+            style="width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius);
+                   color:var(--text-dim);font-family:'JetBrains Mono',monospace;font-size:11px;line-height:1.7;
+                   padding:14px;resize:vertical;height:320px;outline:none;white-space:pre-wrap;">
+Clicca "Aggiorna" per assemblare il prompt completo.</textarea>
+          <div id="copyConfirm" style="display:none;position:absolute;top:10px;right:10px;
+               background:var(--green);color:#0f0f0f;font-family:'JetBrains Mono',monospace;
+               font-size:10px;padding:4px 10px;border-radius:4px;font-weight:600;">
+            ✓ Copiato!
+          </div>
+        </div>
+
+        <div style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--text-dim);margin-top:6px;" id="promptTokenEstimate"></div>
       </div>
 
       <div class="btn-row">
@@ -712,6 +842,10 @@
       </div>
 
       <div class="card">
+      <div class="card">
+        <div style="font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--accent);margin-bottom:12px;text-transform:uppercase;letter-spacing:0.1em;">Hugging Face Token — NER Anonimizzazione</div>
+      </div>
+
         <div style="font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--text-dim);margin-bottom:12px;text-transform:uppercase;letter-spacing:0.1em;">Regex Aggiuntive Anonimizzazione</div>
         <textarea id="cfg_regex" rows="5" placeholder='Aggiungi pattern JSON, es:&#10;[{"pattern": "NHI:\\s*[A-Z]{3}\\d{4}", "replace": "[ID_PAZIENTE]"},&#10; {"pattern": "\\b\\d{7}\\b", "replace": "[MATRICOLA]"}]'></textarea>
       </div>
@@ -1145,95 +1279,284 @@ REGOLE ASSOLUTE:
   }
 }
 
-// Simple client-side anonymization with regex patterns
-// (No server needed, runs in browser)
-function anonymizeText(text) {
+// ═══════════════════════════════════════════════════
+// ANONYMIZATION — 3-Layer Pipeline
+// ═══════════════════════════════════════════════════
+// Layer 1: Manual checklist (user removes obvious identifiers)
+// Layer 2: Regex (local, instant) — structured identifiers
+// Layer 3: Claude Haiku (anonymize only call) — free-text names
+//
+// GDPR rationale: Anthropic has formal DPA + EU SCCs.
+// Claude Haiku receives text already cleaned by L1+L2.
+// Claude NEVER receives both identity + clinical content
+// in the same generation call.
+// ═══════════════════════════════════════════════════
+
+let checksCompleted = [false, false, false, false, false];
+
+function toggleCheck(label) {
+  const idx = parseInt(label.querySelector('.check-box').id.replace('chk',''));
+  checksCompleted[idx] = !checksCompleted[idx];
+  label.classList.toggle('checked', checksCompleted[idx]);
+  label.querySelector('.check-box').textContent = checksCompleted[idx] ? '☑' : '☐';
+}
+
+function proceedToAnonymize() {
+  // Validate all 5 checklist items
+  if (!checksCompleted.every(Boolean)) {
+    document.getElementById('checklistError').style.display = 'block';
+    return;
+  }
+  document.getElementById('checklistError').style.display = 'none';
+  document.getElementById('checklistPanel').style.display = 'none';
+  document.getElementById('anonResultPanel').style.display = 'block';
+  runAnonymizationPipeline();
+}
+
+function resetToChecklist() {
+  document.getElementById('anonResultPanel').style.display = 'none';
+  document.getElementById('checklistPanel').style.display = 'block';
+  document.getElementById('confirmAnon').checked = false;
+}
+
+// ── LAYER 2: Regex — fully local, zero network ──
+function regexAnonymize(text) {
   const replacements = [];
   let result = text;
 
   const patterns = [
-    // Codice fiscale italiano
-    { regex: /\b[A-Z]{6}\d{2}[A-Z]\d{2}[A-Z]\d{3}[A-Z]\b/gi, label: 'Codice Fiscale', tag: '[CODICE_FISCALE]' },
-    // Date of birth patterns
-    { regex: /\bnata?(?:\s+il)?\s+\d{1,2}[\/\-.]\d{1,2}[\/\-.]\d{2,4}\b/gi, label: 'Data Nascita', tag: '[DATA_NASCITA]' },
-    { regex: /\b(?:nato|nata)\s+(?:il\s+)?\d{1,2}[\/\-.]\d{1,2}[\/\-.]\d{2,4}\b/gi, label: 'Data Nascita', tag: '[DATA_NASCITA]' },
-    // Phone numbers
-    { regex: /(?:\+39\s?)?(?:0\d{1,4}[\s\-]?\d{5,8}|\d{3}[\s\-]\d{3}[\s\-]\d{4}|\d{10})/g, label: 'Telefono', tag: '[TELEFONO]' },
-    // Italian hospital/clinic names (common patterns)
-    { regex: /(?:Ospedale|Clinica|Policlinico|ULSS|AULSS|Azienda Ospedaliera|A\.O\.)\s+[A-Z][a-zA-ZÀ-ú\s\.]+(?=\s|,|\.|\n)/g, label: 'Ospedale', tag: '[OSPEDALE]' },
-    // Sig. / Sig.ra followed by name
-    { regex: /\bSig(?:\.?ra?\.?)\s+[A-ZÀÈÉÌÍÒÓÙÚ][a-zàèéìíòóùú]+(?:\s+[A-ZÀÈÉÌÍÒÓÙÚ][a-zàèéìíòóùú]+){0,2}/g, label: 'Nome Paziente', tag: '[PAZIENTE_NOME]' },
-    // Dott. / Prof. followed by name
-    { regex: /\b(?:Dott(?:\.?ssa?\.?)|Prof(?:\.?ssa?\.?)|Dr\.?)\s+[A-ZÀÈÉÌÍÒÓÙÚ][a-zàèéìíòóùú]+(?:\s+[A-ZÀÈÉÌÍÒÓÙÚ][a-zàèéìíòóùú]+)?/g, label: 'Medico', tag: '[MEDICO]' },
-    // NPI/matricola patterns
-    { regex: /\b(?:matricola|NPI|NHI|MRN)[:\s]+[A-Z0-9\-]+/gi, label: 'ID', tag: '[ID_PAZIENTE]' },
+    // Codice fiscale
+    { regex: /\b[A-Z]{6}\d{2}[A-Z]\d{2}[A-Z]\d{3}[A-Z]\b/gi,
+      label: 'Codice Fiscale', tag: '[CODICE_FISCALE]' },
+    // Date di nascita
+    { regex: /\bnata?\s+(?:il\s+)?\d{1,2}[\/\-.]\d{1,2}[\/\-.]\d{2,4}\b/gi,
+      label: 'Data Nascita', tag: '[DATA_NASCITA]' },
+    { regex: /\b(?:nato|nata)\s+(?:il\s+)?\d{1,2}[\/\-.]\d{1,2}[\/\-.]\d{2,4}\b/gi,
+      label: 'Data Nascita', tag: '[DATA_NASCITA]' },
+    // Telefono
+    { regex: /(?:\+39\s?)?(?:0\d{1,4}[\s\-]?\d{5,8}|\d{3}[\s\-]\d{3}[\s\-]\d{4}|\d{10})/g,
+      label: 'Telefono', tag: '[TELEFONO]' },
     // Email
-    { regex: /[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}/g, label: 'Email', tag: '[EMAIL]' },
+    { regex: /[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}/g,
+      label: 'Email', tag: '[EMAIL]' },
+    // ID strutturati
+    { regex: /\b(?:matricola|NPI|NHI|MRN|cartella\s*n\.?)[:\s]+[A-Z0-9\-]+/gi,
+      label: 'ID', tag: '[ID_PAZIENTE]' },
+    // Titoli seguiti da nome: Dott., Prof., Dr.
+    { regex: /\b(?:Dott(?:\.?ssa?)?\.?|Prof(?:\.?ssa?)?\.?|Dr\.?)\s+[A-ZÀÈÉÌÍÒÓÙÚ][a-zàèéìíòóùú]+(?:\s+[A-ZÀÈÉÌÍÒÓÙÚ][a-zàèéìíòóùú]+)?\b/g,
+      label: 'Medico', tag: '[MEDICO]' },
+    // Sig. / Sig.ra
+    { regex: /\bSig(?:\.?ra?\.?)\s+[A-ZÀÈÉÌÍÒÓÙÚ][a-zàèéìíòóùú]+(?:\s+[A-ZÀÈÉÌÍÒÓÙÚ][a-zàèéìíòóùú]+){0,2}\b/g,
+      label: 'Paziente', tag: '[PAZIENTE_NOME]' },
+    // Strutture ospedaliere
+    { regex: /\b(?:Ospedale|Clinica|Policlinico|ULSS|AULSS|Azienda\s+Ospedaliera|A\.O\.)\s+[A-ZÀÈÉÌÍÒÓÙÚ][a-zA-ZÀ-ú\s\.]{2,30}(?=[\s,\.\n\r])/g,
+      label: 'Struttura', tag: '[STRUTTURA]' },
+    // Nomi contestuali: "con Sara", "dalla Giovanna", "refertato da Mario"
+    { regex: /\b((?:con|dalla?|dal|refertato\s+da|visitata?\s+da|seguita?\s+da|dottoressa|infermiera?)\s+)([A-ZÀÈÉÌÍÒÓÙÚ][a-zàèéìíòóùú]{2,})\b/g,
+      label: 'Nome contestuale', tag: '$1[NOME]' },
   ];
 
-  // Load custom regex from settings
-  const customRegexStr = document.getElementById('cfg_regex').value.trim();
-  if (customRegexStr) {
-    try {
-      const customPatterns = JSON.parse(customRegexStr);
-      for (const cp of customPatterns) {
+  // Custom patterns from settings
+  try {
+    const customStr = document.getElementById('cfg_regex').value.trim();
+    if (customStr) {
+      for (const cp of JSON.parse(customStr))
         patterns.push({ regex: new RegExp(cp.pattern, 'gi'), label: 'Custom', tag: cp.replace });
-      }
-    } catch(e) {}
-  }
+    }
+  } catch(e) {}
 
   for (const p of patterns) {
-    const matches = [...result.matchAll(p.regex)];
-    for (const m of matches) {
-      if (!replacements.find(r => r.original === m[0])) {
-        replacements.push({ original: m[0], replacement: p.tag, type: p.label });
+    const isTemplate = p.tag.includes('$');
+    if (!isTemplate) {
+      const matches = [...result.matchAll(p.regex)];
+      for (const m of matches)
+        if (m[0].trim().length > 1 && !replacements.find(r => r.original === m[0]))
+          replacements.push({ original: m[0], replacement: p.tag, type: p.label });
+      result = result.replace(p.regex, p.tag);
+    } else {
+      // Template replacement (e.g. $1[NOME])
+      const matches = [...result.matchAll(p.regex)];
+      for (const m of matches) {
+        const captured = m[2] || m[1];
+        if (captured && !replacements.find(r => r.original === captured))
+          replacements.push({ original: captured, replacement: '[NOME]', type: p.label });
       }
+      result = result.replace(p.regex, p.tag);
     }
-    result = result.replace(p.regex, p.tag);
   }
 
   return { text: result, replacements };
 }
 
-function buildAndAnonymize() {
+// ── LAYER 3: Claude Haiku anonymization call ──
+// Receives post-regex text. Only task: find remaining names.
+// Anthropic has DPA + EU SCCs. No training on API inputs.
+// Cost: ~€0.001 per call.
+async function claudeAnonymize(text, apiKey) {
+  const response = await fetch('https://api.anthropic.com/v1/messages', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'x-api-key': apiKey,
+      'anthropic-version': '2023-06-01',
+      'anthropic-dangerous-direct-browser-access': 'true'
+    },
+    body: JSON.stringify({
+      model: 'claude-haiku-4-5-20251001',
+      max_tokens: 4000,
+      temperature: 0,
+      system: `Sei un sistema di anonimizzazione per testi clinici italiani.
+Il testo che ricevi è già stato pre-processato con regex e potrebbe contenere tag come [MEDICO], [CODICE_FISCALE], ecc.
+
+Il tuo UNICO compito: identificare e sostituire qualsiasi dato identificativo RESIDUO non già sostituito.
+
+Sostituisci:
+- Nomi propri di persone (pazienti, medici, infermieri, familiari) → [NOME]
+- Strutture sanitarie specifiche identificabili → [STRUTTURA]
+- Qualsiasi altro dato identificativo non già sostituito
+
+NON toccare:
+- Tag già presenti ([MEDICO], [NOME], [STRUTTURA], [CODICE_FISCALE], ecc.)
+- Date di esami/ricovero/accertamenti
+- Valori di laboratorio, farmaci, dosi
+- Diagnosi, sintomi, procedure cliniche
+- Nomi di farmaci, patologie, anatomia
+
+Restituisci SOLO il testo modificato. Nessun commento, nessuna spiegazione, nessun markdown.`,
+      messages: [{ role: 'user', content: text }]
+    })
+  });
+
+  if (!response.ok) {
+    const err = await response.json();
+    throw new Error(err.error?.message || `HTTP ${response.status}`);
+  }
+
+  const data = await response.json();
+  return data.content[0].text.trim();
+}
+
+// ── MAIN PIPELINE ORCHESTRATOR ──
+async function runAnonymizationPipeline() {
   const merged = buildMergedText();
-  if (!merged.trim()) {
-    alert('Inserisci almeno alcuni dati clinici prima di procedere.');
+  const apiKey = document.getElementById('apiKeyInput').value.trim()
+               || document.getElementById('apiKeyInput2').value.trim();
+
+  const statusText = document.getElementById('anonStatusText');
+  const spinner = document.getElementById('anonSpinner');
+  const statusBar = document.getElementById('anonStatus');
+
+  spinner.style.display = 'inline-block';
+  statusBar.style.borderColor = 'var(--border)';
+
+  // Show original
+  document.getElementById('origText').textContent = merged;
+  document.getElementById('replacementsList').innerHTML = '';
+
+  // ── Layer 2: Regex (instant) ──
+  statusText.textContent = '① Regex: rimozione identificativi strutturati...';
+  await new Promise(r => setTimeout(r, 50)); // let UI update
+  const { text: regexText, replacements: regexReps } = regexAnonymize(merged);
+
+  if (!apiKey) {
+    // No API key — regex only, warn user
+    renderAnonResult(merged, regexText, regexReps, 'regex');
+    statusText.textContent = '⚠ Solo regex applicato (API key assente). Inserisci la chiave nello Step 4 per anonimizzazione AI completa.';
+    statusBar.style.borderColor = 'var(--accent-dim)';
+    spinner.style.display = 'none';
     return;
   }
 
-  const { text, replacements } = anonymizeText(merged);
+  // ── Layer 3: Claude Haiku ──
+  statusText.textContent = '② Claude Haiku: ricerca nomi residui nel testo...';
+  try {
+    const claudeText = await claudeAnonymize(regexText, apiKey);
 
-  // Show in review panel
-  document.getElementById('origText').textContent = merged;
-  document.getElementById('anonText').value = text;
+    // Diff: find what Claude additionally replaced
+    const claudeReps = findAdditionalReplacements(regexText, claudeText);
 
-  // Show replacements list
+    renderAnonResult(merged, claudeText, [...regexReps, ...claudeReps], 'full');
+    const total = regexReps.length + claudeReps.length;
+    statusText.textContent = `✓ Completato — ${regexReps.length} regex + ${claudeReps.length} AI = ${total} sostituzioni totali`;
+    statusBar.style.borderColor = 'var(--green)';
+  } catch(err) {
+    // Claude failed — use regex result + warn
+    renderAnonResult(merged, regexText, regexReps, 'regex');
+    statusText.textContent = `⚠ Claude non disponibile (${err.message}) — solo regex. Verifica attentamente nomi nel testo.`;
+    statusBar.style.borderColor = 'var(--red)';
+  } finally {
+    spinner.style.display = 'none';
+  }
+}
+
+// Find what Claude replaced that regex hadn't (for display)
+function findAdditionalReplacements(before, after) {
+  const reps = [];
+  const placeholders = ['[NOME]','[STRUTTURA]','[MEDICO]','[PAZIENTE_NOME]','[REDACTED]'];
+  // Simple heuristic: find new placeholder occurrences in after vs before
+  for (const tag of placeholders) {
+    const countBefore = (before.match(new RegExp(escRegex(tag), 'g')) || []).length;
+    const countAfter  = (after.match(new RegExp(escRegex(tag), 'g')) || []).length;
+    const newOnes = countAfter - countBefore;
+    if (newOnes > 0)
+      reps.push({ original: `[${newOnes} identificativo/i rilevato/i da AI]`, replacement: tag, type: 'Claude AI' });
+  }
+  return reps;
+}
+
+function renderAnonResult(original, anonText, replacements, mode) {
+  document.getElementById('anonText').value = anonText;
+
   const listEl = document.getElementById('replacementsList');
+  const badge = mode === 'full'
+    ? '<span class="chip chip-ok" style="margin-left:8px;vertical-align:middle;font-size:9px;">✦ Regex + Claude AI</span>'
+    : '<span class="chip chip-warn" style="margin-left:8px;vertical-align:middle;font-size:9px;">{ } Solo Regex</span>';
+
   if (replacements.length === 0) {
-    listEl.innerHTML = '<div class="infobox green">✓ Nessun identificatore rilevato automaticamente. Verifica manualmente il testo.</div>';
+    listEl.innerHTML = '<div class="infobox green" style="margin-bottom:12px;">✓ Nessun identificatore strutturato rilevato automaticamente. Verifica manualmente.</div>';
   } else {
-    let html = `<div class="replacements-list"><div class="rep-title">Sostituzioni effettuate (${replacements.length})</div>`;
-    for (const r of replacements) {
+    let html = `<div class="replacements-list" style="margin-bottom:14px;">
+      <div class="rep-title">${replacements.length} sostituzion${replacements.length===1?'e':'i'} effettuate ${badge}</div>`;
+    for (const r of replacements)
       html += `<div class="rep-item">
         <span class="rep-original">${escHtml(r.original)}</span>
         <span class="rep-arrow">→</span>
         <span class="rep-new">${escHtml(r.replacement)}</span>
         <span class="rep-type">${r.type}</span>
       </div>`;
-    }
     html += '</div>';
     listEl.innerHTML = html;
   }
 
-  // Highlight in orig text
-  let highlighted = escHtml(merged);
+  // Highlight original
+  let highlighted = escHtml(original);
   for (const r of replacements) {
-    highlighted = highlighted.replace(new RegExp(escRegex(escHtml(r.original)), 'g'),
-      `<span class="redacted">${escHtml(r.original)}</span>`);
+    if (!r.original.startsWith('[')) // skip meta-entries like "[2 identificativi...]"
+      highlighted = highlighted.replace(
+        new RegExp(escRegex(escHtml(r.original)), 'g'),
+        `<span class="redacted">${escHtml(r.original)}</span>`
+      );
   }
   document.getElementById('origText').innerHTML = highlighted;
+}
 
+// Entry point called from Step 2 "Avanti" button
+function buildAndAnonymize() {
+  const merged = buildMergedText();
+  if (!merged.trim()) {
+    alert('Inserisci almeno alcuni dati clinici prima di procedere.');
+    return;
+  }
+  // Reset checklist state
+  checksCompleted.fill(false);
+  document.querySelectorAll('.check-item').forEach(el => {
+    el.classList.remove('checked');
+    el.querySelector('.check-box').textContent = '☐';
+  });
+  document.getElementById('checklistPanel').style.display = 'block';
+  document.getElementById('anonResultPanel').style.display = 'none';
+  document.getElementById('confirmAnon').checked = false;
+  document.getElementById('checklistError').style.display = 'none';
   goTo(2);
 }
 
@@ -1243,18 +1566,22 @@ function proceedToGenerate() {
     return;
   }
   state.anonText = document.getElementById('anonText').value;
-  // Update API preview
-  document.getElementById('apiPreview').textContent = state.anonText.substring(0, 800) + (state.anonText.length > 800 ? '\n...' : '');
   // Set default system prompt
   if (!document.getElementById('systemPrompt').value.trim()) {
     document.getElementById('systemPrompt').value = DEFAULT_SYSTEM_PROMPT;
   }
   goTo(3);
+  // Build full prompt view after navigation
+  setTimeout(refreshFullPrompt, 100);
 }
 
 // ═══════════════════════════════════════════════════
 // GENERATION
 // ═══════════════════════════════════════════════════
+document.getElementById('systemPrompt').addEventListener('input', function() {
+  refreshFullPrompt();
+});
+
 document.getElementById('tempSlider').addEventListener('input', function() {
   document.getElementById('tempLabel').textContent = (this.value / 10).toFixed(1);
 });
@@ -1488,6 +1815,88 @@ function syncApiKey(val) {
 document.getElementById('apiKeyInput').addEventListener('input', function() {
   syncApiKey(this.value);
 });
+
+
+// ═══════════════════════════════════════════════════
+// FULL PROMPT VIEWER
+// ═══════════════════════════════════════════════════
+let currentPromptTab = 'full';
+let cachedSystemPrompt = '';
+let cachedUserPrompt = '';
+
+function showPromptTab(tab) {
+  currentPromptTab = tab;
+  const tabs = { full: 'tabFull', system: 'tabSystem', user: 'tabUser' };
+  for (const [t, id] of Object.entries(tabs)) {
+    const btn = document.getElementById(id);
+    const active = t === tab;
+    btn.style.background = active ? 'var(--accent-glow)' : 'transparent';
+    btn.style.color = active ? 'var(--accent)' : 'var(--text-mid)';
+    btn.style.borderColor = active ? 'var(--accent-dim)' : 'var(--border)';
+  }
+  updatePromptDisplay();
+}
+
+function updatePromptDisplay() {
+  const view = document.getElementById('fullPromptView');
+  if (!cachedSystemPrompt && !cachedUserPrompt) {
+    view.value = 'Clicca "Aggiorna" per assemblare il prompt completo.';
+    return;
+  }
+  if (currentPromptTab === 'full') {
+    view.value =
+      '══ SYSTEM PROMPT ══════════════════════════════════\n\n' +
+      cachedSystemPrompt +
+      '\n\n══ USER PROMPT ════════════════════════════════════\n\n' +
+      cachedUserPrompt;
+  } else if (currentPromptTab === 'system') {
+    view.value = cachedSystemPrompt;
+  } else {
+    view.value = cachedUserPrompt;
+  }
+  // Token estimate (~4 chars per token)
+  const total = (cachedSystemPrompt.length + cachedUserPrompt.length);
+  const est = Math.round(total / 4);
+  const cost_haiku = ((est / 1000) * 0.00025).toFixed(4);
+  const cost_sonnet = ((est / 1000) * 0.003).toFixed(4);
+  document.getElementById('promptTokenEstimate').textContent =
+    `~${est.toLocaleString()} token stimati — Haiku: ~$${cost_haiku} | Sonnet: ~$${cost_sonnet} per questa generazione`;
+}
+
+function refreshFullPrompt() {
+  // Make sure anonText is current
+  if (state.anonText) {
+    cachedSystemPrompt = document.getElementById('systemPrompt').value || DEFAULT_SYSTEM_PROMPT;
+    cachedUserPrompt = buildUserPrompt();
+    updatePromptDisplay();
+  } else {
+    document.getElementById('fullPromptView').value =
+      'Nessun testo anonimizzato disponibile. Completa prima i passi 1-3.';
+  }
+}
+
+async function copyFullPrompt() {
+  refreshFullPrompt();
+  const view = document.getElementById('fullPromptView');
+  const text = currentPromptTab === 'full'
+    ? '══ SYSTEM PROMPT ══════════════════════════════════\n\n' + cachedSystemPrompt +
+      '\n\n══ USER PROMPT ════════════════════════════════════\n\n' + cachedUserPrompt
+    : view.value;
+  await navigator.clipboard.writeText(text);
+  showCopyConfirm();
+}
+
+async function copyUserPromptOnly() {
+  refreshFullPrompt();
+  await navigator.clipboard.writeText(cachedUserPrompt);
+  showCopyConfirm();
+}
+
+function showCopyConfirm() {
+  const el = document.getElementById('copyConfirm');
+  el.style.display = 'block';
+  setTimeout(() => el.style.display = 'none', 1800);
+}
 
 // INIT
 loadSettings();
