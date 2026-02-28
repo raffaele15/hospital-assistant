@@ -229,7 +229,6 @@ hr.div{border:none;border-top:1px solid var(--border);margin:18px 0}
     </div>
   </div>
 
-
   <label>Testo Completo del Paziente</label>
   <textarea id="inp_raw" style="flex:1;min-height:200px;" placeholder="Incolla qui il testo copiato dal PDF...&#10;&#10;Può contenere tutto, incluse intestazioni ospedaliere — verranno rimosse automaticamente prima dell'invio."></textarea>
 
@@ -394,7 +393,7 @@ hr.div{border:none;border-top:1px solid var(--border);margin:18px 0}
 
   <div class="card">
     <div class="ctitle">Pattern Regex Anonimizzazione Custom</div>
-    <div class="ib" style="margin-bottom:10px;">Pattern aggiuntivi in JSON. I pattern base (CF, telefono, date, titoli+nomi, strutture, intestazioni) sono già inclusi.</div>
+    <div class="ib" style="margin-bottom:10px;">Pattern aggiuntivi in JSON. I pattern base (CF, telefono, date di nascita, titoli+nomi, numeri ricovero) sono già inclusi. Le date cliniche e i nomi di strutture ospedaliere NON vengono anonimizzati.</div>
     <textarea id="cfg_regex" rows="5" placeholder='[
   {"pattern": "NHI:\\s*[A-Z]{3}\\d{4}", "replace": "[ID_PAZIENTE]"},
   {"pattern": "cartella\\s*n\\.?\\s*\\d+", "replace": "[CARTELLA]"}
@@ -415,7 +414,6 @@ hr.div{border:none;border-top:1px solid var(--border);margin:18px 0}
     <strong style="color:var(--text);">Come funziona:</strong> ogni caso memorizza la cartella anonimizzata (usata localmente per trovare il caso più simile), la lettera generata (iniettata come esempio few-shot), e un fingerprint stilistico compresso (cacheable). Al momento della generazione, il sistema recupera automaticamente i <strong style="color:var(--text);">1–2 casi più simili</strong> al paziente corrente tramite TF-IDF, e li usa come contesto — solo le loro <em>lettere</em>, non le cartelle complete. Tutto in localStorage, tutto offline.
   </div>
 
-  <!-- Case library grid -->
   <div class="card">
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;flex-wrap:wrap;gap:8px;">
       <div class="ctitle" style="margin:0;">Casi Salvati</div>
@@ -431,14 +429,12 @@ hr.div{border:none;border-top:1px solid var(--border);margin:18px 0}
     <div id="noTplMsg" class="ib" style="margin:0;">Nessun caso ancora. Aggiungine uno qui sotto.</div>
   </div>
 
-  <!-- RAG match preview (shown when anonText is ready) -->
   <div id="ragPreview" style="display:none;" class="card">
     <div class="ctitle">Casi Recuperati per il Paziente Corrente <span class="chip c-blue" style="margin-left:6px;">RAG</span></div>
     <div id="ragMatches"></div>
     <div style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--dim);margin-top:8px;">Solo le <em>lettere</em> di questi casi vengono inviate al modello come esempi. Le cartelle restano locali.</div>
   </div>
 
-  <!-- Add new case -->
   <div class="card">
     <div class="ctitle">Aggiungi Caso</div>
     <div class="ib purple" style="margin-bottom:12px;">
@@ -449,10 +445,10 @@ hr.div{border:none;border-top:1px solid var(--border);margin:18px 0}
     <input type="text" id="newTplName" placeholder='Es: "Neurologia — Stroke ischemico", "Psichiatria — Consulenza BDZ"'>
 
     <label>Cartella Clinica Anonimizzata <span style="color:var(--dim);font-size:9px;text-transform:none;letter-spacing:0;">(usata solo localmente per RAG — non inviata al modello)</span></label>
-    <textarea id="newCaseFolder" rows="8" placeholder="Incolla la cartella clinica già anonimizzata: esami, decorso, terapia, consulenze...&#10;&#10;Verrà usata per trovare automaticamente i casi simili al paziente corrente."></textarea>
+    <textarea id="newCaseFolder" rows="8" placeholder="Incolla la cartella clinica già anonimizzata..."></textarea>
 
     <label>Lettera di Dimissione Corrispondente <span style="color:var(--dim);font-size:9px;text-transform:none;letter-spacing:0;">(questa viene inviata come esempio few-shot)</span></label>
-    <textarea id="newCaseLetter" rows="8" placeholder="Incolla la lettera di dimissione già generata e revisionata per questo caso...&#10;&#10;Verrà usata come riferimento stilistico e clinico per casi simili."></textarea>
+    <textarea id="newCaseLetter" rows="8" placeholder="Incolla la lettera di dimissione già generata e revisionata per questo caso..."></textarea>
 
     <div class="btn-row" style="margin-top:12px;">
       <button class="btn btn-g" onclick="autoExtractTemplate()">
@@ -462,8 +458,6 @@ hr.div{border:none;border-top:1px solid var(--border);margin:18px 0}
       <button class="btn btn-p" onclick="saveNewTemplate()">✓ Salva Caso</button>
     </div>
     <div id="tplExtStatus" style="margin-top:8px;font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--dim);display:none;"></div>
-
-    <!-- fingerprint sections builder (populated by auto-extract or manually) -->
     <div id="newTplSections" style="margin-top:10px;"></div>
   </div>
 </div>
@@ -486,8 +480,6 @@ const PRICING = {
 // STATE
 // ═══════════════════════════════════════════════════
 const S = { rawText:'', cleanText:'', anonText:'', letter:'', strippedBlocks:[], activeTemplateId: null };
-
-// New template builder sections (transient)
 let newTplSections = [];
 
 const DEFAULT_SYS = `Sei un assistente esperto in documentazione medica ospedaliera italiana.
@@ -516,47 +508,46 @@ function goTo(i) {
 }
 
 // ═══════════════════════════════════════════════════
-// BOILERPLATE STRIPPER
+// BOILERPLATE STRIPPER — FIX: only strip PII headers/footers,
+// NOT clinical content, hospital department names, or dates.
 // ═══════════════════════════════════════════════════
 const BOILERPLATE_PATTERNS = [
-  { re:/^Regione\s+\w+\s*$/im,                                                      tag:'Intestazione Regione' },
+  // Regional / company headers
+  { re:/^Regione\s+\w[\w\s]*$/im,                                                   tag:'Intestazione Regione' },
   { re:/^AZIENDA\s+OSPEDALE[^\n]*/im,                                               tag:'Intestazione Azienda' },
   { re:/^Azienda\s+Ospedaliera[^\n]*/im,                                            tag:'Intestazione Azienda' },
   { re:/^AULSS\s*\d*[^\n]*/im,                                                      tag:'Intestazione AULSS' },
   { re:/^ULSS\s*\d*[^\n]*/im,                                                       tag:'Intestazione ULSS' },
-  { re:/^U\.?O\.?[CS]?\.?\s+[A-ZÀÈÉÌÍÒÓÙÚ][^\n]{3,60}$/im,                       tag:'U.O.C. / Reparto' },
+  // Director / responsible lines
   { re:/^Direttore[:\s]+[^\n]+$/im,                                                 tag:'Direttore' },
   { re:/^Responsabile[:\s]+[^\n]+$/im,                                              tag:'Responsabile' },
+  // Admission metadata lines (not clinical content)
   { re:/per il ricovero\s+[\d\/x]+\s+in\s+regime\s+\w+[^\n]*/i,                   tag:'Metadato ricovero' },
   { re:/^Ricovero\s*(?:n\.|numero)?\s*[\d\/x]+[^\n]*/im,                           tag:'Numero ricovero' },
   { re:/RICOVERO\s+[\dx\/]+[^\n]*/i,                                                tag:'Numero ricovero' },
-  { re:/^CONSULENZA\s+SPECIALISTICA[^\n]*/im,                                       tag:'Tipo documento' },
-  { re:/^LETTERA\s+DI\s+DIMISSIONE[^\n]*/im,                                        tag:'Tipo documento' },
-  { re:/^REFERTO[^\n]*/im,                                                           tag:'Tipo documento' },
-  { re:/^Paziente\s*:?\s*[^\n]*\n?(?:Data\s+di\s+Nascita\s*:?\s*[^\n]*)?/im,      tag:'Metadato paziente' },
-  { re:/^Data\s+di\s+(?:Nascita|nascita)\s*:?\s*[^\n]*$/im,                        tag:'Data nascita header' },
-  { re:/^Risposta\s*-\s*del\s+\d{1,2}\/\d{2}\/\d{4}[^\n]*/im,                     tag:'Intestazione risposta' },
-  { re:/Pagina\s+\d+\s*\/\s*\d+[^\n]*/gi,                                          tag:'Numero pagina' },
-  { re:/Pag\.\s*\d+\s*di\s*\d+[^\n]*/gi,                                           tag:'Numero pagina' },
-  { re:/(?:Consulenza\s+VIS\s+\w+|Medico\s+richiedente\s*:)[^\n]*/gi,             tag:'Metadato richiesta' },
+  // Document type headers (redundant if embedded in clinical text)
+  { re:/^LETTERA\s+DI\s+DIMISSIONE\s*$\n?/im,                                      tag:'Tipo documento' },
+  // Patient metadata header block (name+DOB in header, not clinical narrative)
+  { re:/^Paziente\s*:?\s*[A-ZÀÈÉÌÍÒÓÙÚ][^\n]*\n?(?:Data\s+di\s+(?:Nascita|nascita)\s*:?\s*[^\n]*)?\n?/im, tag:'Metadato paziente' },
+  // Page numbers / footers
+  { re:/Pagina\s+\d+\s*(?:di|\/)\s*\d+[^\n]*/gi,                                   tag:'Numero pagina' },
+  { re:/Pag\.\s*\d+\s*(?:di|\/)\s*\d+[^\n]*/gi,                                   tag:'Numero pagina' },
+  // Request metadata (VIS consultation lines)
   { re:/Medico\s+refertante[^\n]*/gi,                                               tag:'Metadato refertante' },
-  { re:/Richiesta\s+in\s+data[^\n]*/gi,                                            tag:'Metadato richiesta' },
-  { re:/Quesito\s*:[^\n]*/gi,                                                       tag:'Quesito' },
-  { re:/[A-ZÀÈÉÌÍÒÓÙÚ]{2,}\s+[A-ZÀÈÉÌÍÒÓÙÚ]{2,}\s*[-–]\s*RICOVERO[^\n]*/g,     tag:'Footer paziente' },
-  { re:/(?:[A-ZÀÈÉÌÍÒÓÙÚ]{2,}\s+){1,3}:\s*:\s*(?:[A-ZÀÈÉÌÍÒÓÙÚ]{2,}\s*)+$/gm,  tag:'Footer duplicato' },
-  // XLS lab report header rows: patient ID, name, ricovero number
-  { re:/^RIC_AO_[^\r\n]*/gm,                                                        tag:'ID Ricovero XLS' },
-  { re:/^[A-Z\u00C0-\u00FF]{3,}\s+[A-Z\u00C0-\u00FF]{3,}\s*$/gm,                  tag:'Nome paziente XLS' },
-  { re:/^(?:lun|mar|mer|gio|ven|sab|dom)\s+\d{1,2}\s+\w+\s+\d{4}[^\r\n]*/gim,    tag:'Data XLS' },
-  { re:/^\d{2}:\d{2}(?::\d{2})?\)?[^\r\n]*/gm,                                    tag:'Ora XLS' },
+  { re:/Richiesta\s+in\s+data[^\n]*/gi,                                             tag:'Metadato richiesta' },
+  // Staff list rows (e.g. printed at end of document)
+  { re:/^(?:[A-ZÀÈÉÌÍÒÓÙÚ]{2,}[\s,]+){2,}(?:MEDICO|INFERMIERE|COORDINATORE)[^\n]*/gim, tag:'Lista personale' },
+  // Cost/DRG notice lines
+  { re:/(?:DRG|tariffa|rimborso)\s*:?\s*[\d.,€$]+[^\n]*/gi,                       tag:'Nota costi DRG' },
+  { re:/Il\s+(?:costo|rimborso|contributo)\s+del\s+(?:ricovero|DRG)[^\n]*/gi,     tag:'Nota costi' },
+  // XLS lab patient header rows
+  { re:/^RIC_AO_[^\r\n]*/gm,                                                       tag:'ID Ricovero XLS' },
 ];
-
 
 function stripBoilerplate(text) {
   const strippedBlocks = [];
   let result = text;
   for (const p of BOILERPLATE_PATTERNS) {
-    // Single replace pass — avoids matchAll which requires /g flag
     result = result.replace(p.re, (match) => {
       const t = match.trim();
       if (t.length > 2 && !strippedBlocks.find(b => b.text === t))
@@ -574,7 +565,6 @@ function stripBoilerplate(text) {
 function goToAnon() {
   const raw = document.getElementById('inp_raw').value.trim();
   if (!raw && !S_XLS.text) { alert('Incolla il testo clinico o carica un referto XLS nello Step 1.'); return; }
-  // Combine text + XLS lab block (XLS appended as clearly marked section)
   S.rawText = raw + (S_XLS.text ? '\n\n' + S_XLS.text : '');
   goTo(1);
   runPipeline();
@@ -612,43 +602,79 @@ function renderBoilerplateReview(blocks) {
 
 // ═══════════════════════════════════════════════════
 // REGEX ANONYMIZER
+// FIX 1: Dates — only redact birth dates explicitly, keep all clinical dates.
+// FIX 2: Names — redact ALL Firstname Lastname patterns including diary headers,
+//         staff names in parentheses, etc.
+// FIX 3: Lab ranges — don't treat "1.7-17" range notation as a date.
+// FIX 4: Hospital names — keep "Clinica Neurologica", "Ospedale Civile" etc.
+//         as non-PII structural terms (they describe ward/location, not patient ID).
 // ═══════════════════════════════════════════════════
 function applyRegex(text) {
   const reps = []; let result = text;
+
   const patterns = [
-    { re:/\b[A-Z]{6}\d{2}[A-Z]\d{2}[A-Z]\d{3}[A-Z]\b/gi,              label:'Codice Fiscale', tag:'[CODICE_FISCALE]' },
-    { re:/\bnata?\s+(?:il\s+)?\d{1,2}[\/\-.]\d{1,2}[\/\-.]\d{2,4}\b/gi,label:'Data Nascita',  tag:'[DATA_NASCITA]' },
-    { re:/\b(?:nato|nata)\s+\d{1,2}[\/\-.]\d{1,2}[\/\-.]\d{2,4}\b/gi, label:'Data Nascita',  tag:'[DATA_NASCITA]' },
-    { re:/\b\d{1,2}[\/\-.]\d{1,2}[\/\-.]\d{2,4}\b/g,                  label:'Data',           tag:'[DATA]' },
-    { re:/(?:\+39[\s\-]?)?\b0\d{1,4}[\s\-]?\d{6,8}\b/g,               label:'Telefono fisso', tag:'[TELEFONO]' },
-    { re:/\b3\d{2}[\s\-]?\d{3}[\s\-]?\d{4}\b/g,                       label:'Telefono mobile',tag:'[TELEFONO]' },
-    { re:/[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}/g,         label:'Email',          tag:'[EMAIL]' },
-    { re:/\b(?:ricovero|cartella|pratica|SDO)\s*(?:n\.|numero|nr\.?)?\s*[\dx\/]+/gi, label:'Nr.Ricovero', tag:'[NR_RICOVERO]' },
-    { re:/\b(?:matricola|NPI|NHI|MRN)\s*[:\s]+[A-Z0-9\-]+/gi,         label:'ID',             tag:'[ID_PAZIENTE]' },
-    { re:/\b(?:Dott(?:\.ssa?|ssa?)?\.?|Prof(?:\.ssa?|ssa?)?\.?|Dr\.?)\s+[A-ZÀÈÉÌÍÒÓÙÚ][a-zàèéìíòóùú]+(?:\s+[A-ZÀÈÉÌÍÒÓÙÚ][a-zàèéìíòóùú]+)?\b/g, label:'Medico', tag:'[MEDICO]' },
-    { re:/\bSig(?:\.ra?\.?|ra?\.?)\s+[A-ZÀÈÉÌÍÒÓÙÚ][a-zàèéìíòóùú]+(?:\s+[A-ZÀÈÉÌÍÒÓÙÚ][a-zàèéìíòóùú]+)?\b/g, label:'Paziente', tag:'[PAZIENTE_NOME]' },
-    { re:/\b(?:Ospedale|Clinica|Policlinico|ULSS|AULSS|A\.O\.)\s+(?:di\s+)?[A-ZÀÈÉÌÍÒÓÙÚ][a-zA-ZÀ-ú]{1,20}(?:\s+[A-ZÀÈÉÌÍÒÓÙÚ][a-zA-ZÀ-ú]{1,20}){0,2}/g, label:'Struttura', tag:'[STRUTTURA]' },
-    { re:/\bnosocomio\s+di\s+[A-ZÀÈÉÌÍÒÓÙÚ][a-zàèéìíòóùú]+/gi,       label:'Struttura',      tag:'[STRUTTURA]' },
+    // ── Codice Fiscale (16-char alphanumeric Italian tax code) ──
+    { re:/\b[A-Z]{6}\d{2}[A-Z]\d{2}[A-Z]\d{3}[A-Z]\b/gi,
+      label:'Codice Fiscale', tag:'[CODICE_FISCALE]' },
+
+    // ── Birth dates only — MUST be preceded by birth context words ──
+    // Matches: "nata il 12/03/1980", "nato il 12.03.80", "Data di nascita: 12-03-1980"
+    // Does NOT match plain clinical dates like "il 15/01" or "in data 03/2024"
+    { re:/\b(?:nata?\s+(?:il\s+)?|Data\s+di\s+(?:[Nn]ascita)\s*:?\s*)\d{1,2}[\/\-.]\d{1,2}[\/\-.]\d{2,4}\b/gi,
+      label:'Data Nascita', tag:'[DATA_NASCITA]' },
+
+    // ── Phone numbers ──
+    { re:/(?:\+39[\s\-]?)?\b0\d{1,4}[\s\-]?\d{6,8}\b/g,
+      label:'Telefono fisso', tag:'[TELEFONO]' },
+    { re:/\b3\d{2}[\s\-]?\d{3}[\s\-]?\d{4}\b/g,
+      label:'Telefono mobile', tag:'[TELEFONO]' },
+
+    // ── Email ──
+    { re:/[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}/g,
+      label:'Email', tag:'[EMAIL]' },
+
+    // ── Admission / record numbers ──
+    { re:/\b(?:ricovero|cartella|pratica|SDO|scheda)\s*(?:n\.|numero|nr\.?)?\s*[\dx\/]+/gi,
+      label:'Nr.Ricovero', tag:'[NR_RICOVERO]' },
+
+    // ── Patient/staff IDs ──
+    { re:/\b(?:matricola|NPI|NHI|MRN)\s*[:\s]+[A-Z0-9\-]+/gi,
+      label:'ID', tag:'[ID_PAZIENTE]' },
+
+    // ── Titled person names: Dott., Prof., Sig., Dr. followed by Name Surname ──
+    // FIX: also catches names in diary headers like "(Dott. Rossi Mario)" 
+    { re:/\b(?:Dott(?:\.ssa?|ssa?)?\.?|Prof(?:\.ssa?|ssa?)?\.?|Dr\.?|Sig(?:\.ra?\.?|ra?\.?)?)\s+[A-ZÀÈÉÌÍÒÓÙÚ][a-zàèéìíòóùú]+(?:\s+[A-ZÀÈÉÌÍÒÓÙÚ][a-zàèéìíòóùú]+)?/g,
+      label:'Medico/Paziente', tag:'[MEDICO]' },
+
+    // ── Untitled Firstname Lastname patterns in known PII contexts ──
+    // Matches: names in parentheses after role words, diary signature lines,
+    // e.g. "(refertato da Mario Rossi)", "Firma: Giovanni Bianchi"
+    { re:/(?:refertato\s+da|visitata?\s+da|seguita?\s+da|eseguita?\s+da|Firma\s*:?\s*|[Rr]edatto\s+da\s*|[Cc]omunicato\s+a\s+)\s*([A-ZÀÈÉÌÍÒÓÙÚ][a-zàèéìíòóùú]{1,20}\s+[A-ZÀÈÉÌÍÒÓÙÚ][a-zàèéìíòóùú]{1,20})/g,
+      label:'Nome contestuale', tag:'[NOME]' },
+
+    // ── Admission/reply metadata with name inline ──
+    { re:/^Risposta\s*-\s*del\s+\d{1,2}\/\d{2}\/\d{4}[^\n]*/im,
+      label:'Intestazione risposta', tag:'' },
   ];
+
+  // Apply custom patterns from settings
   try {
     const raw = document.getElementById('cfg_regex').value.trim();
     if (raw) JSON.parse(raw).forEach(cp =>
       patterns.push({ re: new RegExp(cp.pattern, 'gi'), label:'Custom', tag: cp.replace }));
   } catch(e) {}
+
   for (const p of patterns) {
     if (p.re.global) p.re.lastIndex = 0;
     result = result.replace(p.re, (match) => {
-      if (match.trim().length > 1 && !reps.find(r => r.orig === match))
-        reps.push({ orig: match, repl: p.tag, type: p.label });
+      const m = match.trim();
+      if (!p.tag) return ''; // strip with no replacement (e.g. metadata lines)
+      if (m.length > 1 && !reps.find(r => r.orig === m))
+        reps.push({ orig: m, repl: p.tag, type: p.label });
       return p.tag;
     });
   }
-  // Contextual names: "con Dottoressa", "visitata da Mario" etc.
-  const ctxRe = /\b((?:con|refertato\s+da|visitata?\s+da|seguita?\s+da|eseguita?\s+da|dall[ao])\s+)([A-ZÀÈÉÌÍÒÓÙÚ][a-zàèéìíòóùú]{2,})\b/g;
-  result = result.replace(ctxRe, (match, pre, name) => {
-    if (!reps.find(r => r.orig === name)) reps.push({ orig: name, repl:'[NOME]', type:'Nome contestuale' });
-    return pre + '[NOME]';
-  });
+
   return { text: result, reps };
 }
 
@@ -671,7 +697,7 @@ function renderAnonResult(anonText, reps) {
 }
 
 // ═══════════════════════════════════════════════════
-// TEMPLATE LIBRARY (localStorage) — Case pair: folder + letter + fingerprint
+// TEMPLATE LIBRARY (localStorage)
 // ═══════════════════════════════════════════════════
 function loadLibrary() {
   try { return JSON.parse(localStorage.getItem('letteraai_lib') || '[]'); } catch(e) { return []; }
@@ -695,22 +721,17 @@ function renderLibrary() {
     const letTok = tok(t.letter||'');
     const folTok = tok(t.folder||'');
     const isActive = S.activeTemplateId === t.id;
-    const hasFolder = !!t.folder;
-    const hasLetter = !!t.letter;
-    const hasFp     = !!t.fingerprint;
     return `<div class="tpl-card${isActive?' active-tpl':''}" onclick="selectTemplate('${t.id}')">
       <button class="tpl-del" onclick="event.stopPropagation();deleteTemplate('${t.id}')">✕</button>
       <div class="tpl-name">${esc(t.name)}</div>
       <div class="tpl-meta" style="margin-bottom:6px;">${new Date(t.createdAt).toLocaleDateString('it-IT')}</div>
       <div style="display:flex;flex-wrap:wrap;gap:4px;">
-        ${hasFolder?`<span class="chip c-w">📁 cartella ~${folTok}t</span>`:''}
-        ${hasLetter?`<span class="chip c-ok">📄 lettera ~${letTok}t</span>`:''}
-        ${hasFp?`<span class="tpl-cached-badge">⚡ fp ~${fpTok}t</span>`:''}
+        ${t.folder?`<span class="chip c-w">📁 cartella ~${folTok}t</span>`:''}
+        ${t.letter?`<span class="chip c-ok">📄 lettera ~${letTok}t</span>`:''}
+        ${t.fingerprint?`<span class="tpl-cached-badge">⚡ fp ~${fpTok}t</span>`:''}
       </div>
     </div>`;
   }).join('');
-
-  // Update RAG preview if we have current patient text
   updateRagPreview();
 }
 
@@ -739,26 +760,22 @@ function getActiveFingerprint() {
 }
 
 // ─── TF-IDF RAG ───────────────────────────────────
-// Simple in-browser TF-IDF similarity: no API calls needed.
-// Compares current anonymized text against stored folder texts.
-
 const STOPWORDS_IT = new Set(['il','la','lo','i','gli','le','un','una','uno','dei','delle','degli',
   'di','da','in','con','su','per','tra','fra','a','al','alla','allo','ai','alle','agli',
   'del','della','dello','e','ed','o','ma','se','non','si','che','è','era','sono','stato',
   'stata','stati','state','ha','hanno','ho','nei','nelle','negli','nel','nella','nello',
   'questo','questa','questi','queste','come','più','anche','dopo','prima','durante','presso',
-  'viene','veniva','venivano','si','al','dal','dal','dai','dalle','dagli']);
+  'viene','veniva','venivano','al','dal','dai','dalle','dagli']);
 
 function tokenizeForTfidf(text) {
   return text.toLowerCase()
-    .replace(/\[[\w_]+\]/g, '') // remove placeholders
+    .replace(/\[[\w_]+\]/g, '')
     .replace(/[^a-zàèéìíòóùú\s]/g, ' ')
     .split(/\s+/)
     .filter(w => w.length > 3 && !STOPWORDS_IT.has(w));
 }
 
 function buildTfIdf(docs) {
-  // docs: array of token arrays
   const N = docs.length;
   const df = {};
   for (const d of docs)
@@ -796,7 +813,6 @@ function updateRagPreview() {
   const ragOn = document.getElementById('ragToggle')?.checked;
   const matches = (ragOn && S.anonText) ? findSimilarCases(S.anonText) : [];
 
-  // Library panel preview
   const preview = document.getElementById('ragPreview');
   const matchesEl = document.getElementById('ragMatches');
   if (preview) {
@@ -814,7 +830,6 @@ function updateRagPreview() {
     }
   }
 
-  // Generation panel preview
   const previewGen = document.getElementById('ragPreviewGen');
   const matchesGen = document.getElementById('ragMatchesGen');
   if (previewGen) {
@@ -837,11 +852,6 @@ function updateRagPreview() {
 }
 
 // ─── New case builder ─────────────────────────────
-function addTplSection(label) {
-  const id = 'ntpl_' + Date.now();
-  newTplSections.push({ id, label, text:'' });
-  renderNewTplSections();
-}
 function deleteNewTplSection(id) {
   newTplSections = newTplSections.filter(s => s.id !== id);
   renderNewTplSections();
@@ -923,7 +933,6 @@ function saveNewTemplate() {
   const lib = loadLibrary();
   lib.push({ id:'tpl_'+Date.now(), name, folder, letter, fingerprint: fp, createdAt: new Date().toISOString() });
   saveLibrary(lib);
-  // Reset form
   newTplSections = [];
   renderNewTplSections();
   document.getElementById('newTplName').value = '';
@@ -956,7 +965,7 @@ function updateTokenPanel() {
   const tTemplate = tok(templateTxt);
   const tClinical = tok(clinical);
   const tOut      = 900;
-  const tCacheableBlock = tFp + tRag; // what gets cached
+  const tCacheableBlock = tFp + tRag;
   const tTotal    = tSys + tFp + tRag + tTemplate + tClinical;
 
   const cacheActive = tCacheableBlock > 0;
@@ -1015,8 +1024,6 @@ function updateTokenPanel() {
 
   document.getElementById('tokRows').innerHTML = html;
   document.getElementById('cacheActiveBadge').style.display = cacheActive ? 'inline-flex' : 'none';
-
-  // Also refresh RAG preview
   updateRagPreview();
 }
 
@@ -1093,11 +1100,8 @@ function buildMessages() {
   const fp = getActiveFingerprint();
   const ragOn = document.getElementById('ragToggle')?.checked;
   const ragMatches = (ragOn && S.anonText) ? findSimilarCases(S.anonText) : [];
-
-  // Build content blocks
   const blocks = [];
 
-  // Block 1 (cacheable): fingerprint — stable across calls with same template
   if (fp) {
     blocks.push({ type:'text', text:
       `## RIFERIMENTO STILISTICO — frasi-chiave del tuo stile (NON dati clinici reali)\n\n${fp}\n\n---\n\n`,
@@ -1105,16 +1109,14 @@ function buildMessages() {
     });
   }
 
-  // Block 2 (cacheable): RAG few-shot letters — stable for similar case sets
   if (ragMatches.length) {
     let ragBlock = `## ESEMPI DI RIFERIMENTO — casi clinici simili già elaborati\n\nUsa questi esempi come riferimento per stile, struttura e ragionamento clinico. NON copiare dati clinici specifici.\n\n`;
     ragMatches.forEach(({t, score}, i) => {
-      ragBlock += `### Esempio ${i+1} — ${esc(t.name)} (similarità ${(score*100).toFixed(0)}%)\n\n${t.letter}\n\n---\n\n`;
+      ragBlock += `### Esempio ${i+1} — ${t.name} (similarità ${(score*100).toFixed(0)}%)\n\n${t.letter}\n\n---\n\n`;
     });
     blocks.push({ type:'text', text: ragBlock, cache_control:{ type:'ephemeral' } });
   }
 
-  // Block 3 (NOT cached): current patient data — changes every call
   blocks.push({ type:'text', text:
     `## DATI CLINICI ANONIMIZZATI\n\n<clinical_input>\n${S.anonText}\n</clinical_input>\n\n---\n\n` +
     buildLetterTemplate()
@@ -1194,7 +1196,6 @@ async function generateLetter() {
     const data = await resp.json();
     S.letter = data.content[0].text;
 
-    // Show real usage stats
     const u = data.usage || {};
     const model = document.getElementById('modelSelect').value;
     const price = PRICING[model] || PRICING['claude-sonnet-4-6'];
@@ -1328,19 +1329,9 @@ function clearAll() {
   S.rawText=S.cleanText=S.anonText=S.letter=''; S.strippedBlocks=[];
 }
 
-
 // ═══════════════════════════════════════════════════
 // XLS / XLSX LAB RESULTS PARSER
 // ═══════════════════════════════════════════════════
-// Expects Italian hospital format:
-//   Col 0: Test name (or section header if cols 1-4 empty)
-//   Col 1: Value
-//   Col 2: Method (optional)
-//   Col 3: Unit
-//   Col 4: Reference range
-// Comment rows: col 0 long text, no value
-// Patient header rows: first few rows with ID / date / time
-
 const S_XLS = { text: '', filename: '' };
 
 function handleXlsDrop(e) {
@@ -1383,7 +1374,6 @@ async function processXls(file) {
     const buf = await file.arrayBuffer();
     const wb  = XLS.read(buf, { type: 'array', cellText: true, cellDates: true });
 
-    // Use first sheet
     const sheetName = wb.SheetNames[0];
     const ws = wb.Sheets[sheetName];
     const rows = XLS.utils.sheet_to_json(ws, { header: 1, defval: '', raw: false });
@@ -1392,7 +1382,6 @@ async function processXls(file) {
     S_XLS.text = formatted.text;
     S_XLS.filename = file.name;
 
-    // Show preview
     spin.style.display = 'none';
     stxt.style.color   = 'var(--green)';
     stxt.textContent   = `✓ ${formatted.examCount} esami estratti da "${file.name}"`;
@@ -1408,22 +1397,16 @@ async function processXls(file) {
 }
 
 function formatLabRows(rows) {
-  // Detect the header row: look for row containing 'Metodo' or 'Unità' or 'Intervallo'
-  // Rows before that are patient metadata — skip them
   let dataStart = 0;
   for (let i = 0; i < Math.min(rows.length, 15); i++) {
     const r = rows[i].map(c => String(c).trim().toLowerCase());
     if (r.some(c => c.includes('metodo') || c.includes('unit') || c.includes('intervallo') || c.includes('riferimento'))) {
-      dataStart = i + 1; // skip the header row itself
+      dataStart = i + 1;
       break;
     }
   }
 
-  // Also extract patient/date metadata from top rows for anonymization stripping
-  const metaRows = rows.slice(0, dataStart);
-
   const lines = [];
-  let currentSection = '';
   let examCount = 0;
 
   for (let i = dataStart; i < rows.length; i++) {
@@ -1432,31 +1415,23 @@ function formatLabRows(rows) {
 
     if (!name) continue;
 
-    // Section header: name present, value empty, unit empty
     const isSection = name && !value && !unit;
-    // Comment row: name is a long sentence (>40 chars) with no value
     const isComment = name && !value && name.length > 40;
-    // Normal exam row
-    const isExam = name && value && value !== '';
+    const isExam    = name && value && value !== '';
 
     if (isComment) {
       lines.push(`  ※ ${name}`);
       continue;
     }
-
     if (isSection) {
-      currentSection = name;
       lines.push(`\n[${name.toUpperCase()}]`);
       continue;
     }
-
     if (isExam) {
       examCount++;
-      // Build compact line: Name: Value Unit (ref: range)
       let line = `  ${name}: ${value}`;
       if (unit && unit !== method) line += ` ${unit}`;
       if (refRange) line += ` (rif: ${refRange})`;
-      // Flag if value looks abnormal (simple check: value contains H/L markers or is outside range)
       if (isAbnormal(value, refRange)) line += ' ⚠';
       lines.push(line);
     }
@@ -1467,15 +1442,19 @@ function formatLabRows(rows) {
   return { text, preview, examCount };
 }
 
+// FIX 3: Lab ranges — parse "1.7-17" as a numeric range, NOT as a date.
+// Only flag as abnormal if both ends look like plain decimals (no slashes).
 function isAbnormal(value, refRange) {
   if (!refRange || !value) return false;
-  // Try to parse numeric value and range like "4.40 - 11.00"
+  // Reject if refRange looks like a date (contains / or -)
+  if (/\d{1,2}[\/]\d{1,2}/.test(refRange)) return false;
   const numVal = parseFloat(value.replace(',', '.'));
   if (isNaN(numVal)) return false;
   const rangeMatch = refRange.match(/([\d.,]+)\s*[-–]\s*([\d.,]+)/);
   if (!rangeMatch) return false;
   const lo = parseFloat(rangeMatch[1].replace(',', '.'));
   const hi = parseFloat(rangeMatch[2].replace(',', '.'));
+  if (isNaN(lo) || isNaN(hi)) return false;
   return numVal < lo || numVal > hi;
 }
 
