@@ -33,11 +33,11 @@ aside{background:var(--surface);border-right:1px solid var(--border);padding:14p
 .sn{width:17px;height:17px;border-radius:50%;background:var(--surface3);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:9px;flex-shrink:0;transition:all .12s}
 .ni.active .sn{background:var(--accent-d);border-color:var(--accent);color:var(--accent)}
 
-main{overflow-y:auto;background:var(--bg)}
+main{overflow-y:auto;background:var(--bg);display:flex;flex-direction:column}
 
 /* ── PANEL VISIBILITY ── */
 /* All panels hidden by default */
-.panel{display:none;padding:28px 32px;max-width:920px}
+.panel{display:none;padding:28px 32px;width:100%;flex:1}
 /* Only the active panel is shown — flex for panel0, block for others */
 .panel.active{display:block}
 /* panel0 needs flex layout when active */
@@ -95,8 +95,9 @@ select{width:100%;background:var(--surface2);border:1px solid var(--border);bord
 
 /* diff */
 .diff-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:13px}
+.diff-grid > div{display:flex;flex-direction:column}
 .dlabel{font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--dim);letter-spacing:.12em;text-transform:uppercase;margin-bottom:6px;padding:2px 6px;background:var(--surface2);border-radius:3px;display:inline-block}
-.dtext{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:12px 13px;font-family:'JetBrains Mono',monospace;font-size:11px;line-height:1.8;white-space:pre-wrap;overflow-y:auto}
+.dtext{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:12px 13px;font-family:'JetBrains Mono',monospace;font-size:11px;line-height:1.8;white-space:pre-wrap;overflow-y:auto;min-height:600px}
 .redacted{background:rgba(201,110,110,.18);color:var(--red);border-radius:2px;padding:0 2px}
 
 /* replacements */
@@ -232,11 +233,11 @@ Non è necessario strutturarlo preventivamente."></textarea>
   <div class="diff-grid">
     <div>
       <div class="dlabel">Testo originale — locale, non inviato</div>
-      <div class="dtext" id="origText" style="max-height:420px;overflow-y:auto;">—</div>
+      <div class="dtext" id="origText" style="min-height:600px;overflow-y:auto;">—</div>
     </div>
     <div>
       <div class="dlabel">Testo anonimizzato ✏ modificabile</div>
-      <textarea id="anonText" class="dtext" style="height:420px;font-size:11px;resize:vertical;"></textarea>
+      <textarea id="anonText" class="dtext" style="font-size:11px;resize:vertical;min-height:600px;"></textarea>
     </div>
   </div>
 
