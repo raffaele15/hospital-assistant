@@ -252,12 +252,22 @@ hr.div{border:none;border-top:1px solid var(--border);margin:18px 0}
   </div>
 
   <div id="bpReview" style="display:none;">
-    <div class="ib acc">✂ Blocchi rimossi automaticamente — <strong style="color:var(--text);">NON inviati al modello</strong>. Verifica qui sotto cosa è stato eliminato.</div>
-    <div id="bpList"></div>
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">
+      <div class="ib acc" style="margin:0;flex:1;">✂ Blocchi boilerplate rimossi — <strong style="color:var(--text);">NON inviati al modello</strong>. <span id="bpCount" style="color:var(--accent);"></span></div>
+      <button class="btn btn-g" style="font-size:10px;padding:4px 11px;margin-left:10px;flex-shrink:0;" onclick="toggleSection('bpList','bpToggleBtn')" id="bpToggleBtn">▼ Mostra</button>
+    </div>
+    <div id="bpList" style="display:none;"></div>
     <hr class="div">
   </div>
 
-  <div id="repList"></div>
+  <div id="repReview" style="display:none;">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">
+      <div class="ib" style="margin:0;flex:1;border-left-color:var(--accent);">{ } Sostituzioni regex offline — <strong style="color:var(--text);">identificatori anonimizzati</strong>. <span id="repCount" style="color:var(--accent);"></span></div>
+      <button class="btn btn-g" style="font-size:10px;padding:4px 11px;margin-left:10px;flex-shrink:0;" onclick="toggleSection('repList','repToggleBtn')" id="repToggleBtn">▼ Mostra</button>
+    </div>
+    <div id="repList" style="display:none;"></div>
+    <hr class="div">
+  </div>
 
   <div class="diff-grid">
     <div>
@@ -591,10 +601,37 @@ const BOILERPLATE_PATTERNS = [
   { re:/^\d{1,2}\/\d{2}\/\d{4}\n\d{2}:\d{2}(?:\n\d{1,2}\/\d{2}\/\d{4}\n\d{2}:\d{2})?(?:\nMotivo\s+Cancellazione[^\n]*)?\n/gm, tag:'Timestamp diario' },
   // ── Vital signs chart footer with names in parentheses ──
   { re:/(?:\([A-ZÀÈÉÌÍÒÓÙÚ][a-zàèéìíòóùú]{1,20}\s+[A-ZÀÈÉÌÍÒÓÙÚ][a-zàèéìíòóùú]{1,20}\)\s*)+/g, tag:'Operatori grafica' },
-  // ── Address lines (CAP + city + street) ──
+  // ── Address lines — full footer "35128 Padova - Ospedale Civile, Via Giustiniani..." ──
+  { re:/^\d{5}\s+\w[\w\s]+-\s*Ospedale[^\n]*/gim,                               tag:'Footer indirizzo ospedale' },
   { re:/^\d{5}\s+[A-ZÀÈÉÌÍÒÓÙÚ][a-zA-ZÀ-ú\s]+[-–]\s*(?:Via|Viale|Piazza|C\.so)[^\n]*/gim, tag:'Indirizzo' },
-  { re:/^(?:Via|Viale|Piazza|C\.so)\s+[^\n]{5,60}$/gim,                            tag:'Indirizzo' },
-  { re:/^Azienda\s+Ospedale\s+-\s+Università\s+Padova[^\n]*/gim,                  tag:'Footer azienda' },
+  { re:/^(?:Via|Viale|Piazza|C\.so)\s+[^\n]{5,60}$/gim,                          tag:'Indirizzo' },
+  { re:/^Azienda\s+Ospedale\s+-\s+Università\s+Padova[^\n]*/gim,                 tag:'Footer azienda' },
+
+  // ── Standalone all-caps department name on its own line ──
+  { re:/^(?:CLINICA\s+NEUROLOGICA|STROKE\s+UNIT)\s*$/gim,                        tag:'Intestazione reparto' },
+
+  // ── Repeated page header: "SCHIAVON GIANFRANCOPaziente: Nato il: ..." ──
+  { re:/^[A-ZÀÈÉÌÍÒÓÙÚ]{2,20}\s+[A-ZÀÈÉÌÍÒÓÙÚ]{2,20}Paziente:[^\n]*/gim,       tag:'Header paziente ripetuto' },
+
+  // ── Patient demographic header lines ──
+  { re:/^Codice\s+fiscale\s*:[^\n]*/gim,                                          tag:'CF header' },
+  { re:/^(?:Indirizzo\s+(?:domicilio|residenza)|Indirizzo\s+n\.)\s*:[^\n]*/gim,  tag:'Indirizzo paziente' },
+  { re:/^Telefono\s*\d?\s*:[^\n]*/gim,                                            tag:'Telefono paziente' },
+  { re:/^MMG\/PLS\s*:[^\n]*/gim,                                                  tag:'MMG header' },
+  { re:/\bSSN\s*:\s*\d+/g,                                                        tag:'SSN' },
+
+  // ── Rete sociale table header + rows ──
+  { re:/^Rete\s+sociale\s*$/gim,                                                  tag:'Rete sociale' },
+  { re:/^Cognome\/Nome\s+Relazione\s+Tipo[^\n]*/gim,                              tag:'Header rete sociale' },
+
+  // ── "Stampato il DD/MM/YYYY HH:MM" ──
+  { re:/Stampato\s+il\s+\d{1,2}\/\d{2}\/\d{4}[^\n]*/gi,                         tag:'Data stampa' },
+
+  // ── "QUELLO PRESCRITTO DAL MEDICO" ──
+  { re:/^QUELLO\s+PRESCRITTO\s+DAL\s+MEDICO\s*$/gim,                             tag:'Avviso posologia' },
+
+  // ── Staff list block: multiple "Dr. / Dr.ssa / Prof." lines in sequence ──
+  { re:/(?:^(?:Dr\.?(?:ssa)?|Prof\.?(?:ssa)?)\s+[A-ZÀÈÉÌÍÒÓÙÚ][^\n]*\n){2,}/gm, tag:'Lista medici' },
   // ── Legenda / footnote lines ──
   { re:/^\(P\)\s+Profilo[^\n]*/gim,                                                 tag:'Legenda profilo' },
   { re:/^Data\s+stampa\s*:[^\n]*/gim,                                               tag:'Data stampa' },
@@ -659,14 +696,27 @@ function runPipeline() {
   }, 60);
 }
 
+function toggleSection(listId, btnId) {
+  const list = document.getElementById(listId);
+  const btn  = document.getElementById(btnId);
+  const open = list.style.display === 'none';
+  list.style.display = open ? 'block' : 'none';
+  btn.textContent = open ? '▲ Nascondi' : '▼ Mostra';
+}
+
 function renderBoilerplateReview(blocks) {
-  const wrap = document.getElementById('bpReview');
-  const list = document.getElementById('bpList');
+  const wrap  = document.getElementById('bpReview');
+  const list  = document.getElementById('bpList');
+  const count = document.getElementById('bpCount');
+  const btn   = document.getElementById('bpToggleBtn');
+  list.style.display = 'none';
+  btn.textContent = '▼ Mostra';
   if (!blocks.length) { wrap.style.display = 'none'; return; }
   wrap.style.display = 'block';
-  list.innerHTML = blocks.map(b =>
-    `<div class="bpblock"><span class="bptag">✂ ${esc(b.tag)}</span>${esc(b.text)}</div>`
-  ).join('');
+  count.textContent = blocks.length + ' blocco' + (blocks.length === 1 ? '' : 'chi');
+  list.innerHTML = blocks.map(function(b) {
+    return '<div class="bpblock"><span class="bptag">✂ ' + esc(b.tag) + '</span>' + esc(b.text) + '</div>';
+  }).join('');
 }
 
 // ═══════════════════════════════════════════════════
@@ -681,105 +731,171 @@ function renderBoilerplateReview(blocks) {
 function applyRegex(text) {
   const reps = []; let result = text;
 
+  // ── Words that are NEVER names — lab tests, drugs, ECG terms, anatomy, clinical terms ──
+  const CLINICAL_WORDS = new Set([
+    // Lab test names
+    'LEUCOCITI','ERITROCITI','EMOGLOBINA','EMATOCRITO','PIASTRINE','NEUTROFILI','LINFOCITI',
+    'MONOCITI','EOSINOFILI','BASOFILI','PROTROMBINA','GLUCOSIO','UREA','CREATININA','SODIO',
+    'POTASSIO','CLORO','CALCIO','FOSFATO','FERRO','MAGNESIO','BILIRUBINA','CONIUGATA',
+    'ALBUMINA','COLESTEROLO','TRIGLICERIDI','OMOCISTEINA','VITAMINA','FOLATI','TIROXINA',
+    'TRIIODOTIRONINA','EMOGLOBINA','GLICATA','PROTEINE','TOTALI','PROTEICO','LIPIDICO',
+    'EMATOLOGICO','URINARIO','COAGULAZIONE','EMATOLOGIA','BIOCHIMICI','COSTITUENTI',
+    'MICROSCOPICA','CLINICA','ORMONI','METABOLITI','SPECIALI','SIEROIMMUNOLOGICA',
+    'BATTERIOLOGICA','INDAGINE','PROFILO','FORMULA','ZONA','ALBUMINICA','DIFFERENZIALE',
+    'INORGANICO','FOSFORO','LATTATO','DEIDROGENASI',
+    // Lab units / markers
+    'LEUCOCITI','ERITROCITI','PIASTRINE','NEUTROFILI','MONOCITI','EOSINOFILI','BASOFILI',
+    'APTT','AIFA','RATIO','INR','PCR','MCH','MCV','RDW','LDL','HDL','TSH','FT3','FT4',
+    'HBSAG','ACIDO','URICO','FERRITINA','ELETTROFORESI','IMMUNOGLOBULINE',
+    // Drug forms / identifiers
+    'CAPSULE','COMPRESSE','RIVESTITE','DIVISIBILI','ORODISPERSIBILI','SOLUZIONE','INFUSIONE',
+    'INIETTABILE','POLV','PLAST','SACCHE','VIAFLO','BAXTER','RIGIDE','GASTROENTERICHE',
+    'GASTRORESISTENTI','RETTALE','ORALE',
+    // Drug partial names that are all-caps
+    'ELIQUIS','BERBEROL','NEURABEN','DELTACORTENE','TAMSULOSIN','TAMSULOSINA','BISOPROLOLO',
+    'RAMIPRIL','SIMVASTATINA','OMEPRAZOLO','PANTOPRAZOLO','LANSOPRAZOLO','LIXIANA','XANAX',
+    'LYRICA','NORMIX','ZOLOFT','FUROSEMIDE','LASIX','QUARK','ASPIRIN',
+    // ECG / cardiology terms
+    'SINUSALE','NORMALE','FIBRILLAZIONE','ATRIALE','VENTRICOLARE','RITMO','FLUTTER',
+    'BRADICARDIA','TACHICARDIA','EXTRASISTOLIA','ASHMAN',
+    // Anatomy / clinical
+    'STROKE','UNIT','NEUROLOGICA','NEUROLOGIA','CARDIOLOGIA','ORTOPEDICA','FISIATRICA',
+    'MICROBIOLOGIA','VIROLOGIA','NEURORADIOLOGIA','RADIOLOGIA','PEDIATRICA','LABORATORIO',
+    'MEDICINA','SISTEMI','DIAGNOSTICA','INTEGRATA','RIABILITAZIONE',
+    // Institutional / org
+    'PADOVA','VENETO','REGIONE','AZIENDA','OSPEDALE','UNIVERSITA','CLINICA','REPARTO',
+    'STROKE','CERTIFICATO','CERTIQUALITY',
+    // Surveillance test
+    'ENTEROBACTERALES','ACINETOBACTER','CARBAPENEMI','ENTEROCOCCHI',
+    // Misc
+    'FINE','DOCUMENTO','PAGINA','FINALE','SARANNO','DISPONIBILI','ULTERIORI',
+    'QUELLO','PRESCRITTO','MEDICO','STAMPATO',
+    // SGQ / ISO
+    'SGQ','UNI','ISO','DPC','SOLO','AIFA',
+  ]);
+
+  function isAllCapsName(w1, w2) {
+    // Both words must be ALL-CAPS letters only (no digits, no special chars)
+    if (!/^[A-ZÀÈÉÌÍÒÓÙÚ]{2,20}$/.test(w1) || !/^[A-ZÀÈÉÌÍÒÓÙÚ]{2,20}$/.test(w2)) return false;
+    // Reject if either word is a known clinical term
+    if (CLINICAL_WORDS.has(w1) || CLINICAL_WORDS.has(w2)) return false;
+    // Reject if both are 2-3 chars (likely abbreviations: TV, FC, PA, etc.)
+    if (w1.length <= 3 && w2.length <= 3) return false;
+    // Reject common 2-letter combos
+    if (['FC','PA','TC','RM','SR','CV','BM','BE','EU','OS','PT'].includes(w1)) return false;
+    return true;
+  }
+
   const patterns = [
 
     // ══ 1. CODICE FISCALE ══
-    { re:/\b[A-Z]{6}\d{2}[A-Z]\d{2}[A-Z]\d{3}[A-Z]\b/gi,
+    { re:/\b[A-Z]{6}\d{2}[A-Z]\d{2}[A-Z]\d{3}[A-Z]\b/g,
       label:'Codice Fiscale', tag:'[CODICE_FISCALE]' },
 
-    // ══ 2. INLINE (d.n. DATE) BLOCKS — e.g. "(d.n.26/05/1941)" ══
-    { re:/\(\s*[Dd]\.?[Nn]\.?\s*\d{1,2}[\/\-.]\d{1,2}[\/\-.]\d{2,4}\s*\)/g,
-      label:'Blocco DN inline', tag:'' },
+    // ══ 2. SSN / nosografico identifiers ══
+    { re:/\bSSN\s*:\s*\d+/g,
+      label:'SSN', tag:'[ID_PAZIENTE]' },
 
-    // ══ 3. BIRTH DATES — only when preceded by birth context ══
-    // Covers: "nata il", "nato il", "Data di nascita:", "D.N.:", "nato/a il", "Nato/a il"
-    { re:/\b(?:nata?\s+(?:il\s+)?|[Dd]ata\s+di\s+[Nn]ascita\s*:?\s*|[Dd]\.?[Nn]\.?\s*:?\s*|nato\/a\s+il\s+|Nato\/a\s+il\s+)\d{1,2}[\/\-.]\d{1,2}[\/\-.]\d{2,4}\b/gi,
+    // ══ 3. ADDRESS lines — VIA/VIALE/PIAZZA + street name + number ══
+    { re:/\b(?:VIA|VIALE|PIAZZA|CORSO|C\.SO|LOC\.?)\s+[A-ZÀÈÉÌÍÒÓÙÚ][A-ZÀ-Úa-zà-ú\s']{2,40}\s+\d+[\/A-Z]*/g,
+      label:'Indirizzo', tag:'[INDIRIZZO]' },
+    // City name (PONTE SAN NICOLO' etc.) after address
+    { re:/\b(?:Indirizzo\s+(?:domicilio|residenza)\s*:\s*)[^\n]+/gi,
+      label:'Indirizzo completo', tag:'' },
+
+    // ══ 4. INLINE BIRTH DATE BLOCKS — "(n. 22/06/1968)", "(d.n.26/05/1941)" ══
+    { re:/\(\s*(?:[Dd]\.?[Nn]\.?|n\.)\s*\d{1,2}[\/\-.]\d{1,2}[\/\-.]\d{2,4}\s*\)/g,
+      label:'Blocco nascita inline', tag:'' },
+
+    // ══ 5. BIRTH DATES with context ══
+    { re:/\b(?:nata?\s+(?:il\s+)?|[Dd]ata\s+di\s+[Nn]ascita\s*:?\s*|[Dd]\.?[Nn]\.?\s*:?\s*|nato\/a\s+il\s+|Nato\/a\s+il\s+|[Nn]ato\s+(?:il\s+)?|[Nn]ato\s+in\s+data\s+)\d{1,2}[\/\-.]\d{1,2}[\/\-.]\d{2,4}\b/g,
       label:'Data Nascita', tag:'[DATA_NASCITA]' },
 
-    // ══ 4. PHONE NUMBERS ══
-    { re:/(?:\+39[\s\-]?)?(?:\+039[\s\-]?)?\b0\d{1,4}[\s\-]?\d{5,8}\b/g,
+    // ══ 6. PHONE NUMBERS ══
+    { re:/(?:\+39[\s\-]?|\+039[\s\-]?)?\b0\d{1,4}[\s\-.]?\d{3,4}[\s\-.]?\d{3,5}\b/g,
       label:'Telefono fisso', tag:'[TELEFONO]' },
     { re:/\b3\d{2}[\s\-]?\d{3}[\s\-]?\d{4}\b/g,
       label:'Telefono mobile', tag:'[TELEFONO]' },
 
-    // ══ 5. EMAIL ══
+    // ══ 7. EMAIL ══
     { re:/[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}/g,
       label:'Email', tag:'[EMAIL]' },
 
-    // ══ 6. ADMISSION / RECORD NUMBERS ══
-    { re:/\b(?:ricovero|cartella|pratica|SDO|scheda|nosografico)\s*(?:n\.|numero|nr\.?)?\s*[\dx\/]+/gi,
+    // ══ 8. ADMISSION / RECORD NUMBERS (but NOT "nosografico" clinical usage) ══
+    { re:/\b(?:cartella|pratica|SDO|scheda)\s*(?:n\.|numero|nr\.?)?\s*[\dx\/]+/gi,
       label:'Nr.Ricovero', tag:'[NR_RICOVERO]' },
 
-    // ══ 7. PATIENT/STAFF IDs ══
+    // ══ 9. PATIENT/STAFF IDs ══
     { re:/\b(?:matricola|NPI|NHI|MRN|ASSIPCA)\s*[:\s]+[A-Z0-9\-]+/gi,
       label:'ID', tag:'[ID_PAZIENTE]' },
 
-    // ══ 8. DIARY HEADER: Firstname\nSurname\n[role letter] (split over lines) ══
+    // ══ 10. DIARY HEADER: Firstname\nSurname on two lines + role letter ══
     { re:/^([A-ZÀÈÉÌÍÒÓÙÚ][a-zàèéìíòóùú]{1,20})\n([A-ZÀÈÉÌÍÒÓÙÚ][a-zàèéìíòóùú]{1,20})\n[MITNOF]\b/gm,
       label:'Intestazione diario split', tag:'[MEDICO]' },
 
-    // ══ 9. DIARY HEADER: FirstnameSurname[role] concatenated no space ══
-    // e.g. "Rossana RagoneM", "EdoardoFabrisM", "ChiaraCaloreI"
+    // ══ 11. DIARY HEADER: FirstnameSurname+role concatenated (no space) ══
+    // e.g. "Rossana RagoneM", "ValentinaFerreroM", "GiuliaIemmoloI"
     { re:/\b([A-ZÀÈÉÌÍÒÓÙÚ][a-zàèéìíòóùú]{1,20})([A-ZÀÈÉÌÍÒÓÙÚ][a-zàèéìíòóùú]{1,20})[MITNOF](?=\s|$)/gm,
       label:'Intestazione diario concat', tag:'[MEDICO]' },
 
-    // ══ 10. NAMES IN PARENTHESES — vital signs chart operators ══
-    // e.g. "(Formentin Arianna)", "(Filosa Ornella)"
+    // ══ 12. NAMES IN PARENTHESES — vital signs chart ══
     { re:/\(([A-ZÀÈÉÌÍÒÓÙÚ][a-zàèéìíòóùú]{1,20}\s+[A-ZÀÈÉÌÍÒÓÙÚ][a-zàèéìíòóùú]{1,20})\)/g,
       label:'Operatore in parentesi', tag:'([MEDICO])' },
 
-    // ══ 11. ALL-CAPS PATIENT NAME (Surname Firstname or Firstname Surname) ══
-    // Guards against matching clinical abbreviations: mmHg, bpm, ml, etc.
-    { re:/\b([A-ZÀÈÉÌÍÒÓÙÚ]{2,20})\s+([A-ZÀÈÉÌÍÒÓÙÚ]{2,20})\b(?!\s*(?:mmHg|bpm|ml|mg|g\/L|U\/L|ng|umol|mmol|%|Hz|mSv|cm|ms|INR|ECG|TC|RM|EAS|FA|IVU|TVP|ADL|VRE|PCR|MCH|MCV|RDW|LDL|HDL|TSH|FT3|FT4|HbA|INR|PLT|RBC|AST|ALT|ALP|LAD|TnI|PCR|INR|PT|APTT|IgM|IgG|HBs|HCV|SSI|SGQ|UNI|ISO|DLgs|CABG|LIMA|PICA|IMT|EAS|VIS|DPC|AIFA))/g,
-      label:'Nome tutto maiuscolo', tag:'[PAZIENTE_NOME]' },
+    // ══ 13. ALL-CAPS PATIENT/STAFF NAME — with clinical-word guard ══
+    // Only replaces pairs where NEITHER word is a known clinical/drug/lab term
+    { re:/\b([A-ZÀÈÉÌÍÒÓÙÚ]{2,20})\s+([A-ZÀÈÉÌÍÒÓÙÚ]{2,20})\b/g,
+      label:'Nome maiuscolo',
+      tag:'[PAZIENTE_NOME]',
+      guard: (m, w1, w2) => isAllCapsName(w1, w2) },
 
-    // ══ 12. PATIENT NAME AFTER COURTESY TITLE ══
-    // "sig. Marcolin Marianno", "sig.ra Rossi Maria"
+    // ══ 14. PATIENT NAME AFTER COURTESY TITLE ══
     { re:/\b(?:sig\.?r?a?\.?|signora?)\s+[A-ZÀÈÉÌÍÒÓÙÚ][a-zàèéìíòóùú]{1,20}\s+[A-ZÀÈÉÌÍÒÓÙÚ][a-zàèéìíòóùú]{1,20}/gi,
       label:'Paziente sig.', tag:'[PAZIENTE_NOME]' },
 
-    // ══ 13. NAME + AGE ANCHOR — "Marcolin Marianno di anni 84" ══
+    // ══ 15. NAME + AGE ANCHOR ══
     { re:/[A-ZÀÈÉÌÍÒÓÙÚ][a-zàèéìíòóùú]{1,20}\s+[A-ZÀÈÉÌÍÒÓÙÚ][a-zàèéìíòóùú]{1,20}(?:\s*,)?\s+(?:di\s+)?anni\s+\d{1,3}/g,
       label:'Paziente + età', tag:'[PAZIENTE_NOME]' },
 
-    // ══ 14. TITLED NAMES — Dott./Prof./Dr./T.S.R.M. + Name ══
-    { re:/\b(?:Dott(?:\.ssa?|ssa?)?\.?|Prof(?:\.ssa?|ssa?)?\.?|Dr\.?|T\.S\.R\.M\.?|MFS)\s+[A-ZÀÈÉÌÍÒÓÙÚ][a-zA-ZÀ-ú.\s]{1,35}(?=[,\n\r;]|$)/gm,
+    // ══ 16. TITLED NAMES — Dott./Prof./Dr. etc. ══
+    { re:/\b(?:Dott(?:\.ssa?|ssa?)?\.?|Prof(?:\.ssa?|ssa?)?\.?|Dr\.?|T\.S\.R\.M\.?|MFS)\s+[A-ZÀÈÉÌÍÒÓÙÚ][a-zA-ZÀ-ú.\s]{1,35}(?=[,\n\r;(]|$)/gm,
       label:'Medico con titolo', tag:'[MEDICO]' },
 
-    // ══ 15. ABBREVIATED TITLED NAMES — "Dott. G. Fredianelli", "F. VIARO" after label ══
+    // ══ 17. ABBREVIATED TITLED NAMES — "Dr. F. Causin", "Prof. R. Manara" ══
     { re:/\b(?:Dott(?:\.ssa?)?\.?|Prof(?:\.ssa?)?\.?|Dr\.?)\s+[A-Z]\.\s+[A-ZÀÈÉÌÍÒÓÙÚ][a-zA-ZÀ-ú]{1,20}/g,
       label:'Medico abbreviato', tag:'[MEDICO]' },
 
-    // ══ 16. ALL-CAPS NAMES AFTER LABEL KEYWORDS ══
-    // "Medico Richiedente: CAVATORTI STEFANO", "Firmatario:PICCIONE FRANCESCO"
+    // ══ 18. ALL-CAPS NAMES AFTER LABEL KEYWORDS ══
     { re:/(?:Medico\s+[Rr]ichiedente|Firmatario|Operatore|Refertato\s+da)\s*:?\s*[A-ZÀÈÉÌÍÒÓÙÚ]{2,20}\s+[A-ZÀÈÉÌÍÒÓÙÚ]{2,20}/g,
       label:'Nome dopo etichetta', tag:'[MEDICO]' },
 
-    // ══ 17. SIGNING PHRASES ══
-    // "Lettera di dimissione firmata da Viaro Federica il..."
-    // "Referto firmato digitalmente da: Fogar Paola"
-    // "Documento Firmato digitalmente da [name]"
+    // ══ 19. SIGNING PHRASES ══
     { re:/(?:lettera\s+(?:di\s+dimissione\s+)?firmata?\s+da|referto\s+firmato\s+(?:digitalmente\s+)?da\s*:?|documento\s+firmato\s+(?:digitalmente\s+)?da\s*:?|Firmatario\s*:)\s*[A-ZÀÈÉÌÍÒÓÙÚ][a-zàèéìíòóùú]{1,20}\s+[A-ZÀÈÉÌÍÒÓÙÚ][a-zàèéìíòóùú]{1,20}/gi,
       label:'Firma documento', tag:'[DOCUMENTO_FIRMATO_DA_MEDICO]' },
 
-    // ══ 18. CONTEXTUAL NAMES AFTER ROLE PHRASES ══
-    { re:/(?:refertato\s+da|visitata?\s+da|seguita?\s+da|eseguita?\s+da|firmata?\s+da|compilata?\s+da|dettata?\s+da|[Rr]edatto\s+da|[Cc]omunicato\s+a|con\s+(?:il\s+)?(?:dott|prof)\.?\s*)\s+([A-ZÀÈÉÌÍÒÓÙÚ][a-zàèéìíòóùú]{1,20}\s+[A-ZÀÈÉÌÍÒÓÙÚ][a-zàèéìíòóùú]{1,20})/gi,
+    // ══ 20. CONTEXTUAL NAMES AFTER ROLE PHRASES ══
+    { re:/(?:refertato\s+da|visitata?\s+da|seguita?\s+da|eseguita?\s+da|firmata?\s+da|compilata?\s+da|dettata?\s+da|[Rr]edatto\s+da|[Cc]omunicato\s+a|con\s+(?:il\s+)?(?:dott|prof)\.?\s*|[Gg]iro\s+visite\s+con\s+(?:prof\.?(?:ssa\s)?|dott\.?(?:ssa\s)?)?)\s*([A-ZÀÈÉÌÍÒÓÙÚ][a-zàèéìíòóùú]{1,20}(?:\s+[A-ZÀÈÉÌÍÒÓÙÚ][a-zàèéìíòóùú]{1,20})?)/gi,
       label:'Nome contestuale', tag:'[MEDICO]' },
 
-    // ══ 19. "Giro visite con [MEDICO], [MEDICO]" — already [MEDICO] but catch raw names ══
-    { re:/(?:[Gg]iro\s+visite\s+con|[Ss]u\s+indicazione\s+(?:del\s+)?(?:dott\.?|prof\.?)?)\s+([A-ZÀÈÉÌÍÒÓÙÚ][a-zàèéìíòóùú]{1,20}\s+[A-ZÀÈÉÌÍÒÓÙÚ][a-zàèéìíòóùú]{1,20})/g,
-      label:'Medico in contesto', tag:'[MEDICO]' },
+    // ══ 21. MMG/PLS NAME after label ══
+    { re:/\b(?:MMG|PLS|MdG|MDG)\s*(?:\/[A-Z]+)?\s*:\s*[A-ZÀÈÉÌÍÒÓÙÚ][a-zàèéìíòóùú]{1,20}\s+[A-ZÀÈÉÌÍÒÓÙÚ][a-zàèéìíòóùú]{1,20}/g,
+      label:'MMG/PLS nome', tag:'[MEDICO_CURANTE]' },
 
-    // ══ 20. NAME SPLIT ACROSS TWO LINES in lab/radiology headers ══
-    // "Sig. Marcolin\nMarianno" or bare surname\nfirstname
+    // ══ 22. RELATIVE/SOCIAL NETWORK NAMES — lowercase pairs after relationship keywords ══
+    // "barbiero laura" — mixed/lowercase name pair after social network context
+    { re:/(?:^|\n)([a-zàèéìíòóùú]{2,20}\s+[a-zàèéìíòóùú]{2,20})(?:\s+(?:Coniuge|Figlio|Figlia|Madre|Padre|Fratello|Sorella|Parente|Sconosciuto))/gm,
+      label:'Familiare rete sociale', tag:'[FAMILIARE]' },
+
+    // ══ 23. NAME SPLIT ACROSS TWO LINES in lab headers ══
     { re:/^(?:Sig\.?\s+)?([A-ZÀÈÉÌÍÒÓÙÚ]{2,20})\n([A-ZÀÈÉÌÍÒÓÙÚ][a-zàèéìíòóùú]{2,20})$/gm,
       label:'Nome split riga', tag:'[PAZIENTE_NOME]' },
 
-    // ══ 21. ADMISSION/REPLY HEADER with date ══
-    { re:/^Risposta\s*-\s*del\s+\d{1,2}\/\d{2}\/\d{4}[^\n]*/gim,
-      label:'Intestazione risposta', tag:'' },
+    // ══ 24. STANDALONE SINGLE NAME on its own line ══
+    // Catches "Valentina Ferrero" alone at end of section, "Cosetta Pinzerato" standalone
+    { re:/^([A-ZÀÈÉÌÍÒÓÙÚ][a-zàèéìíòóùú]{1,20})\s+([A-ZÀÈÉÌÍÒÓÙÚ][a-zàèéìíòóùú]{1,20})\s*$/gm,
+      label:'Nome standalone', tag:'[MEDICO]' },
 
-    // ══ 22. PATIENT CONTEXT PHRASES ══
+    // ══ 25. PATIENT CONTEXT PHRASES ══
     { re:/\b(?:il|la|del|della)\s+paziente\s+[A-ZÀÈÉÌÍÒÓÙÚ][a-zàèéìíòóùú]{1,20}\s+[A-ZÀÈÉÌÍÒÓÙÚ][a-zàèéìíòóùú]{1,20}/gi,
       label:'Paziente in contesto', tag:'[PAZIENTE_NOME]' },
     { re:/\bassistit[oa]\s+[A-ZÀÈÉÌÍÒÓÙÚ][a-zàèéìíòóùú]{1,20}\s+[A-ZÀÈÉÌÍÒÓÙÚ][a-zàèéìíòóùú]{1,20}/gi,
@@ -799,9 +915,11 @@ function applyRegex(text) {
 
   for (const p of patterns) {
     if (p.re.global) p.re.lastIndex = 0;
-    result = result.replace(p.re, (match) => {
+    result = result.replace(p.re, (match, g1, g2) => {
+      // Pattern 13 (ALL-CAPS guard) uses a guard function
+      if (p.guard && !p.guard(match, g1, g2)) return match;
       const m = match.trim();
-      if (!p.tag) return ''; // strip with no replacement
+      if (!p.tag) return '';
       if (m.length > 1 && !reps.find(r => r.orig === m))
         reps.push({ orig: m, repl: p.tag, type: p.label });
       return p.tag;
@@ -813,19 +931,33 @@ function applyRegex(text) {
 
 function renderAnonResult(anonText, reps) {
   document.getElementById('anonText').value = anonText;
-  const listEl = document.getElementById('repList');
+
+  const repReview = document.getElementById('repReview');
+  const listEl    = document.getElementById('repList');
+  const repCount  = document.getElementById('repCount');
+  const btn       = document.getElementById('repToggleBtn');
+
+  // reset toggle state
+  listEl.style.display = 'none';
+  btn.textContent = '▼ Mostra';
+
   if (!reps.length) {
-    listEl.innerHTML = '<div class="ib green" style="margin-bottom:11px;">✓ Nessun identificatore rilevato dai pattern base. Verifica manualmente.</div>';
+    repReview.style.display = 'block';
+    repCount.textContent = '0 sostituzioni';
+    listEl.innerHTML = '<div class="ib green" style="margin-bottom:4px;">✓ Nessun identificatore rilevato dai pattern base. Verifica manualmente.</div>';
   } else {
-    let h = `<div class="rl"><div class="rtitle">${reps.length} sostituzion${reps.length===1?'e':'i'} <span class="chip c-w" style="margin-left:6px;">{ } Regex Offline</span></div>`;
+    repReview.style.display = 'block';
+    repCount.textContent = reps.length + ' sostituzion' + (reps.length === 1 ? 'e' : 'i');
+    let h = '<div class="rl"><div class="rtitle">' + reps.length + ' sostituzion' + (reps.length === 1 ? 'e' : 'i') + ' <span class="chip c-w" style="margin-left:6px;">{ } Regex Offline</span></div>';
     for (const r of reps)
-      h += `<div class="rrow"><span class="rorig">${esc(r.orig)}</span><span class="rarr">→</span><span class="rnew">${esc(r.repl)}</span><span class="rtype">${r.type}</span></div>`;
+      h += '<div class="rrow"><span class="rorig">' + esc(r.orig) + '</span><span class="rarr">→</span><span class="rnew">' + esc(r.repl) + '</span><span class="rtype">' + r.type + '</span></div>';
     h += '</div>';
     listEl.innerHTML = h;
   }
+
   let hi = esc(S.cleanText);
   for (const r of reps)
-    hi = hi.replace(new RegExp(escR(esc(r.orig)),'g'), `<span class="redacted">${esc(r.orig)}</span>`);
+    hi = hi.replace(new RegExp(escR(esc(r.orig)), 'g'), '<span class="redacted">' + esc(r.orig) + '</span>');
   document.getElementById('origText').innerHTML = hi;
 }
 
