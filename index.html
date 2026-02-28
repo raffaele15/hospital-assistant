@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Lettera.AI — Dimissione</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <link href="https://fonts.googleapis.com/css2?family=Crimson+Pro:ital,wght@0,300;0,400;0,600;1,300;1,400&family=JetBrains+Mono:wght@300;400;500&display=swap" rel="stylesheet">
 <style>
 :root {
@@ -197,6 +198,37 @@ hr.div{border:none;border-top:1px solid var(--border);margin:18px 0}
       </div>
     </div>
   </div>
+
+  <div class="card" style="margin-bottom:16px;">
+    <div class="ctitle">Carica Referto Laboratorio XLS / XLSX — Opzionale</div>
+    <div class="ib acc" style="margin-bottom:10px;">
+      I valori vengono estratti e aggiunti al testo clinico. Il file viene letto <strong style="color:var(--text);">localmente</strong> — nessun dato trasmesso. Se un esame è già presente nel testo PDF, il modello userà entrambe le fonti e darà priorità al valore più completo.
+    </div>
+    <div id="xlsDropzone" onclick="document.getElementById('xlsFileInput').click()"
+      style="border:2px dashed var(--border);border-radius:var(--r);padding:20px;text-align:center;cursor:pointer;transition:all .15s;background:var(--surface2);"
+      ondragover="event.preventDefault();this.style.borderColor='var(--accent)'"
+      ondragleave="this.style.borderColor='var(--border)'"
+      ondrop="handleXlsDrop(event)">
+      <input type="file" id="xlsFileInput" accept=".xls,.xlsx,.csv" style="display:none;" onchange="handleXlsFile(event)">
+      <div style="font-size:22px;margin-bottom:5px;color:var(--dim);">📊</div>
+      <div style="font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--mid);">
+        <strong style="color:var(--text);">Clicca o trascina XLS / XLSX</strong> — referto laboratorio completo
+      </div>
+    </div>
+    <div id="xlsStatus" style="display:none;margin-top:10px;">
+      <div style="display:flex;align-items:center;gap:8px;font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--mid);">
+        <span class="spin" id="xlsSpin" style="display:none;"></span><span id="xlsStatusTxt"></span>
+      </div>
+    </div>
+    <div id="xlsPreview" style="display:none;margin-top:10px;">
+      <div style="font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--dim);text-transform:uppercase;letter-spacing:.1em;margin-bottom:5px;">Anteprima valori estratti</div>
+      <div id="xlsPreviewContent" style="background:var(--surface2);border:1px solid var(--border);border-radius:var(--r);padding:10px 12px;font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--mid);max-height:200px;overflow-y:auto;white-space:pre-wrap;"></div>
+      <div class="btn-row" style="margin-top:8px;">
+        <button class="btn btn-g" style="font-size:10px;padding:5px 11px;" onclick="clearXls()">✕ Rimuovi</button>
+      </div>
+    </div>
+  </div>
+
 
   <label>Testo Completo del Paziente</label>
   <textarea id="inp_raw" style="flex:1;min-height:200px;" placeholder="Incolla qui il testo copiato dal PDF...&#10;&#10;Può contenere tutto, incluse intestazioni ospedaliere — verranno rimosse automaticamente prima dell'invio."></textarea>
@@ -512,7 +544,13 @@ const BOILERPLATE_PATTERNS = [
   { re:/Quesito\s*:[^\n]*/gi,                                                       tag:'Quesito' },
   { re:/[A-ZÀÈÉÌÍÒÓÙÚ]{2,}\s+[A-ZÀÈÉÌÍÒÓÙÚ]{2,}\s*[-–]\s*RICOVERO[^\n]*/g,     tag:'Footer paziente' },
   { re:/(?:[A-ZÀÈÉÌÍÒÓÙÚ]{2,}\s+){1,3}:\s*:\s*(?:[A-ZÀÈÉÌÍÒÓÙÚ]{2,}\s*)+$/gm,  tag:'Footer duplicato' },
+  // XLS lab report header rows: patient ID, name, ricovero number
+  { re:/^RIC_AO_[^\r\n]*/gm,                                                        tag:'ID Ricovero XLS' },
+  { re:/^[A-Z\u00C0-\u00FF]{3,}\s+[A-Z\u00C0-\u00FF]{3,}\s*$/gm,                  tag:'Nome paziente XLS' },
+  { re:/^(?:lun|mar|mer|gio|ven|sab|dom)\s+\d{1,2}\s+\w+\s+\d{4}[^\r\n]*/gim,    tag:'Data XLS' },
+  { re:/^\d{2}:\d{2}(?::\d{2})?\)?[^\r\n]*/gm,                                    tag:'Ora XLS' },
 ];
+
 
 function stripBoilerplate(text) {
   const strippedBlocks = [];
@@ -535,8 +573,9 @@ function stripBoilerplate(text) {
 // ═══════════════════════════════════════════════════
 function goToAnon() {
   const raw = document.getElementById('inp_raw').value.trim();
-  if (!raw) { alert('Incolla prima il testo clinico nello Step 1.'); return; }
-  S.rawText = raw;
+  if (!raw && !S_XLS.text) { alert('Incolla il testo clinico o carica un referto XLS nello Step 1.'); return; }
+  // Combine text + XLS lab block (XLS appended as clearly marked section)
+  S.rawText = raw + (S_XLS.text ? '\n\n' + S_XLS.text : '');
   goTo(1);
   runPipeline();
 }
@@ -1287,6 +1326,165 @@ function clearAll() {
   document.getElementById('inp_raw').value='';
   document.getElementById('inp_diagnosi').value='';
   S.rawText=S.cleanText=S.anonText=S.letter=''; S.strippedBlocks=[];
+}
+
+
+// ═══════════════════════════════════════════════════
+// XLS / XLSX LAB RESULTS PARSER
+// ═══════════════════════════════════════════════════
+// Expects Italian hospital format:
+//   Col 0: Test name (or section header if cols 1-4 empty)
+//   Col 1: Value
+//   Col 2: Method (optional)
+//   Col 3: Unit
+//   Col 4: Reference range
+// Comment rows: col 0 long text, no value
+// Patient header rows: first few rows with ID / date / time
+
+const S_XLS = { text: '', filename: '' };
+
+function handleXlsDrop(e) {
+  e.preventDefault();
+  document.getElementById('xlsDropzone').style.borderColor = 'var(--border)';
+  const file = e.dataTransfer.files[0];
+  if (file) processXls(file);
+  else alert('Carica un file XLS, XLSX o CSV.');
+}
+function handleXlsFile(e) {
+  const file = e.target.files[0];
+  if (file) processXls(file);
+}
+
+async function ensureSheetJs() {
+  if (window.XLSX) return window.XLSX;
+  return new Promise((res, rej) => {
+    const s = document.createElement('script');
+    s.src = 'https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js';
+    s.onload = () => res(window.XLSX);
+    s.onerror = () => rej(new Error('Impossibile caricare SheetJS'));
+    document.head.appendChild(s);
+  });
+}
+
+async function processXls(file) {
+  const spin   = document.getElementById('xlsSpin');
+  const stxt   = document.getElementById('xlsStatusTxt');
+  const status = document.getElementById('xlsStatus');
+  const preview = document.getElementById('xlsPreview');
+  status.style.display = 'block';
+  spin.style.display   = 'inline-block';
+  stxt.style.color     = 'var(--mid)';
+  stxt.textContent     = 'Caricamento SheetJS...';
+
+  try {
+    const XLS = await ensureSheetJs();
+    stxt.textContent = 'Parsing ' + file.name + '...';
+
+    const buf = await file.arrayBuffer();
+    const wb  = XLS.read(buf, { type: 'array', cellText: true, cellDates: true });
+
+    // Use first sheet
+    const sheetName = wb.SheetNames[0];
+    const ws = wb.Sheets[sheetName];
+    const rows = XLS.utils.sheet_to_json(ws, { header: 1, defval: '', raw: false });
+
+    const formatted = formatLabRows(rows);
+    S_XLS.text = formatted.text;
+    S_XLS.filename = file.name;
+
+    // Show preview
+    spin.style.display = 'none';
+    stxt.style.color   = 'var(--green)';
+    stxt.textContent   = `✓ ${formatted.examCount} esami estratti da "${file.name}"`;
+    document.getElementById('xlsPreviewContent').textContent = formatted.preview;
+    preview.style.display = 'block';
+    document.getElementById('xlsFileInput').value = '';
+
+  } catch(err) {
+    spin.style.display = 'none';
+    stxt.style.color   = 'var(--red)';
+    stxt.textContent   = '✗ ' + err.message;
+  }
+}
+
+function formatLabRows(rows) {
+  // Detect the header row: look for row containing 'Metodo' or 'Unità' or 'Intervallo'
+  // Rows before that are patient metadata — skip them
+  let dataStart = 0;
+  for (let i = 0; i < Math.min(rows.length, 15); i++) {
+    const r = rows[i].map(c => String(c).trim().toLowerCase());
+    if (r.some(c => c.includes('metodo') || c.includes('unit') || c.includes('intervallo') || c.includes('riferimento'))) {
+      dataStart = i + 1; // skip the header row itself
+      break;
+    }
+  }
+
+  // Also extract patient/date metadata from top rows for anonymization stripping
+  const metaRows = rows.slice(0, dataStart);
+
+  const lines = [];
+  let currentSection = '';
+  let examCount = 0;
+
+  for (let i = dataStart; i < rows.length; i++) {
+    const row = rows[i].map(c => String(c).trim());
+    const [name, value, method, unit, refRange] = row;
+
+    if (!name) continue;
+
+    // Section header: name present, value empty, unit empty
+    const isSection = name && !value && !unit;
+    // Comment row: name is a long sentence (>40 chars) with no value
+    const isComment = name && !value && name.length > 40;
+    // Normal exam row
+    const isExam = name && value && value !== '';
+
+    if (isComment) {
+      lines.push(`  ※ ${name}`);
+      continue;
+    }
+
+    if (isSection) {
+      currentSection = name;
+      lines.push(`\n[${name.toUpperCase()}]`);
+      continue;
+    }
+
+    if (isExam) {
+      examCount++;
+      // Build compact line: Name: Value Unit (ref: range)
+      let line = `  ${name}: ${value}`;
+      if (unit && unit !== method) line += ` ${unit}`;
+      if (refRange) line += ` (rif: ${refRange})`;
+      // Flag if value looks abnormal (simple check: value contains H/L markers or is outside range)
+      if (isAbnormal(value, refRange)) line += ' ⚠';
+      lines.push(line);
+    }
+  }
+
+  const text = `## ESAMI DI LABORATORIO (da file: ${S_XLS.filename || 'referto.xls'})\n` + lines.join('\n');
+  const preview = lines.slice(0, 40).join('\n') + (lines.length > 40 ? `\n  ... e altri ${lines.length - 40} righe` : '');
+  return { text, preview, examCount };
+}
+
+function isAbnormal(value, refRange) {
+  if (!refRange || !value) return false;
+  // Try to parse numeric value and range like "4.40 - 11.00"
+  const numVal = parseFloat(value.replace(',', '.'));
+  if (isNaN(numVal)) return false;
+  const rangeMatch = refRange.match(/([\d.,]+)\s*[-–]\s*([\d.,]+)/);
+  if (!rangeMatch) return false;
+  const lo = parseFloat(rangeMatch[1].replace(',', '.'));
+  const hi = parseFloat(rangeMatch[2].replace(',', '.'));
+  return numVal < lo || numVal > hi;
+}
+
+function clearXls() {
+  S_XLS.text = '';
+  S_XLS.filename = '';
+  document.getElementById('xlsPreview').style.display = 'none';
+  document.getElementById('xlsStatus').style.display = 'none';
+  document.getElementById('xlsFileInput').value = '';
 }
 
 // ═══════════════════════════════════════════════════
