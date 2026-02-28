@@ -12,13 +12,12 @@
   --border:#2a2a2a; --border-hi:#3d3d3d;
   --text:#e8e4dc; --dim:#7a7570; --mid:#b0aa9f;
   --accent:#c9a96e; --accent-d:#7a6340; --accent-g:rgba(201,169,110,0.12);
-  --red:#c96e6e; --green:#6ec98a; --r:6px;
+  --red:#c96e6e; --green:#6ec98a; --blue:#6ea8c9; --purple:#a96ec9; --r:6px;
 }
 *{box-sizing:border-box;margin:0;padding:0}
 body{background:var(--bg);color:var(--text);font-family:'Crimson Pro',Georgia,serif;font-size:17px;line-height:1.6;min-height:100vh}
 
-/* layout */
-.app{display:grid;grid-template-columns:196px 1fr;grid-template-rows:52px 1fr;min-height:100vh}
+.app{display:grid;grid-template-columns:210px 1fr;grid-template-rows:52px 1fr;min-height:100vh}
 header{grid-column:1/-1;background:var(--surface);border-bottom:1px solid var(--border);display:flex;align-items:center;padding:0 22px;gap:14px}
 .logo{font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:500;letter-spacing:.14em;color:var(--accent);text-transform:uppercase}
 .logo span{color:var(--dim)}
@@ -34,19 +33,13 @@ aside{background:var(--surface);border-right:1px solid var(--border);padding:14p
 .ni.active .sn{background:var(--accent-d);border-color:var(--accent);color:var(--accent)}
 
 main{overflow-y:auto;background:var(--bg);display:flex;flex-direction:column}
-
-/* ── PANEL VISIBILITY ── */
-/* All panels hidden by default */
 .panel{display:none;padding:28px 32px;width:100%;flex:1}
-/* Only the active panel is shown — flex for panel0, block for others */
 .panel.active{display:block}
-/* panel0 needs flex layout when active */
 #panel0.active{display:flex;flex-direction:column;height:calc(100vh - 52px)}
 
 .ptitle{font-size:24px;font-weight:300;margin-bottom:3px;letter-spacing:-.01em}
 .psub{font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--dim);margin-bottom:22px;letter-spacing:.06em}
 
-/* form */
 label{display:block;font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--dim);letter-spacing:.1em;text-transform:uppercase;margin-bottom:5px;margin-top:16px}
 label:first-child{margin-top:0}
 textarea,input[type=text],input[type=password]{width:100%;background:var(--surface);border:1px solid var(--border);border-radius:var(--r);color:var(--text);font-family:'JetBrains Mono',monospace;font-size:12px;line-height:1.7;padding:11px 13px;outline:none;transition:border-color .12s}
@@ -55,43 +48,33 @@ textarea:focus,input:focus{border-color:var(--accent-d)}
 textarea::placeholder,input::placeholder{color:var(--dim)}
 select{width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:var(--r);color:var(--text);font-family:'JetBrains Mono',monospace;font-size:12px;padding:10px 12px;outline:none;cursor:pointer}
 
-/* buttons */
 .btn{display:inline-flex;align-items:center;gap:7px;padding:9px 18px;border-radius:var(--r);font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:500;letter-spacing:.05em;cursor:pointer;border:1px solid;transition:all .12s;text-transform:uppercase}
 .btn-p{background:var(--accent);color:#0f0f0f;border-color:var(--accent)}
 .btn-p:hover{background:#dfbb80}
 .btn-p:disabled{opacity:.4;cursor:not-allowed}
 .btn-g{background:transparent;color:var(--mid);border-color:var(--border)}
 .btn-g:hover{background:var(--surface2);color:var(--text);border-color:var(--border-hi)}
-.btn-row{display:flex;gap:10px;margin-top:20px;flex-wrap:wrap}
+.btn-row{display:flex;gap:10px;margin-top:20px;flex-wrap:wrap;align-items:center}
 
-/* cards */
 .card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:16px;margin-bottom:14px}
 .ctitle{font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--dim);text-transform:uppercase;letter-spacing:.1em;margin-bottom:11px}
 
-/* infobox */
 .ib{background:var(--surface2);border:1px solid var(--border);border-left:3px solid var(--accent-d);border-radius:0 var(--r) var(--r) 0;padding:10px 13px;font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--dim);line-height:1.65;margin-bottom:13px}
 .ib.red{border-left-color:var(--red)}
 .ib.green{border-left-color:var(--green)}
 .ib.acc{border-left-color:var(--accent)}
+.ib.blue{border-left-color:var(--blue)}
+.ib.purple{border-left-color:var(--purple)}
 
-/* chips */
 .chip{display:inline-flex;align-items:center;gap:4px;font-family:'JetBrains Mono',monospace;font-size:9px;letter-spacing:.06em;padding:3px 8px;border-radius:20px;text-transform:uppercase}
 .c-ok{background:rgba(110,201,138,.12);color:var(--green);border:1px solid rgba(110,201,138,.25)}
 .c-w{background:rgba(201,169,110,.12);color:var(--accent);border:1px solid rgba(201,169,110,.25)}
 .c-err{background:rgba(201,110,110,.12);color:var(--red);border:1px solid rgba(201,110,110,.25)}
+.c-blue{background:rgba(110,168,201,.12);color:var(--blue);border:1px solid rgba(110,168,201,.25)}
+.c-purple{background:rgba(169,110,201,.12);color:var(--purple);border:1px solid rgba(169,110,201,.25)}
 
-/* spinner */
 .spin{display:inline-block;width:13px;height:13px;border:2px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:sp .7s linear infinite}
 @keyframes sp{to{transform:rotate(360deg)}}
-
-/* checklist */
-.ci{display:flex;align-items:flex-start;gap:11px;padding:10px 13px;background:var(--surface);border:1px solid var(--border);border-radius:var(--r);cursor:pointer;transition:all .12s;user-select:none;margin-bottom:7px}
-.ci:hover{border-color:var(--border-hi);background:var(--surface2)}
-.ci.chk{border-color:var(--green);background:rgba(110,201,138,.05)}
-.cb{font-family:'JetBrains Mono',monospace;font-size:14px;color:var(--dim);flex-shrink:0;line-height:1.4}
-.ci.chk .cb{color:var(--green)}
-.ct{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--mid);line-height:1.6}
-.ci.chk .ct{color:var(--text)}
 
 /* diff */
 .diff-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:13px}
@@ -99,6 +82,10 @@ select{width:100%;background:var(--surface2);border:1px solid var(--border);bord
 .dlabel{font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--dim);letter-spacing:.12em;text-transform:uppercase;margin-bottom:6px;padding:2px 6px;background:var(--surface2);border-radius:3px;display:inline-block}
 .dtext{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:12px 13px;font-family:'JetBrains Mono',monospace;font-size:11px;line-height:1.8;white-space:pre-wrap;overflow-y:auto;min-height:600px}
 .redacted{background:rgba(201,110,110,.18);color:var(--red);border-radius:2px;padding:0 2px}
+
+/* boilerplate review */
+.bpblock{background:var(--surface2);border:1px solid var(--border);border-left:3px solid var(--accent-d);border-radius:0 var(--r) var(--r) 0;padding:10px 12px;margin-bottom:8px;font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--dim);white-space:pre-wrap;line-height:1.6}
+.bpblock .bptag{color:var(--accent);font-size:9px;text-transform:uppercase;letter-spacing:.1em;margin-bottom:4px;display:block}
 
 /* replacements */
 .rl{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:11px;margin-bottom:11px}
@@ -118,11 +105,37 @@ select{width:100%;background:var(--surface2);border:1px solid var(--border);bord
 .tab{font-family:'JetBrains Mono',monospace;font-size:10px;padding:5px 12px;border-radius:var(--r);border:1px solid var(--border);background:transparent;color:var(--mid);cursor:pointer;transition:all .12s;text-transform:uppercase;letter-spacing:.05em}
 .tab.active{background:var(--accent-g);color:var(--accent);border-color:var(--accent-d)}
 
-/* copy confirm */
 .cc{display:none;position:absolute;top:10px;right:10px;background:var(--green);color:#0f0f0f;font-family:'JetBrains Mono',monospace;font-size:10px;padding:4px 10px;border-radius:4px;font-weight:600}
-
-/* api notice */
 .an{font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--accent);display:flex;gap:7px;margin-top:8px;line-height:1.5}
+
+/* ── TOKEN COST BREAKDOWN ── */
+.tok-panel{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:16px;margin-bottom:14px}
+.tok-row{display:flex;align-items:center;gap:0;font-family:'JetBrains Mono',monospace;font-size:11px;padding:5px 0;border-bottom:1px solid var(--border)}
+.tok-row:last-child{border-bottom:none;font-weight:600;color:var(--text)}
+.tok-label{flex:1;color:var(--mid)}
+.tok-bar-wrap{width:180px;height:6px;background:var(--surface3);border-radius:3px;overflow:hidden;margin:0 12px}
+.tok-bar{height:100%;border-radius:3px;transition:width .3s}
+.tok-val{width:70px;text-align:right;color:var(--dim)}
+.tok-cost{width:90px;text-align:right}
+.tok-cached{color:var(--blue);font-size:9px;margin-left:5px}
+.tok-total-row{margin-top:12px;padding-top:10px;border-top:2px solid var(--border);display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.tok-total-box{background:var(--surface2);border:1px solid var(--border);border-radius:var(--r);padding:10px 14px;text-align:center}
+.tok-total-box .tlabel{font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--dim);text-transform:uppercase;letter-spacing:.1em;margin-bottom:4px}
+.tok-total-box .tval{font-family:'JetBrains Mono',monospace;font-size:18px;color:var(--accent);font-weight:500}
+.tok-total-box .tsub{font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--dim);margin-top:2px}
+.tok-cache-note{font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--blue);margin-top:10px;line-height:1.6}
+
+/* ── TEMPLATE LIBRARY ── */
+.tpl-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:10px;margin-bottom:14px}
+.tpl-card{background:var(--surface2);border:1px solid var(--border);border-radius:var(--r);padding:12px;cursor:pointer;transition:all .12s;position:relative}
+.tpl-card:hover{border-color:var(--border-hi);background:var(--surface3)}
+.tpl-card.active-tpl{border-color:var(--accent-d);background:var(--accent-g)}
+.tpl-name{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--text);margin-bottom:4px;font-weight:500}
+.tpl-meta{font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--dim)}
+.tpl-del{position:absolute;top:8px;right:8px;font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--dim);background:none;border:none;cursor:pointer;padding:2px 5px;border-radius:3px}
+.tpl-del:hover{color:var(--red);background:rgba(201,110,110,.1)}
+.tpl-tok{display:inline-block;margin-top:4px;font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--dim);background:var(--surface3);padding:2px 6px;border-radius:3px}
+.tpl-cached-badge{display:inline-block;margin-left:4px;font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--blue);background:rgba(110,168,201,.1);border:1px solid rgba(110,168,201,.2);padding:2px 6px;border-radius:3px}
 
 hr.div{border:none;border-top:1px solid var(--border);margin:18px 0}
 ::-webkit-scrollbar{width:5px;height:5px}
@@ -148,44 +161,36 @@ hr.div{border:none;border-top:1px solid var(--border);margin:18px 0}
   <button class="ni" onclick="goTo(3)" id="nav3"><span class="sn">4</span>Lettera</button>
   <div class="ns" style="margin-top:14px;">Config</div>
   <button class="ni" onclick="goTo(4)" id="nav4"><span class="sn">⚙</span>Impostazioni</button>
+  <button class="ni" onclick="goTo(5)" id="nav5"><span class="sn">📚</span>Libreria Stili</button>
 </aside>
 
 <main>
 
 <!-- ═══ STEP 1 — TESTO CLINICO ═══ -->
-<!-- NOTE: no inline style here anymore — CSS handles display via #panel0.active -->
 <div class="panel active" id="panel0">
   <div class="ptitle">Testo Clinico</div>
-  <div class="psub">// step 01 — incolla il testo copiato dal PDF</div>
+  <div class="psub">// step 01 — carica PDF o incolla il testo</div>
 
   <div class="ib acc">
-    Incolla qui il testo completo copiato dal PDF ospedaliero: anamnesi, esami di laboratorio, accertamenti strumentali, decorso, terapia domiciliare, terapia in reparto, follow-up. Tutto in un unico blocco — non è necessario strutturarlo.
+    Incolla o carica il PDF. Le intestazioni ospedaliere (Regione, AZIENDA, Direttore, metadati paziente, numeri pagina, footer) vengono rimosse automaticamente prima di inviare al modello.
   </div>
 
-  <!-- PDF UPLOAD -->
   <div class="card" style="margin-bottom:16px;">
     <div class="ctitle">Carica PDF — Estrazione Testo Offline</div>
-    <div class="ib acc" style="margin-bottom:12px;">
-      Carica il PDF scaricato dal server ospedaliero. Il testo viene estratto localmente con PDF.js — <strong style="color:var(--text);">nessun OCR, nessuna rete, nessun dato trasmesso.</strong> Funziona solo su PDF con testo selezionabile (i tuoi lo sono).
-    </div>
-
     <div id="pdfDropzone" onclick="document.getElementById('pdfFileInput').click()"
-      style="border:2px dashed var(--border);border-radius:var(--r);padding:28px 20px;text-align:center;cursor:pointer;transition:all .15s;background:var(--surface2);"
+      style="border:2px dashed var(--border);border-radius:var(--r);padding:24px 20px;text-align:center;cursor:pointer;transition:all .15s;background:var(--surface2);"
       ondragover="event.preventDefault();this.style.borderColor='var(--accent)'"
       ondragleave="this.style.borderColor='var(--border)'"
       ondrop="handlePdfDrop(event)">
       <input type="file" id="pdfFileInput" accept=".pdf" style="display:none;" onchange="handlePdfFile(event)">
-      <div style="font-size:28px;margin-bottom:8px;color:var(--dim);">⬆</div>
+      <div style="font-size:24px;margin-bottom:6px;color:var(--dim);">⬆</div>
       <div style="font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--mid);">
-        <strong style="color:var(--text);">Clicca o trascina il PDF</strong><br>
-        <span style="color:var(--dim);">Estrazione offline — PDF.js — nessun OCR</span>
+        <strong style="color:var(--text);">Clicca o trascina il PDF</strong> — estrazione offline, nessun dato trasmesso
       </div>
     </div>
-
     <div id="pdfStatus" style="display:none;margin-top:10px;">
       <div style="display:flex;align-items:center;gap:8px;font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--mid);">
-        <span class="spin" id="pdfSpin" style="display:none;"></span>
-        <span id="pdfStatusTxt"></span>
+        <span class="spin" id="pdfSpin" style="display:none;"></span><span id="pdfStatusTxt"></span>
       </div>
       <div style="background:var(--surface3);border-radius:2px;height:3px;margin-top:6px;overflow:hidden;">
         <div id="pdfBar" style="height:100%;background:var(--accent);border-radius:2px;width:0%;transition:width .2s;"></div>
@@ -194,16 +199,7 @@ hr.div{border:none;border-top:1px solid var(--border);margin:18px 0}
   </div>
 
   <label>Testo Completo del Paziente</label>
-  <textarea id="inp_raw" style="flex:1;min-height:200px;" placeholder="Incolla qui il testo copiato dal PDF...
-
-Il blocco può contenere tutto:
-- Motivo del ricovero e anamnesi
-- Esami ematochimici e strumentali
-- Terapia domiciliare e in reparto
-- Decorso clinico
-- Follow-up e raccomandazioni
-
-Non è necessario strutturarlo preventivamente."></textarea>
+  <textarea id="inp_raw" style="flex:1;min-height:200px;" placeholder="Incolla qui il testo copiato dal PDF...&#10;&#10;Può contenere tutto, incluse intestazioni ospedaliere — verranno rimosse automaticamente prima dell'invio."></textarea>
 
   <label>Diagnosi Principale</label>
   <input type="text" id="inp_diagnosi" placeholder='Es: "Sospetto minor stroke silviano destro a genesi indeterminata"'>
@@ -217,15 +213,17 @@ Non è necessario strutturarlo preventivamente."></textarea>
 <!-- ═══ STEP 2 — ANONIMIZZAZIONE ═══ -->
 <div class="panel" id="panel1">
   <div class="ptitle">Anonimizzazione</div>
-  <div class="psub">// step 02 — regex offline → revisiona → procedi</div>
-
-  <div class="ib acc">
-    Anonimizzazione con pattern regex — gira nel browser, <strong style="color:var(--text);">zero rete, zero trasmissione dati.</strong> Pattern configurabili nelle Impostazioni.
-  </div>
+  <div class="psub">// step 02 — boilerplate strip → regex offline → revisiona</div>
 
   <div id="anonStatus" class="card" style="display:flex;align-items:center;gap:10px;padding:12px 14px;">
     <span class="spin" id="anonSpin" style="display:none;"></span>
     <span id="anonStatusTxt" style="font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--mid);">Pronto.</span>
+  </div>
+
+  <div id="bpReview" style="display:none;">
+    <div class="ib acc">✂ Blocchi rimossi automaticamente — <strong style="color:var(--text);">NON inviati al modello</strong>. Verifica qui sotto cosa è stato eliminato.</div>
+    <div id="bpList"></div>
+    <hr class="div">
   </div>
 
   <div id="repList"></div>
@@ -241,7 +239,7 @@ Non è necessario strutturarlo preventivamente."></textarea>
     </div>
   </div>
 
-  <div class="ib red">⚠ Verifica il testo a destra. Correggi manualmente qualsiasi nome o dato rimasto prima di procedere.</div>
+  <div class="ib red">⚠ Verifica il testo a destra. Correggi manualmente qualsiasi dato rimasto prima di procedere.</div>
 
   <div class="btn-row">
     <button class="btn btn-g" onclick="goTo(0)">← Indietro</button>
@@ -252,12 +250,12 @@ Non è necessario strutturarlo preventivamente."></textarea>
 <!-- ═══ STEP 3 — GENERAZIONE ═══ -->
 <div class="panel" id="panel2">
   <div class="ptitle">Generazione</div>
-  <div class="psub">// step 03 — configura e genera la lettera</div>
+  <div class="psub">// step 03 — stima costo → genera</div>
 
   <div class="card">
     <div class="ctitle">API Key Anthropic</div>
     <input type="password" id="apiKeyInput" placeholder="sk-ant-...  (solo in memoria di sessione, mai su disco)">
-    <div class="an"><span>ℹ</span><span>Usata solo per questa sessione. Mai salvata. Ottenibile su console.anthropic.com — deposito minimo $5, ~200–300 lettere per lettera completa.</span></div>
+    <div class="an"><span>ℹ</span><span>Usata solo per questa sessione. Mai salvata. Ottenibile su console.anthropic.com.</span></div>
   </div>
 
   <div class="card">
@@ -265,7 +263,7 @@ Non è necessario strutturarlo preventivamente."></textarea>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
       <div>
         <label>Modello</label>
-        <select id="modelSelect">
+        <select id="modelSelect" onchange="updateTokenPanel()">
           <option value="claude-haiku-4-5-20251001">claude-haiku-4-5 — economico, veloce</option>
           <option value="claude-sonnet-4-6" selected>claude-sonnet-4-6 — migliore qualità</option>
         </select>
@@ -278,23 +276,30 @@ Non è necessario strutturarlo preventivamente."></textarea>
     </div>
   </div>
 
-  <div class="card">
-    <div class="ctitle">Prompt di Sistema — modificabile</div>
-    <textarea id="systemPrompt" rows="10" style="font-size:11px;"></textarea>
+  <!-- ── LIVE TOKEN COST BREAKDOWN ── -->
+  <div class="tok-panel" id="tokPanel">
+    <div class="ctitle" style="margin-bottom:14px;">
+      Stima Token & Costo
+      <span id="cacheActiveBadge" class="chip c-blue" style="margin-left:8px;display:none;">⚡ Cache Attiva</span>
+    </div>
+    <div id="tokRows">
+      <div style="font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--dim);">Completa gli Step 1–2 per vedere la stima.</div>
+    </div>
   </div>
 
-  <!-- FULL PROMPT VIEWER -->
+  <div class="card">
+    <div class="ctitle">Prompt di Sistema — modificabile</div>
+    <textarea id="systemPrompt" rows="8" style="font-size:11px;"></textarea>
+  </div>
+
   <div class="card">
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;flex-wrap:wrap;gap:8px;">
-      <div class="ctitle" style="margin:0;">Prompt Completo — Copia per qualsiasi AI</div>
+      <div class="ctitle" style="margin:0;">Prompt Completo</div>
       <div style="display:flex;gap:7px;flex-wrap:wrap;">
         <button class="btn btn-g" style="font-size:10px;padding:5px 11px;" onclick="refreshPrompt()">↺ Aggiorna</button>
         <button class="btn btn-g" style="font-size:10px;padding:5px 11px;" onclick="copyFull()">⎘ Tutto</button>
         <button class="btn btn-g" style="font-size:10px;padding:5px 11px;" onclick="copyUser()">⎘ Solo User</button>
       </div>
-    </div>
-    <div class="ib" style="margin-bottom:10px;">
-      Copia il prompt e incollalo su <strong style="color:var(--text);">ChatGPT, Gemini, Copilot</strong> o qualsiasi altro AI. Il <strong style="color:var(--accent);">System</strong> va nelle istruzioni di sistema, lo <strong style="color:var(--accent);">User</strong> nel campo messaggio.
     </div>
     <div class="tabs">
       <button class="tab active" id="tabFull"   onclick="showTab('full')">Completo</button>
@@ -302,10 +307,9 @@ Non è necessario strutturarlo preventivamente."></textarea>
       <button class="tab"        id="tabUser"   onclick="showTab('user')">User</button>
     </div>
     <div style="position:relative;">
-      <textarea id="promptView" readonly rows="14" style="font-size:11px;background:var(--surface2);color:var(--dim);cursor:default;">Clicca "Aggiorna" per assemblare il prompt completo.</textarea>
+      <textarea id="promptView" readonly rows="12" style="font-size:11px;background:var(--surface2);color:var(--dim);cursor:default;"></textarea>
       <div class="cc" id="copyConfirm">✓ Copiato!</div>
     </div>
-    <div style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--dim);margin-top:6px;" id="tokEst"></div>
   </div>
 
   <div class="btn-row">
@@ -323,7 +327,9 @@ Non è necessario strutturarlo preventivamente."></textarea>
   <div class="ptitle">Lettera Generata</div>
   <div class="psub">// step 04 — revisiona, stampa, copia</div>
 
-  <div class="ib green">✓ Lettera generata. Sostituisci i placeholder <code style="background:var(--surface3);padding:1px 5px;border-radius:3px;">[PAZIENTE_NOME]</code>, <code style="background:var(--surface3);padding:1px 5px;border-radius:3px;">[DATA_NASCITA]</code> ecc. con i dati reali prima di stampare.</div>
+  <div class="ib green">✓ Sostituisci i placeholder <code style="background:var(--surface3);padding:1px 5px;border-radius:3px;">[PAZIENTE_NOME]</code>, <code style="background:var(--surface3);padding:1px 5px;border-radius:3px;">[DATA_NASCITA]</code> ecc. con i dati reali prima di stampare.</div>
+
+  <div id="usageInfo" style="display:none;" class="ib blue"></div>
 
   <div id="letterOut" class="paper">—</div>
 
@@ -337,10 +343,10 @@ Non è necessario strutturarlo preventivamente."></textarea>
 <!-- ═══ STEP 5 — IMPOSTAZIONI ═══ -->
 <div class="panel" id="panel4">
   <div class="ptitle">Impostazioni</div>
-  <div class="psub">// config — intestazione, regex, stile</div>
+  <div class="psub">// config — intestazione, firma, regex</div>
 
   <div class="card">
-    <div class="ctitle">Intestazione Lettera</div>
+    <div class="ctitle">Intestazione & Firme</div>
     <label>Città</label><input type="text" id="cfg_citta" placeholder="Es: Padova">
     <label>U.O. / Reparto</label><input type="text" id="cfg_reparto" placeholder="Es: U.O. di Neurologia">
     <label>Firma — Medico in Formazione Specialistica</label><input type="text" id="cfg_dott" placeholder="Es: Dott. [COGNOME]">
@@ -348,27 +354,72 @@ Non è necessario strutturarlo preventivamente."></textarea>
   </div>
 
   <div class="card">
-    <div class="ctitle">Pattern Regex Anonimizzazione</div>
-    <div class="ib" style="margin-bottom:10px;">
-      Pattern aggiuntivi in formato JSON per ID locali e formati specifici del tuo ospedale. Questi si aggiungono ai pattern base già inclusi (CF, telefono, DOB, titoli+nomi, strutture).
-    </div>
-    <textarea id="cfg_regex" rows="6" placeholder='Formato JSON array, es:
-[
+    <div class="ctitle">Pattern Regex Anonimizzazione Custom</div>
+    <div class="ib" style="margin-bottom:10px;">Pattern aggiuntivi in JSON. I pattern base (CF, telefono, date, titoli+nomi, strutture, intestazioni) sono già inclusi.</div>
+    <textarea id="cfg_regex" rows="5" placeholder='[
   {"pattern": "NHI:\\s*[A-Z]{3}\\d{4}", "replace": "[ID_PAZIENTE]"},
   {"pattern": "cartella\\s*n\\.?\\s*\\d+", "replace": "[CARTELLA]"}
 ]'></textarea>
   </div>
 
-  <div class="card">
-    <div class="ctitle">Lettere Esempio — Few-Shot Stile</div>
-    <div class="ib" style="margin-bottom:10px;">
-      Incolla 1–2 tue lettere precedenti <strong style="color:var(--text);">già anonimizzate</strong>. Il modello replicherà il tuo stile. Non vengono mai inviate insieme ai dati del paziente corrente — sono incluse solo come riferimento stilistico nel prompt.
-    </div>
-    <textarea id="cfg_examples" rows="14" placeholder="Incolla qui lettere di dimissione precedenti già anonimizzate..."></textarea>
+  <div class="btn-row">
+    <button class="btn btn-p" onclick="saveBaseSettings()">✓ Salva</button>
+  </div>
+</div>
+
+<!-- ═══ STEP 6 — LIBRERIA STILI ═══ -->
+<div class="panel" id="panel5">
+  <div class="ptitle">Libreria Stili</div>
+  <div class="psub">// template persistenti — fingerprint + prompt caching</div>
+
+  <div class="ib blue">
+    <strong style="color:var(--text);">Strategia token ottimale:</strong> ogni template viene salvato come <em>fingerprint compresso</em> (~150 token) invece della lettera completa (~2000 token). Al momento della generazione, il blocco fingerprint viene marcato con <code style="background:var(--surface3);padding:1px 4px;border-radius:2px;">cache_control</code> — Anthropic lo memorizza e le chiamate successive costano solo il <strong style="color:var(--text);">10% del prezzo input</strong> per quella sezione. Templates salvati in <code style="background:var(--surface3);padding:1px 4px;border-radius:2px;">localStorage</code> — persistono tra sessioni.
   </div>
 
-  <div class="btn-row">
-    <button class="btn btn-p" onclick="saveSettings()">✓ Salva per questa sessione</button>
+  <!-- Template library grid -->
+  <div class="card">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
+      <div class="ctitle" style="margin:0;">Templates Salvati</div>
+      <div style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--dim);" id="libStats"></div>
+    </div>
+    <div id="tplGrid" class="tpl-grid"></div>
+    <div id="noTplMsg" class="ib" style="margin:0;">Nessun template ancora. Aggiungine uno qui sotto.</div>
+  </div>
+
+  <!-- Add new template -->
+  <div class="card">
+    <div class="ctitle">Aggiungi / Importa Template</div>
+    <div class="ib purple" style="margin-bottom:12px;">
+      <strong style="color:var(--text);">Due modi:</strong><br>
+      1. <strong style="color:var(--text);">Manuale</strong> — scrivi direttamente le frasi-chiave del tuo stile nelle sezioni sotto (~150 token totali).<br>
+      2. <strong style="color:var(--text);">Auto-estrazione</strong> — incolla una lettera già anonimizzata e Haiku la comprime automaticamente (richiede API key).
+    </div>
+
+    <label>Nome Template</label>
+    <input type="text" id="newTplName" placeholder='Es: "Neurologia — Stroke", "Psichiatria — Consulenza"'>
+
+    <div style="margin-top:14px;">
+      <div style="display:flex;gap:8px;margin-bottom:10px;flex-wrap:wrap;">
+        <button class="btn btn-g" style="font-size:10px;" onclick="addTplSection('Apertura')">+ Apertura</button>
+        <button class="btn btn-g" style="font-size:10px;" onclick="addTplSection('Decorso tipo')">+ Decorso tipo</button>
+        <button class="btn btn-g" style="font-size:10px;" onclick="addTplSection('Terapia tipo')">+ Terapia tipo</button>
+        <button class="btn btn-g" style="font-size:10px;" onclick="addTplSection('Chiusura')">+ Chiusura</button>
+        <button class="btn btn-g" style="font-size:10px;" onclick="addTplSection('Custom')">+ Sezione custom</button>
+      </div>
+      <div id="newTplSections"></div>
+    </div>
+
+    <hr class="div">
+    <div class="ctitle">Oppure — Importa da lettera completa</div>
+    <textarea id="tplImportLetter" rows="7" placeholder="Incolla una lettera già anonimizzata — Haiku la comprime in ~150 token preservando solo lo stile..."></textarea>
+    <div class="btn-row" style="margin-top:10px;">
+      <button class="btn btn-g" onclick="autoExtractTemplate()">
+        <span class="spin" id="tplExtSpin" style="display:none;"></span>
+        ✦ Auto-estrai fingerprint
+      </button>
+      <button class="btn btn-p" onclick="saveNewTemplate()">✓ Salva Template</button>
+    </div>
+    <div id="tplExtStatus" style="margin-top:8px;font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--dim);display:none;"></div>
   </div>
 </div>
 
@@ -379,9 +430,20 @@ Non è necessario strutturarlo preventivamente."></textarea>
 'use strict';
 
 // ═══════════════════════════════════════════════════
+// PRICING TABLE (per 1M tokens, USD)
+// ═══════════════════════════════════════════════════
+const PRICING = {
+  'claude-sonnet-4-6':        { in: 3.00,  in_cache_write: 3.75, in_cache_read: 0.30,  out: 15.00 },
+  'claude-haiku-4-5-20251001':{ in: 0.80,  in_cache_write: 1.00, in_cache_read: 0.08,  out: 4.00  },
+};
+
+// ═══════════════════════════════════════════════════
 // STATE
 // ═══════════════════════════════════════════════════
-const S = { rawText:'', anonText:'', letter:'' };
+const S = { rawText:'', cleanText:'', anonText:'', letter:'', strippedBlocks:[], activeTemplateId: null };
+
+// New template builder sections (transient)
+let newTplSections = [];
 
 const DEFAULT_SYS = `Sei un assistente esperto in documentazione medica ospedaliera italiana.
 Genera una lettera di dimissione strutturata in italiano formale clinico.
@@ -404,81 +466,142 @@ function goTo(i) {
   document.querySelectorAll('.ni').forEach(n => n.classList.remove('active'));
   document.getElementById('panel' + i).classList.add('active');
   document.getElementById('nav' + i).classList.add('active');
+  if (i === 2) updateTokenPanel();
+  if (i === 5) renderLibrary();
 }
 
+// ═══════════════════════════════════════════════════
+// BOILERPLATE STRIPPER
+// ═══════════════════════════════════════════════════
+const BOILERPLATE_PATTERNS = [
+  { re:/^Regione\s+\w+\s*$/im,                                                      tag:'Intestazione Regione' },
+  { re:/^AZIENDA\s+OSPEDALE[^\n]*/im,                                               tag:'Intestazione Azienda' },
+  { re:/^Azienda\s+Ospedaliera[^\n]*/im,                                            tag:'Intestazione Azienda' },
+  { re:/^AULSS\s*\d*[^\n]*/im,                                                      tag:'Intestazione AULSS' },
+  { re:/^ULSS\s*\d*[^\n]*/im,                                                       tag:'Intestazione ULSS' },
+  { re:/^U\.?O\.?[CS]?\.?\s+[A-ZÀÈÉÌÍÒÓÙÚ][^\n]{3,60}$/im,                       tag:'U.O.C. / Reparto' },
+  { re:/^Direttore[:\s]+[^\n]+$/im,                                                 tag:'Direttore' },
+  { re:/^Responsabile[:\s]+[^\n]+$/im,                                              tag:'Responsabile' },
+  { re:/per il ricovero\s+[\d\/x]+\s+in\s+regime\s+\w+[^\n]*/i,                   tag:'Metadato ricovero' },
+  { re:/^Ricovero\s*(?:n\.|numero)?\s*[\d\/x]+[^\n]*/im,                           tag:'Numero ricovero' },
+  { re:/RICOVERO\s+[\dx\/]+[^\n]*/i,                                                tag:'Numero ricovero' },
+  { re:/^CONSULENZA\s+SPECIALISTICA[^\n]*/im,                                       tag:'Tipo documento' },
+  { re:/^LETTERA\s+DI\s+DIMISSIONE[^\n]*/im,                                        tag:'Tipo documento' },
+  { re:/^REFERTO[^\n]*/im,                                                           tag:'Tipo documento' },
+  { re:/^Paziente\s*:?\s*[^\n]*\n?(?:Data\s+di\s+Nascita\s*:?\s*[^\n]*)?/im,      tag:'Metadato paziente' },
+  { re:/^Data\s+di\s+(?:Nascita|nascita)\s*:?\s*[^\n]*$/im,                        tag:'Data nascita header' },
+  { re:/^Risposta\s*-\s*del\s+\d{1,2}\/\d{2}\/\d{4}[^\n]*/im,                     tag:'Intestazione risposta' },
+  { re:/Pagina\s+\d+\s*\/\s*\d+[^\n]*/gi,                                          tag:'Numero pagina' },
+  { re:/Pag\.\s*\d+\s*di\s*\d+[^\n]*/gi,                                           tag:'Numero pagina' },
+  { re:/(?:Consulenza\s+VIS\s+\w+|Medico\s+richiedente\s*:)[^\n]*/gi,             tag:'Metadato richiesta' },
+  { re:/Medico\s+refertante[^\n]*/gi,                                               tag:'Metadato refertante' },
+  { re:/Richiesta\s+in\s+data[^\n]*/gi,                                            tag:'Metadato richiesta' },
+  { re:/Quesito\s*:[^\n]*/gi,                                                       tag:'Quesito' },
+  { re:/[A-ZÀÈÉÌÍÒÓÙÚ]{2,}\s+[A-ZÀÈÉÌÍÒÓÙÚ]{2,}\s*[-–]\s*RICOVERO[^\n]*/g,     tag:'Footer paziente' },
+  { re:/(?:[A-ZÀÈÉÌÍÒÓÙÚ]{2,}\s+){1,3}:\s*:\s*(?:[A-ZÀÈÉÌÍÒÓÙÚ]{2,}\s*)+$/gm,  tag:'Footer duplicato' },
+];
+
+function stripBoilerplate(text) {
+  const strippedBlocks = [];
+  let result = text;
+  for (const p of BOILERPLATE_PATTERNS) {
+    if (p.re.global) p.re.lastIndex = 0;
+    const matches = [...result.matchAll(p.re)];
+    for (const m of matches) {
+      const t = m[0].trim();
+      if (t.length > 2 && !strippedBlocks.find(b => b.text === t))
+        strippedBlocks.push({ text: t, tag: p.tag });
+    }
+    result = result.replace(p.re, '');
+  }
+  return { clean: result.replace(/\n{3,}/g, '\n\n').trim(), strippedBlocks };
+}
+
+// ═══════════════════════════════════════════════════
+// PIPELINE
+// ═══════════════════════════════════════════════════
 function goToAnon() {
   const raw = document.getElementById('inp_raw').value.trim();
   if (!raw) { alert('Incolla prima il testo clinico nello Step 1.'); return; }
   S.rawText = raw;
   goTo(1);
-  runRegex();
+  runPipeline();
 }
 
-// ═══════════════════════════════════════════════════
-// REGEX ANONYMIZER (fully offline)
-// ═══════════════════════════════════════════════════
-function runRegex() {
-  const spin  = document.getElementById('anonSpin');
-  const stxt  = document.getElementById('anonStatusTxt');
+function runPipeline() {
+  const spin = document.getElementById('anonSpin');
+  const stxt = document.getElementById('anonStatusTxt');
   const scard = document.getElementById('anonStatus');
   spin.style.display = 'inline-block';
-  stxt.textContent   = 'Regex: elaborazione in corso...';
+  stxt.textContent = 'Strip boilerplate + anonimizzazione regex...';
   scard.style.borderColor = 'var(--border)';
-
   setTimeout(() => {
-    const { text, reps } = applyRegex(S.rawText);
-    renderAnonResult(text, reps);
-    stxt.textContent = `✓ Regex completato — ${reps.length} sostituzion${reps.length===1?'e':'i'} effettuate. Verifica il testo a destra.`;
+    const { clean, strippedBlocks } = stripBoilerplate(S.rawText);
+    S.cleanText = clean; S.strippedBlocks = strippedBlocks;
+    const { text: anonText, reps } = applyRegex(clean);
+    renderBoilerplateReview(strippedBlocks);
+    renderAnonResult(anonText, reps);
+    const saved = S.rawText.length - clean.length;
+    stxt.textContent = `✓ ${strippedBlocks.length} blocchi boilerplate rimossi (−${saved} char) · ${reps.length} identificatori anonimizzati`;
     scard.style.borderColor = 'var(--green)';
     spin.style.display = 'none';
   }, 60);
 }
 
-function applyRegex(text) {
-  const reps = [];
-  let result = text;
+function renderBoilerplateReview(blocks) {
+  const wrap = document.getElementById('bpReview');
+  const list = document.getElementById('bpList');
+  if (!blocks.length) { wrap.style.display = 'none'; return; }
+  wrap.style.display = 'block';
+  list.innerHTML = blocks.map(b =>
+    `<div class="bpblock"><span class="bptag">✂ ${esc(b.tag)}</span>${esc(b.text)}</div>`
+  ).join('');
+}
 
+// ═══════════════════════════════════════════════════
+// REGEX ANONYMIZER
+// ═══════════════════════════════════════════════════
+function applyRegex(text) {
+  const reps = []; let result = text;
   const patterns = [
-    { re:/\b[A-Z]{6}\d{2}[A-Z]\d{2}[A-Z]\d{3}[A-Z]\b/gi,                                          label:'Codice Fiscale', tag:'[CODICE_FISCALE]' },
-    { re:/\bnata?\s+(?:il\s+)?\d{1,2}[\/\-.]\d{1,2}[\/\-.]\d{2,4}\b/gi,                           label:'Data Nascita',   tag:'[DATA_NASCITA]' },
-    { re:/\b(?:nato|nata)\s+(?:il\s+)?\d{1,2}[\/\-.]\d{1,2}[\/\-.]\d{2,4}\b/gi,                  label:'Data Nascita',   tag:'[DATA_NASCITA]' },
-    { re:/(?:\+39\s?)?(?:0\d{1,4}[\s\-]?\d{5,8}|\d{3}[\s\-]\d{3}[\s\-]\d{4}|\b\d{10}\b)/g,      label:'Telefono',       tag:'[TELEFONO]' },
-    { re:/[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}/g,                                     label:'Email',          tag:'[EMAIL]' },
-    { re:/\b(?:matricola|NPI|NHI|MRN|cartella\s*n\.?)\s*[:\s]+[A-Z0-9\-]+/gi,                     label:'ID',             tag:'[ID_PAZIENTE]' },
+    { re:/\b[A-Z]{6}\d{2}[A-Z]\d{2}[A-Z]\d{3}[A-Z]\b/gi,              label:'Codice Fiscale', tag:'[CODICE_FISCALE]' },
+    { re:/\bnata?\s+(?:il\s+)?\d{1,2}[\/\-.]\d{1,2}[\/\-.]\d{2,4}\b/gi,label:'Data Nascita',  tag:'[DATA_NASCITA]' },
+    { re:/\b(?:nato|nata)\s+\d{1,2}[\/\-.]\d{1,2}[\/\-.]\d{2,4}\b/gi, label:'Data Nascita',  tag:'[DATA_NASCITA]' },
+    { re:/\b(\d{1,2})[\/\-\.](\d{1,2})[\/\-\.](\d{2}|\d{4})\b/g,      label:'Data',           tag:'[DATA]' },
+    { re:/(?:\+39\s?)?(?:0\d{1,4}[\s\-]?\d{5,8}|\d{3}[\s\-]\d{3}[\s\-]\d{4}|\b\d{10}\b)/g, label:'Telefono', tag:'[TELEFONO]' },
+    { re:/[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}/g,          label:'Email',          tag:'[EMAIL]' },
+    { re:/\b(?:ricovero|cartella|pratica|SDO)\s*(?:n\.|numero|nr\.?)?\s*[\dx\/]+/gi, label:'Nr.Ricovero', tag:'[NR_RICOVERO]' },
+    { re:/\b(?:matricola|NPI|NHI|MRN)\s*[:\s]+[A-Z0-9\-]+/gi,          label:'ID',             tag:'[ID_PAZIENTE]' },
     { re:/\b(?:Dott(?:\.?ssa?)?\.?|Prof(?:\.?ssa?)?\.?|Dr\.?)\s+[A-ZÀÈÉÌÍÒÓÙÚ][a-zàèéìíòóùú]+(?:\s+[A-ZÀÈÉÌÍÒÓÙÚ][a-zàèéìíòóùú]+)?\b/g, label:'Medico', tag:'[MEDICO]' },
     { re:/\bSig(?:\.?ra?\.?)\s+[A-ZÀÈÉÌÍÒÓÙÚ][a-zàèéìíòóùú]+(?:\s+[A-ZÀÈÉÌÍÒÓÙÚ][a-zàèéìíòóùú]+){0,2}\b/g, label:'Paziente', tag:'[PAZIENTE_NOME]' },
     { re:/\b(?:Ospedale|Clinica|Policlinico|ULSS|AULSS|Azienda\s+Ospedaliera|A\.O\.)\s+[A-ZÀÈÉÌÍÒÓÙÚ][a-zA-ZÀ-ú\s\.]{2,30}(?=[\s,\.\n\r])/g, label:'Struttura', tag:'[STRUTTURA]' },
+    { re:/\bnosocomio\s+di\s+[A-ZÀÈÉÌÍÒÓÙÚ][a-zàèéìíòóùú]+/gi,        label:'Struttura',      tag:'[STRUTTURA]' },
   ];
-
   try {
     const raw = document.getElementById('cfg_regex').value.trim();
     if (raw) JSON.parse(raw).forEach(cp =>
       patterns.push({ re: new RegExp(cp.pattern, 'gi'), label:'Custom', tag: cp.replace }));
   } catch(e) {}
-
   for (const p of patterns) {
+    if (p.re.global) p.re.lastIndex = 0;
     const matches = [...result.matchAll(p.re)];
     for (const m of matches)
       if (m[0].trim().length > 1 && !reps.find(r => r.orig === m[0]))
         reps.push({ orig: m[0], repl: p.tag, type: p.label });
     result = result.replace(p.re, p.tag);
   }
-
   const ctxRe = /\b((?:con|dalla?|dal|refertato\s+da|visitata?\s+da|seguita?\s+da|eseguita?\s+da|infermier[ae])\s+)([A-ZÀÈÉÌÍÒÓÙÚ][a-zàèéìíòóùú]{2,})\b/g;
   for (const m of [...result.matchAll(ctxRe)])
-    if (!reps.find(r => r.orig === m[2]))
-      reps.push({ orig: m[2], repl: '[NOME]', type: 'Nome contestuale' });
+    if (!reps.find(r => r.orig === m[2])) reps.push({ orig: m[2], repl:'[NOME]', type:'Nome contestuale' });
   result = result.replace(ctxRe, '$1[NOME]');
-
   return { text: result, reps };
 }
 
 function renderAnonResult(anonText, reps) {
   document.getElementById('anonText').value = anonText;
-
   const listEl = document.getElementById('repList');
   if (!reps.length) {
-    listEl.innerHTML = '<div class="ib green" style="margin-bottom:11px;">✓ Nessun identificatore strutturato rilevato dai pattern regex. Verifica manualmente il testo.</div>';
+    listEl.innerHTML = '<div class="ib green" style="margin-bottom:11px;">✓ Nessun identificatore rilevato dai pattern base. Verifica manualmente.</div>';
   } else {
     let h = `<div class="rl"><div class="rtitle">${reps.length} sostituzion${reps.length===1?'e':'i'} <span class="chip c-w" style="margin-left:6px;">{ } Regex Offline</span></div>`;
     for (const r of reps)
@@ -486,51 +609,261 @@ function renderAnonResult(anonText, reps) {
     h += '</div>';
     listEl.innerHTML = h;
   }
-
-  let hi = esc(S.rawText);
+  let hi = esc(S.cleanText);
   for (const r of reps)
     hi = hi.replace(new RegExp(escR(esc(r.orig)),'g'), `<span class="redacted">${esc(r.orig)}</span>`);
   document.getElementById('origText').innerHTML = hi;
 }
 
 // ═══════════════════════════════════════════════════
-// PROCEED TO GENERATE
+// TEMPLATE LIBRARY (localStorage)
 // ═══════════════════════════════════════════════════
-function proceedToGenerate() {
-  S.anonText = document.getElementById('anonText').value;
-  if (!S.anonText.trim()) { alert('Nessun testo anonimizzato. Torna allo Step 1.'); return; }
-  if (!document.getElementById('systemPrompt').value.trim())
-    document.getElementById('systemPrompt').value = DEFAULT_SYS;
-  goTo(2);
-  setTimeout(refreshPrompt, 100);
+function loadLibrary() {
+  try { return JSON.parse(localStorage.getItem('letteraai_lib') || '[]'); } catch(e) { return []; }
+}
+function saveLibrary(lib) {
+  localStorage.setItem('letteraai_lib', JSON.stringify(lib));
+}
+function renderLibrary() {
+  const lib = loadLibrary();
+  const grid = document.getElementById('tplGrid');
+  const noMsg = document.getElementById('noTplMsg');
+  const stats = document.getElementById('libStats');
+  const totalTok = lib.reduce((a, t) => a + Math.round((t.fingerprint||'').length/4), 0);
+  stats.textContent = `${lib.length} template · ~${totalTok} token totali`;
+  if (!lib.length) { grid.innerHTML=''; noMsg.style.display='block'; return; }
+  noMsg.style.display = 'none';
+  grid.innerHTML = lib.map(t => {
+    const tok = Math.round((t.fingerprint||'').length/4);
+    const isActive = S.activeTemplateId === t.id;
+    return `<div class="tpl-card${isActive?' active-tpl':''}" onclick="selectTemplate('${t.id}')">
+      <button class="tpl-del" onclick="event.stopPropagation();deleteTemplate('${t.id}')">✕</button>
+      <div class="tpl-name">${esc(t.name)}</div>
+      <div class="tpl-meta">${esc(t.type||'Generico')}</div>
+      <span class="tpl-tok">~${tok} token</span>
+      <span class="tpl-cached-badge">⚡ cacheable</span>
+    </div>`;
+  }).join('');
+}
+
+function selectTemplate(id) {
+  S.activeTemplateId = (S.activeTemplateId === id) ? null : id;
+  renderLibrary();
+  updateTokenPanel();
+  // Show active template in status badge area
+  const lib = loadLibrary();
+  const t = lib.find(x => x.id === id);
+  if (t && S.activeTemplateId === id)
+    document.getElementById('statusBadge').textContent = `📚 ${t.name}`;
+  else
+    document.getElementById('statusBadge').textContent = '● Pronto';
+}
+
+function deleteTemplate(id) {
+  if (!confirm('Eliminare questo template?')) return;
+  if (S.activeTemplateId === id) S.activeTemplateId = null;
+  const lib = loadLibrary().filter(t => t.id !== id);
+  saveLibrary(lib);
+  renderLibrary();
+  updateTokenPanel();
+}
+
+function getActiveFingerprint() {
+  if (!S.activeTemplateId) return '';
+  const lib = loadLibrary();
+  const t = lib.find(x => x.id === S.activeTemplateId);
+  return t ? (t.fingerprint || '') : '';
+}
+
+// ── New template builder ──
+function addTplSection(label) {
+  const id = 'ntpl_' + Date.now();
+  newTplSections.push({ id, label, text:'' });
+  renderNewTplSections();
+}
+function deleteNewTplSection(id) {
+  newTplSections = newTplSections.filter(s => s.id !== id);
+  renderNewTplSections();
+}
+function renderNewTplSections() {
+  const el = document.getElementById('newTplSections');
+  if (!newTplSections.length) { el.innerHTML=''; return; }
+  el.innerHTML = newTplSections.map(s => `
+    <div style="margin-bottom:10px;">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;">
+        <span style="font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--accent);text-transform:uppercase;letter-spacing:.1em;">${esc(s.label)}</span>
+        <button class="fp-del" style="font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--red);cursor:pointer;background:none;border:none;" onclick="deleteNewTplSection('${s.id}')">✕</button>
+      </div>
+      <textarea rows="2" style="font-size:11px;margin-top:0;" placeholder="Frasi-chiave del tuo stile per '${s.label}'..." oninput="updateNewTplSection('${s.id}',this.value)">${esc(s.text||'')}</textarea>
+    </div>`).join('');
+}
+function updateNewTplSection(id, val) {
+  const s = newTplSections.find(x => x.id === id);
+  if (s) s.text = val;
+}
+
+function buildFingerprintFromSections(sections) {
+  const active = sections.filter(s => s.text && s.text.trim());
+  if (!active.length) return '';
+  let fp = '';
+  for (const s of active) fp += `[${s.label}]\n${s.text.trim()}\n\n`;
+  return fp.trim();
+}
+
+async function autoExtractTemplate() {
+  const key = document.getElementById('apiKeyInput').value.trim();
+  const letter = document.getElementById('tplImportLetter').value.trim();
+  if (!letter) { alert('Incolla prima una lettera da comprimere.'); return; }
+  if (!key)    { alert('Inserisci la API key nella sezione Generazione.'); return; }
+
+  const spin = document.getElementById('tplExtSpin');
+  const status = document.getElementById('tplExtStatus');
+  spin.style.display = 'inline-block';
+  status.style.display = 'block';
+  status.style.color = 'var(--mid)';
+  status.textContent = 'Estrazione fingerprint in corso con Haiku...';
+
+  try {
+    const resp = await fetch('https://api.anthropic.com/v1/messages', {
+      method:'POST',
+      headers:{ 'Content-Type':'application/json','x-api-key':key,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true' },
+      body: JSON.stringify({
+        model:'claude-haiku-4-5-20251001', max_tokens:500,
+        system:`Estrai lo stile di scrittura da una lettera di dimissione medica italiana.
+Restituisci SOLO JSON con queste chiavi (solo quelle presenti nella lettera):
+{"apertura":"frase tipo (max 2 righe)","decorso":"1-2 frasi tipo registro clinico","terapia":"1 riga tipo presentazione terapia","chiusura":"frase tipo (max 2 righe)"}
+IMPORTANTE: solo stile/registro, NON dati clinici. Sostituisci dati specifici con [...]. Solo JSON, nessun testo extra.`,
+        messages:[{ role:'user', content:`Lettera:\n\n${letter}` }],
+      }),
+    });
+    if (!resp.ok) { const e = await resp.json(); throw new Error(e.error?.message||`HTTP ${resp.status}`); }
+    const raw = (await resp.json()).content[0].text;
+    const parsed = JSON.parse(raw.replace(/```json|```/g,'').trim());
+    const map = { apertura:'Apertura', decorso:'Decorso tipo', terapia:'Terapia tipo', chiusura:'Chiusura' };
+    newTplSections = [];
+    for (const [k,label] of Object.entries(map))
+      if (parsed[k]) newTplSections.push({ id:'ntpl_'+Date.now()+'_'+k, label, text:parsed[k] });
+    renderNewTplSections();
+    document.getElementById('tplImportLetter').value = '';
+    const origTok = Math.round(letter.length/4);
+    const newTok = Math.round(buildFingerprintFromSections(newTplSections).length/4);
+    status.style.color='var(--green)';
+    status.textContent=`✓ ${newTplSections.length} sezioni estratte · da ~${origTok} a ~${newTok} token (−${Math.round((1-newTok/origTok)*100)}%)`;
+  } catch(err) {
+    status.style.color='var(--red)'; status.textContent='✗ '+err.message;
+  } finally { spin.style.display='none'; }
+}
+
+function saveNewTemplate() {
+  const name = document.getElementById('newTplName').value.trim();
+  if (!name) { alert('Inserisci un nome per il template.'); return; }
+  const fp = buildFingerprintFromSections(newTplSections);
+  if (!fp) { alert('Aggiungi almeno una sezione con del testo.'); return; }
+  const lib = loadLibrary();
+  lib.push({ id:'tpl_'+Date.now(), name, type: name, fingerprint: fp, createdAt: new Date().toISOString() });
+  saveLibrary(lib);
+  // Reset
+  newTplSections = [];
+  renderNewTplSections();
+  document.getElementById('newTplName').value = '';
+  document.getElementById('tplExtStatus').style.display='none';
+  renderLibrary();
+  alert(`Template "${name}" salvato.`);
+}
+
+// ═══════════════════════════════════════════════════
+// TOKEN BREAKDOWN PANEL
+// ═══════════════════════════════════════════════════
+function tok(str) { return Math.round((str||'').length / 4); }
+
+function updateTokenPanel() {
+  if (!S.anonText) return;
+  const model = document.getElementById('modelSelect').value;
+  const price = PRICING[model] || PRICING['claude-sonnet-4-6'];
+  const sysTxt   = document.getElementById('systemPrompt').value || DEFAULT_SYS;
+  const fp       = getActiveFingerprint();
+  const template = buildLetterTemplate();
+  const clinical = S.anonText;
+
+  const tSys      = tok(sysTxt);
+  const tFp       = tok(fp);
+  const tTemplate = tok(template);
+  const tClinical = tok(clinical);
+  const tOut      = 900; // estimated output
+  const tTotal    = tSys + tFp + tTemplate + tClinical;
+
+  const cacheActive = fp.length > 0;
+
+  // Cost calculation
+  // With caching: fp block is written once (1.25x), then read (0.1x)
+  // Without caching: everything at normal rate
+  const costNoCacheIn  = (tTotal / 1_000_000) * price.in;
+  const costCacheWrite = cacheActive ? ((tFp / 1_000_000) * price.in_cache_write) : 0;
+  const costCacheRead  = cacheActive ? ((tFp / 1_000_000) * price.in_cache_read) : 0;
+  const costNonCached  = ((tSys + tTemplate + tClinical) / 1_000_000) * price.in;
+  const costWithCacheFirstCall = costCacheWrite + costNonCached;
+  const costWithCacheSubseq    = costCacheRead  + costNonCached;
+  const costOut = (tOut / 1_000_000) * price.out;
+
+  const sections = [
+    { label:'System Prompt',   tokens: tSys,      color:'#7a6340', cached:false },
+    { label:'Fingerprint Stile', tokens: tFp,     color:'#6ea8c9', cached:cacheActive },
+    { label:'Template lettera',  tokens: tTemplate,color:'#7a7570', cached:false },
+    { label:'Testo clinico',     tokens: tClinical,color:'#c9a96e', cached:false },
+    { label:'Output stimato',    tokens: tOut,     color:'#6ec98a', cached:false },
+  ];
+
+  const maxTok = Math.max(...sections.map(s=>s.tokens), 1);
+
+  let html = `<div style="margin-bottom:12px;">`;
+  for (const s of sections) {
+    const pct = Math.round((s.tokens/maxTok)*100);
+    const costStr = s.label==='Output stimato'
+      ? `$${((s.tokens/1_000_000)*price.out).toFixed(4)}`
+      : `$${((s.tokens/1_000_000)*price.in).toFixed(4)}`;
+    html += `<div class="tok-row">
+      <span class="tok-label">${s.label}${s.cached?`<span class="tok-cached">⚡ cached</span>`:''}</span>
+      <div class="tok-bar-wrap"><div class="tok-bar" style="width:${pct}%;background:${s.color};"></div></div>
+      <span class="tok-val">${s.tokens.toLocaleString()} tok</span>
+      <span class="tok-cost" style="color:${s.cached?'var(--blue)':'var(--dim)'};">${costStr}</span>
+    </div>`;
+  }
+  html += `</div>`;
+
+  html += `<div class="tok-total-row">
+    <div class="tok-total-box">
+      <div class="tlabel">Senza caching</div>
+      <div class="tval">$${(costNoCacheIn+costOut).toFixed(4)}</div>
+      <div class="tsub">${(tTotal+tOut).toLocaleString()} token totali</div>
+    </div>
+    <div class="tok-total-box" style="${cacheActive?'border-color:var(--blue);':'}">
+      <div class="tlabel">${cacheActive?'Con caching (1ª chiamata)':'Con caching (no template)'}</div>
+      <div class="tval" style="color:${cacheActive?'var(--blue)':'var(--accent)'};">$${(costWithCacheFirstCall+costOut).toFixed(4)}</div>
+      <div class="tsub">${cacheActive?`Successive: $${(costWithCacheSubseq+costOut).toFixed(4)}`:'Seleziona un template per attivare'}</div>
+    </div>
+  </div>`;
+
+  if (cacheActive) {
+    const saving = ((costNoCacheIn - costWithCacheSubseq) / costNoCacheIn * 100).toFixed(0);
+    html += `<div class="tok-cache-note">⚡ Cache attiva — Il blocco fingerprint (${tFp} token) viene memorizzato da Anthropic. Dalla 2ª chiamata in poi risparmio stimato: <strong>${saving}%</strong> sul costo input.</div>`;
+  }
+
+  document.getElementById('tokRows').innerHTML = html;
+  document.getElementById('cacheActiveBadge').style.display = cacheActive ? 'inline-flex' : 'none';
 }
 
 // ═══════════════════════════════════════════════════
 // PROMPT BUILDER
 // ═══════════════════════════════════════════════════
-function buildUserPrompt() {
+function buildLetterTemplate() {
   const citta    = (document.getElementById('cfg_citta').value    || 'Padova').trim();
   const dott     = (document.getElementById('cfg_dott').value     || 'Dott. [NOME]').trim();
   const prof     = (document.getElementById('cfg_prof').value     || 'Prof. [NOME]').trim();
-  const examples = document.getElementById('cfg_examples').value.trim();
   const diagnosi = document.getElementById('inp_diagnosi').value.trim() || '[DIAGNOSI_PRINCIPALE]';
   const today    = new Date().toLocaleDateString('it-IT',{day:'2-digit',month:'2-digit',year:'numeric'});
+  return `## TEMPLATE LETTERA DI DIMISSIONE
 
-  let p = '';
-
-  if (examples)
-    p += `## ESEMPI DI STILE (riferimento stilistico SOLO — non copiare contenuto clinico)\n\n${examples}\n\n---\n\n`;
-
-  p += `## DATI CLINICI ANONIMIZZATI\n\n<clinical_input>\n${S.anonText}\n</clinical_input>\n\n---\n\n`;
-
-  p += `## TEMPLATE LETTERA DI DIMISSIONE
-
-Genera la lettera completa seguendo ESATTAMENTE questa struttura.
-
-ISTRUZIONI SPECIALI:
-— Il DECORSO CLINICO deve essere generato sintetizzando cronologicamente tutti i dati dell'input: accertamenti eseguiti, terapie avviate, evoluzione, ragionamento diagnostico-terapeutico. Prosa continua, 150-300 parole, passato remoto.
-— La TERAPIA ALLA DIMISSIONE deve corrispondere all'ultima terapia somministrata identificabile dall'input. Modificala solo se ci sono ragioni cliniche esplicite nei dati (es. DAPT → singola antiaggregante, sospensione antibiotico, titolazione).
-— Per dati assenti scrivi "Non documentato." — MAI inventare.
+Genera la lettera seguendo ESATTAMENTE questa struttura. Per dati assenti: "Non documentato." — MAI inventare.
 
 ---
 ${citta}, ${today}
@@ -543,51 +876,92 @@ Egregio Collega,
 "${diagnosi}"
 
 **Motivo del ricovero**
-[Prosa continua, passato remoto — usa i dati di presentazione dall'input]
+[Prosa continua, passato remoto — dati di presentazione dall'input]
 
-**Non farmacoallergie note.** [oppure allergie se documentate nell'input]
+**Non farmacoallergie note.** [oppure allergie se documentate]
 
-**Terapia domiciliare**: [farmaci pre-ricovero dall'input, se presenti]
+**Terapia domiciliare**: [farmaci pre-ricovero dall'input]
 
 **Anamnesi Patologica Remota**
-[Trattini per ogni voce — usa i dati APR dall'input]
+[Trattini per voce — dati APR dall'input]
 
 **Anamnesi Fisiologica/Sociale/Familiare**
-[Prosa concisa — usa i dati dall'input]
+[Prosa concisa — dati dall'input]
 
-**Esame neurologico all'ingresso**: [se presente nell'input — ometti altrimenti]
+**Esame neurologico all'ingresso**: [se presente — ometti altrimenti]
 
-**Esame obiettivo generale all'ingresso**: [se presente nell'input — ometti altrimenti]
+**Esame obiettivo generale all'ingresso**: [se presente — ometti altrimenti]
 
 Durante la degenza sono stati eseguiti i seguenti **esami di laboratorio:**
-[Lista strutturata — mantieni i valori numerici esatti dall'input]
+[Lista — mantieni valori numerici esatti dall'input]
 
-ed i seguenti **accertamenti strumentali** e le seguenti **valutazioni specialistiche**:
-[Lista strutturata — mantieni date e referti esatti dall'input]
+ed i seguenti **accertamenti strumentali** e **valutazioni specialistiche**:
+[Lista — mantieni date e referti esatti dall'input]
 
 **Decorso clinico**
-[GENERA prosa clinica continua sintetizzando i dati dell'input in ordine cronologico]
+[Prosa clinica 150-300 parole, passato remoto, sintesi cronologica dell'input]
 
-Alla dimissione [condizioni cliniche alla dimissione dall'input].
+Alla dimissione [condizioni cliniche alla dimissione].
 
 **Terapia alla dimissione:**
-[Trascrivi l'ultima terapia dall'input — farmaco, dose, frequenza. Applica modifiche solo se clinicamente motivate.]
+[Trascrivi ultima terapia dall'input — farmaco, dose, frequenza]
 
 [Follow-up e accertamenti pendenti dall'input]
 
-Si prega di presentarsi muniti degli appositi foglietti azzurri allegati alla lettera di dimissione.
+Si prega di presentarsi muniti degli appositi foglietti azzurri allegati.
 
-Sarà nostra cura fornire gli esiti degli accertamenti mediante Lettera di Completamento.
+Sarà nostra cura fornire gli esiti mediante Lettera di Completamento.
 
 [Raccomandazioni specifiche se presenti nell'input]
 
-Ringraziando per la collaborazione, rimaniamo a disposizione per qualsiasi chiarimento. Cordiali saluti.
+Ringraziando per la collaborazione, rimaniamo a disposizione. Cordiali saluti.
 
 ${dott.padEnd(46)}${prof}
 (Medico in formazione specialistica)${' '.repeat(14)}(Dirigente Medico)
 ---`;
+}
 
+function buildMessages() {
+  const fp = getActiveFingerprint();
+  let userContent = '';
+  if (fp) {
+    userContent += `## RIFERIMENTO STILISTICO — frasi-chiave del tuo stile (NON dati clinici reali)\n\n${fp}\n\n---\n\n`;
+  }
+  userContent += `## DATI CLINICI ANONIMIZZATI\n\n<clinical_input>\n${S.anonText}\n</clinical_input>\n\n---\n\n`;
+  userContent += buildLetterTemplate();
+
+  // If cache active, split into cacheable (fp block) + rest
+  if (fp) {
+    const fpBlock = `## RIFERIMENTO STILISTICO — frasi-chiave del tuo stile (NON dati clinici reali)\n\n${fp}\n\n---\n\n`;
+    const rest = `## DATI CLINICI ANONIMIZZATI\n\n<clinical_input>\n${S.anonText}\n</clinical_input>\n\n---\n\n` + buildLetterTemplate();
+    return [
+      { role:'user', content:[
+        { type:'text', text: fpBlock, cache_control:{ type:'ephemeral' } },
+        { type:'text', text: rest }
+      ]}
+    ];
+  }
+  return [{ role:'user', content: userContent }];
+}
+
+function buildUserPromptStr() {
+  const fp = getActiveFingerprint();
+  let p = '';
+  if (fp) p += `## RIFERIMENTO STILISTICO\n\n${fp}\n\n---\n\n`;
+  p += `## DATI CLINICI ANONIMIZZATI\n\n<clinical_input>\n${S.anonText}\n</clinical_input>\n\n---\n\n`;
+  p += buildLetterTemplate();
   return p;
+}
+
+// ═══════════════════════════════════════════════════
+// PROCEED TO GENERATE
+// ═══════════════════════════════════════════════════
+function proceedToGenerate() {
+  S.anonText = document.getElementById('anonText').value;
+  if (!S.anonText.trim()) { alert('Nessun testo. Torna allo Step 1.'); return; }
+  if (!document.getElementById('systemPrompt').value.trim())
+    document.getElementById('systemPrompt').value = DEFAULT_SYS;
+  goTo(2);
 }
 
 // ═══════════════════════════════════════════════════
@@ -595,37 +969,57 @@ ${dott.padEnd(46)}${prof}
 // ═══════════════════════════════════════════════════
 async function generateLetter() {
   const key = document.getElementById('apiKeyInput').value.trim();
-  if (!key)       { showErr('Inserisci la API key Anthropic.'); return; }
-  if (!S.anonText){ showErr('Nessun testo anonimizzato. Completa prima gli Step 1–2.'); return; }
+  if (!key)        { showErr('Inserisci la API key Anthropic.'); return; }
+  if (!S.anonText) { showErr('Nessun testo anonimizzato.'); return; }
 
-  const btn  = document.getElementById('genBtn');
+  const btn = document.getElementById('genBtn');
   const spin = document.getElementById('genSpin');
-  btn.disabled = true;
-  spin.style.display = 'inline-block';
+  btn.disabled = true; spin.style.display = 'inline-block';
   document.getElementById('genErr').style.display = 'none';
   document.getElementById('statusBadge').textContent = '⟳ Generando...';
 
+  const fp = getActiveFingerprint();
+  const headers = {
+    'Content-Type':'application/json','x-api-key':key,
+    'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true',
+  };
+  // Add beta header if using cache_control
+  if (fp) headers['anthropic-beta'] = 'prompt-caching-2024-07-31';
+
   try {
     const resp = await fetch('https://api.anthropic.com/v1/messages', {
-      method:'POST',
-      headers:{
-        'Content-Type':'application/json',
-        'x-api-key': key,
-        'anthropic-version':'2023-06-01',
-        'anthropic-dangerous-direct-browser-access':'true',
-      },
+      method:'POST', headers,
       body: JSON.stringify({
         model:       document.getElementById('modelSelect').value,
         max_tokens:  3500,
         temperature: parseInt(document.getElementById('tempSlider').value) / 10,
-        system:      document.getElementById('systemPrompt').value || DEFAULT_SYS,
-        messages:   [{ role:'user', content: buildUserPrompt() }],
+        system: [{ type:'text', text: document.getElementById('systemPrompt').value || DEFAULT_SYS,
+                   ...(fp ? { cache_control:{ type:'ephemeral' } } : {}) }],
+        messages: buildMessages(),
       }),
     });
 
     if (!resp.ok) { const e = await resp.json(); throw new Error(e.error?.message || `HTTP ${resp.status}`); }
+    const data = await resp.json();
+    S.letter = data.content[0].text;
 
-    S.letter = (await resp.json()).content[0].text;
+    // Show real usage stats
+    const u = data.usage || {};
+    const model = document.getElementById('modelSelect').value;
+    const price = PRICING[model] || PRICING['claude-sonnet-4-6'];
+    const inCost   = ((u.input_tokens||0)/1e6)*price.in;
+    const cacheCr  = ((u.cache_creation_input_tokens||0)/1e6)*price.in_cache_write;
+    const cacheRd  = ((u.cache_read_input_tokens||0)/1e6)*price.in_cache_read;
+    const outCost  = ((u.output_tokens||0)/1e6)*price.out;
+    const total    = inCost + cacheCr + cacheRd + outCost;
+
+    const usageEl = document.getElementById('usageInfo');
+    usageEl.style.display = 'block';
+    usageEl.innerHTML = `✓ Costo reale — input: ${u.input_tokens||0} tok ($${inCost.toFixed(4)})` +
+      (u.cache_creation_input_tokens ? ` · cache write: ${u.cache_creation_input_tokens} tok ($${cacheCr.toFixed(4)})` : '') +
+      (u.cache_read_input_tokens ? ` · cache read: ${u.cache_read_input_tokens} tok ($${cacheRd.toFixed(4)})` : '') +
+      ` · output: ${u.output_tokens||0} tok ($${outCost.toFixed(4)}) — <strong style="color:var(--text);">totale: $${total.toFixed(4)}</strong>`;
+
     document.getElementById('letterOut').textContent = S.letter;
     document.getElementById('statusBadge').textContent = '✓ Lettera generata';
     document.getElementById('nav3').classList.add('done');
@@ -634,10 +1028,7 @@ async function generateLetter() {
   } catch(err) {
     showErr('✗ ' + err.message);
     document.getElementById('statusBadge').textContent = '✗ Errore';
-  } finally {
-    btn.disabled = false;
-    spin.style.display = 'none';
-  }
+  } finally { btn.disabled=false; spin.style.display='none'; }
 }
 
 function showErr(msg) {
@@ -646,15 +1037,14 @@ function showErr(msg) {
 }
 
 // ═══════════════════════════════════════════════════
-// FULL PROMPT VIEWER
+// PROMPT VIEWER
 // ═══════════════════════════════════════════════════
 let pTab = 'full', pSys = '', pUsr = '';
 
 function showTab(t) {
   pTab = t;
-  ['full','system','user'].forEach(id => {
-    document.getElementById('tab'+id.charAt(0).toUpperCase()+id.slice(1)).classList.toggle('active', id===t);
-  });
+  ['full','system','user'].forEach(id =>
+    document.getElementById('tab'+id.charAt(0).toUpperCase()+id.slice(1)).classList.toggle('active', id===t));
   renderPromptView();
 }
 
@@ -662,55 +1052,36 @@ function renderPromptView() {
   const el = document.getElementById('promptView');
   if (!pSys && !pUsr) return;
   if (pTab==='full')
-    el.value = '══ SYSTEM PROMPT ══════════════════════════════\n\n'+pSys+'\n\n══ USER PROMPT ════════════════════════════════\n\n'+pUsr;
-  else if (pTab==='system')
-    el.value = pSys;
-  else
-    el.value = pUsr;
-
-  const tok = Math.round((pSys.length+pUsr.length)/4);
-  document.getElementById('tokEst').textContent =
-    `~${tok.toLocaleString()} token stimati — Haiku: ~$${(tok/1000*0.00025).toFixed(4)} | Sonnet: ~$${(tok/1000*0.003).toFixed(4)}`;
+    el.value = '══ SYSTEM ══════════════════════\n\n'+pSys+'\n\n══ USER ════════════════════════\n\n'+pUsr;
+  else if (pTab==='system') el.value = pSys;
+  else el.value = pUsr;
 }
 
 function refreshPrompt() {
-  if (!S.anonText) {
-    document.getElementById('promptView').value = 'Completa gli Step 1–2 per vedere il prompt assemblato.';
-    return;
-  }
+  if (!S.anonText) { document.getElementById('promptView').value = 'Completa gli Step 1–2.'; return; }
   pSys = document.getElementById('systemPrompt').value || DEFAULT_SYS;
-  pUsr = buildUserPrompt();
+  pUsr = buildUserPromptStr();
   renderPromptView();
+  updateTokenPanel();
 }
 
 async function copyFull() {
   refreshPrompt();
   const txt = pTab==='full'
-    ? '══ SYSTEM PROMPT ══════════════════════════════\n\n'+pSys+'\n\n══ USER PROMPT ════════════════════════════════\n\n'+pUsr
+    ? '══ SYSTEM ══════════════════════\n\n'+pSys+'\n\n══ USER ════════════════════════\n\n'+pUsr
     : document.getElementById('promptView').value;
-  await navigator.clipboard.writeText(txt);
-  flash();
+  await navigator.clipboard.writeText(txt); flash();
 }
-
-async function copyUser() {
-  refreshPrompt();
-  await navigator.clipboard.writeText(pUsr);
-  flash();
-}
-
+async function copyUser() { refreshPrompt(); await navigator.clipboard.writeText(pUsr); flash(); }
 function flash() {
   const el = document.getElementById('copyConfirm');
-  el.style.display='block';
-  setTimeout(()=>el.style.display='none', 1600);
+  el.style.display='block'; setTimeout(()=>el.style.display='none', 1600);
 }
 
 // ═══════════════════════════════════════════════════
 // OUTPUT ACTIONS
 // ═══════════════════════════════════════════════════
-function copyLetter() {
-  navigator.clipboard.writeText(S.letter).then(()=>alert('Lettera copiata negli appunti.'));
-}
-
+function copyLetter() { navigator.clipboard.writeText(S.letter).then(()=>alert('Copiato.')); }
 function printLetter() {
   const w = window.open('','_blank');
   w.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Lettera di Dimissione</title>
@@ -718,44 +1089,39 @@ function printLetter() {
   </head><body><pre>${esc(S.letter)}</pre></body></html>`);
   w.document.close(); w.print();
 }
-
 function newLetter() {
-  if (!confirm('Iniziare una nuova lettera? I dati correnti andranno persi.')) return;
-  S.rawText=S.anonText=S.letter='';
+  if (!confirm('Nuova lettera? I dati correnti andranno persi.')) return;
+  S.rawText=S.cleanText=S.anonText=S.letter=''; S.strippedBlocks=[];
   document.getElementById('inp_raw').value='';
   document.getElementById('inp_diagnosi').value='';
   document.getElementById('letterOut').textContent='—';
-  document.getElementById('statusBadge').textContent='● Pronto';
+  document.getElementById('usageInfo').style.display='none';
+  document.getElementById('statusBadge').textContent = S.activeTemplateId ? '📚 Template attivo' : '● Pronto';
   document.querySelectorAll('.ni').forEach(n=>n.classList.remove('done'));
   goTo(0);
 }
 
 // ═══════════════════════════════════════════════════
-// SETTINGS
+// SETTINGS PERSISTENCE
 // ═══════════════════════════════════════════════════
-function saveSettings() {
-  try {
-    sessionStorage.setItem('cfg', JSON.stringify({
-      citta:   document.getElementById('cfg_citta').value,
-      reparto: document.getElementById('cfg_reparto').value,
-      dott:    document.getElementById('cfg_dott').value,
-      prof:    document.getElementById('cfg_prof').value,
-      regex:   document.getElementById('cfg_regex').value,
-      ex:      document.getElementById('cfg_examples').value,
-    }));
-    alert('Impostazioni salvate per questa sessione.');
-  } catch(e) { alert('Errore: '+e.message); }
+function saveBaseSettings() {
+  localStorage.setItem('letteraai_cfg', JSON.stringify({
+    citta:   document.getElementById('cfg_citta').value,
+    reparto: document.getElementById('cfg_reparto').value,
+    dott:    document.getElementById('cfg_dott').value,
+    prof:    document.getElementById('cfg_prof').value,
+    regex:   document.getElementById('cfg_regex').value,
+  }));
+  alert('Impostazioni salvate.');
 }
-
-function loadSettings() {
+function loadBaseSettings() {
   try {
-    const c = JSON.parse(sessionStorage.getItem('cfg')||'{}');
+    const c = JSON.parse(localStorage.getItem('letteraai_cfg')||'{}');
     if(c.citta)   document.getElementById('cfg_citta').value    = c.citta;
     if(c.reparto) document.getElementById('cfg_reparto').value  = c.reparto;
     if(c.dott)    document.getElementById('cfg_dott').value     = c.dott;
     if(c.prof)    document.getElementById('cfg_prof').value     = c.prof;
     if(c.regex)   document.getElementById('cfg_regex').value    = c.regex;
-    if(c.ex)      document.getElementById('cfg_examples').value = c.ex;
   } catch(e){}
 }
 
@@ -768,116 +1134,56 @@ function clearAll() {
   if(!confirm('Cancellare tutto?')) return;
   document.getElementById('inp_raw').value='';
   document.getElementById('inp_diagnosi').value='';
-  S.rawText=S.anonText=S.letter='';
+  S.rawText=S.cleanText=S.anonText=S.letter=''; S.strippedBlocks=[];
 }
 
 // ═══════════════════════════════════════════════════
-// PDF.js TEXT EXTRACTION — fully offline
+// PDF.js
 // ═══════════════════════════════════════════════════
-let pdfjsLib = null;
-
+let pdfjsLib=null;
 async function ensurePdfJs() {
-  if (pdfjsLib) return pdfjsLib;
-  return new Promise((resolve, reject) => {
-    if (window.pdfjsLib) { pdfjsLib = window.pdfjsLib; resolve(pdfjsLib); return; }
-    const script = document.createElement('script');
-    script.src = 'https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.min.js';
-    script.onload = () => {
-      pdfjsLib = window.pdfjsLib;
-      pdfjsLib.GlobalWorkerOptions.workerSrc =
-        'https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.worker.min.js';
-      resolve(pdfjsLib);
-    };
-    script.onerror = () => reject(new Error('Impossibile caricare PDF.js. Verifica la connessione internet.'));
-    document.head.appendChild(script);
+  if(pdfjsLib) return pdfjsLib;
+  return new Promise((res,rej)=>{
+    if(window.pdfjsLib){pdfjsLib=window.pdfjsLib;res(pdfjsLib);return;}
+    const s=document.createElement('script');
+    s.src='https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.min.js';
+    s.onload=()=>{pdfjsLib=window.pdfjsLib;pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.worker.min.js';res(pdfjsLib);};
+    s.onerror=()=>rej(new Error('Impossibile caricare PDF.js.'));
+    document.head.appendChild(s);
   });
 }
-
-function handlePdfDrop(e) {
-  e.preventDefault();
-  document.getElementById('pdfDropzone').style.borderColor = 'var(--border)';
-  const file = e.dataTransfer.files[0];
-  if (file && file.type === 'application/pdf') processPdf(file);
-  else alert('Carica un file PDF.');
-}
-
-function handlePdfFile(e) {
-  const file = e.target.files[0];
-  if (file) processPdf(file);
-}
-
-async function processPdf(file) {
-  const spin   = document.getElementById('pdfSpin');
-  const stxt   = document.getElementById('pdfStatusTxt');
-  const bar    = document.getElementById('pdfBar');
-  const status = document.getElementById('pdfStatus');
-
-  status.style.display = 'block';
-  spin.style.display   = 'inline-block';
-  bar.style.width      = '0%';
-  stxt.style.color     = 'var(--mid)';
-  stxt.textContent     = 'Caricamento PDF.js...';
-
+function handlePdfDrop(e){e.preventDefault();document.getElementById('pdfDropzone').style.borderColor='var(--border)';const f=e.dataTransfer.files[0];if(f&&f.type==='application/pdf')processPdf(f);else alert('Carica un PDF.');}
+function handlePdfFile(e){const f=e.target.files[0];if(f)processPdf(f);}
+async function processPdf(file){
+  const spin=document.getElementById('pdfSpin'),stxt=document.getElementById('pdfStatusTxt'),bar=document.getElementById('pdfBar'),status=document.getElementById('pdfStatus');
+  status.style.display='block';spin.style.display='inline-block';bar.style.width='0%';stxt.style.color='var(--mid)';stxt.textContent='Caricamento PDF.js...';
   try {
-    const lib = await ensurePdfJs();
-    stxt.textContent = `Lettura PDF: ${file.name}`;
-
-    const arrayBuffer = await file.arrayBuffer();
-    const pdf = await lib.getDocument({ data: arrayBuffer }).promise;
-    const total = pdf.numPages;
-
-    let fullText = '';
-    for (let i = 1; i <= total; i++) {
-      const page    = await pdf.getPage(i);
-      const content = await page.getTextContent();
-
-      let pageText = '';
-      let lastY = null;
-      for (const item of content.items) {
-        if ('str' in item) {
-          if (lastY !== null && Math.abs(item.transform[5] - lastY) > 5) {
-            pageText += '\n';
-          }
-          pageText += item.str;
-          if (item.hasEOL) pageText += '\n';
-          lastY = item.transform[5];
-        }
-      }
-
-      fullText += pageText.trim() + '\n\n';
-      bar.style.width = Math.round((i / total) * 100) + '%';
-      stxt.textContent = `Pagina ${i} / ${total}...`;
+    const lib=await ensurePdfJs();stxt.textContent=`Lettura: ${file.name}`;
+    const ab=await file.arrayBuffer();const pdf=await lib.getDocument({data:ab}).promise;const tot=pdf.numPages;
+    let full='';
+    for(let i=1;i<=tot;i++){
+      const pg=await pdf.getPage(i);const ct=await pg.getTextContent();
+      let pt='',ly=null;
+      for(const it of ct.items){if('str'in it){if(ly!==null&&Math.abs(it.transform[5]-ly)>5)pt+='\n';pt+=it.str;if(it.hasEOL)pt+='\n';ly=it.transform[5];}}
+      full+=pt.trim()+'\n\n';bar.style.width=Math.round(i/tot*100)+'%';stxt.textContent=`Pag ${i}/${tot}...`;
     }
-
-    fullText = fullText.replace(/\n{3,}/g, '\n\n').trim();
-
-    const existing = document.getElementById('inp_raw').value.trim();
-    document.getElementById('inp_raw').value = existing
-      ? existing + '\n\n--- ' + file.name + ' ---\n\n' + fullText
-      : fullText;
-
-    bar.style.width    = '100%';
-    spin.style.display = 'none';
-    stxt.style.color   = 'var(--green)';
-    stxt.textContent   = `✓ ${total} pagina${total===1?'':'e'} estratta${total===1?'':'e'} da "${file.name}" — ${fullText.length.toLocaleString()} caratteri`;
-
-    document.getElementById('pdfFileInput').value = '';
-
-  } catch(err) {
-    spin.style.display = 'none';
-    stxt.style.color   = 'var(--red)';
-    stxt.textContent   = '✗ Errore: ' + err.message;
-  }
+    full=full.replace(/\n{3,}/g,'\n\n').trim();
+    const ex=document.getElementById('inp_raw').value.trim();
+    document.getElementById('inp_raw').value=ex?ex+'\n\n--- '+file.name+' ---\n\n'+full:full;
+    bar.style.width='100%';spin.style.display='none';stxt.style.color='var(--green)';
+    stxt.textContent=`✓ ${tot} pagina${tot===1?'':'e'} · ${full.length.toLocaleString()} caratteri`;
+    document.getElementById('pdfFileInput').value='';
+  } catch(err){spin.style.display='none';stxt.style.color='var(--red)';stxt.textContent='✗ '+err.message;}
 }
 
 // ── INIT ──
 document.getElementById('tempSlider').addEventListener('input', function(){
-  document.getElementById('tempLabel').textContent = (this.value/10).toFixed(1);
+  document.getElementById('tempLabel').textContent=(this.value/10).toFixed(1);
 });
-document.getElementById('systemPrompt').addEventListener('input', refreshPrompt);
-
-loadSettings();
+document.getElementById('systemPrompt').addEventListener('input', ()=>{ updateTokenPanel(); refreshPrompt(); });
+loadBaseSettings();
 document.getElementById('systemPrompt').value = DEFAULT_SYS;
+renderLibrary();
 </script>
 </body>
 </html>
