@@ -836,7 +836,7 @@ function updateTokenPanel() {
       <div class="tval">$${(costNoCacheIn+costOut).toFixed(4)}</div>
       <div class="tsub">${(tTotal+tOut).toLocaleString()} token totali</div>
     </div>
-    <div class="tok-total-box" style="${cacheActive?'border-color:var(--blue);':'}">
+    <div class="tok-total-box" style="${cacheActive?'border-color:var(--blue);':''}">
       <div class="tlabel">${cacheActive?'Con caching (1ª chiamata)':'Con caching (no template)'}</div>
       <div class="tval" style="color:${cacheActive?'var(--blue)':'var(--accent)'};">$${(costWithCacheFirstCall+costOut).toFixed(4)}</div>
       <div class="tsub">${cacheActive?`Successive: $${(costWithCacheSubseq+costOut).toFixed(4)}`:'Seleziona un template per attivare'}</div>
