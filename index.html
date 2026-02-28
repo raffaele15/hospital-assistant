@@ -518,14 +518,14 @@ function stripBoilerplate(text) {
   const strippedBlocks = [];
   let result = text;
   for (const p of BOILERPLATE_PATTERNS) {
-    if (p.re.global) p.re.lastIndex = 0;
-    const matches = [...result.matchAll(p.re)];
-    for (const m of matches) {
-      const t = m[0].trim();
+    // Single replace pass — avoids matchAll which requires /g flag
+    result = result.replace(p.re, (match) => {
+      const t = match.trim();
       if (t.length > 2 && !strippedBlocks.find(b => b.text === t))
         strippedBlocks.push({ text: t, tag: p.tag });
-    }
-    result = result.replace(p.re, '');
+      return '';
+    });
+    if (p.re.global) p.re.lastIndex = 0;
   }
   return { clean: result.replace(/\n{3,}/g, '\n\n').trim(), strippedBlocks };
 }
