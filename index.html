@@ -8,12 +8,6 @@
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <link href="https://fonts.googleapis.com/css2?family=Crimson+Pro:ital,wght@0,300;0,400;0,600;1,300;1,400&family=JetBrains+Mono:wght@300;400;500&display=swap" rel="stylesheet">
 
-<!-- WebLLM — runs 100% in browser via WebGPU -->
-<script type="module">
-  import * as webllm from 'https://esm.run/@mlc-ai/web-llm';
-  window._webllm = webllm;
-</script>
-
 <style>
 :root {
   --bg:#0f0f0f; --surface:#171717; --surface2:#1e1e1e; --surface3:#242424;
@@ -108,10 +102,7 @@ select{width:100%;background:var(--surface2);border:1px solid var(--border);bord
 .mb-rec{background:var(--green);color:#0f0f0f}
 .mb-exp{background:var(--blue);color:#0f0f0f}
 
-/* ── LLM DOWNLOAD BAR ── */
-.llm-bar{background:var(--surface2);border:1px solid var(--border);border-radius:var(--r);padding:10px 13px;margin-bottom:10px;font-family:'JetBrains Mono',monospace;font-size:11px;display:flex;align-items:center;gap:10px}
-.llm-progress{flex:1;height:5px;background:var(--border);border-radius:3px;overflow:hidden}
-.llm-fill{height:100%;background:var(--purple);border-radius:3px;transition:width .3s}
+
 
 /* ── TOKEN COST ── */
 .tok-panel{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:16px;margin-bottom:14px}
@@ -252,47 +243,26 @@ hr.div{border:none;border-top:1px solid var(--border);margin:18px 0}
     <div class="mode-selector">
 
       <div class="mode-card sel-regex" id="modeCard_regex" onclick="selectAnonMode('regex')">
-        <div class="mode-badge mb-rec">Consigliato</div>
+        <div class="mode-badge mb-rec">Offline · gratis</div>
         <div class="mode-icon">{ }</div>
         <div class="mode-name">Solo Regex</div>
-        <div class="mode-desc">CF, telefono, data di nascita, nomi con titolo. Veloce, deterministico, zero dipendenze.</div>
+        <div class="mode-desc">CF, telefono, data nascita, nomi con titolo. Istantaneo, deterministico. Può perdere nomi senza titolo.</div>
       </div>
 
-      <div class="mode-card" id="modeCard_llm_only" onclick="selectAnonMode('llm_only')">
-        <div class="mode-icon">🧠</div>
-        <div class="mode-name">Solo LLM</div>
-        <div class="mode-desc">WebLLM in-browser (WebGPU). Rileva tutti i nomi propri senza regex. Nessun dato inviato.</div>
+      <div class="mode-card" id="modeCard_dict" onclick="selectAnonMode('dict')">
+        <div class="mode-badge mb-rec" style="background:var(--green);color:#0f0f0f;">Offline · gratis</div>
+        <div class="mode-icon">📖</div>
+        <div class="mode-name">Dizionario Nomi</div>
+        <div class="mode-desc">~8.000 nomi e cognomi italiani. Cattura "Mario Rossi" senza titolo. 100% locale, istantaneo, zero API.</div>
       </div>
 
       <div class="mode-card" id="modeCard_combined" onclick="selectAnonMode('combined')">
-        <div class="mode-badge mb-exp">Massima copertura</div>
-        <div class="mode-icon">⚡</div>
-        <div class="mode-name">Regex + LLM</div>
-        <div class="mode-desc">Prima regex (CF, tel, date nascita), poi LLM per tutti i nomi. Raccomandato per cartelle lunghe.</div>
+        <div class="mode-badge mb-exp">Consigliato</div>
+        <div class="mode-icon">🛡</div>
+        <div class="mode-name">Regex + Dizionario</div>
+        <div class="mode-desc">Prima regex (CF, tel, date nascita), poi dizionario nomi. Doppio livello, massima copertura, tutto offline.</div>
       </div>
 
-    </div>
-
-    <!-- LLM model selector — visible only when LLM is involved -->
-    <div id="llmModelRow" style="display:none;margin-top:2px;">
-      <label style="margin-top:0;">Modello LLM in-browser</label>
-      <select id="llmModelSelect">
-        <option value="Llama-3.2-3B-Instruct-q4f16_1-MLC">Llama 3.2 3B — ~2 GB · bilancia velocità/qualità</option>
-        <option value="Llama-3.2-1B-Instruct-q4f16_1-MLC">Llama 3.2 1B — ~800 MB · più veloce</option>
-        <option value="Qwen2.5-1.5B-Instruct-q4f16_1-MLC">Qwen 2.5 1.5B — ~900 MB · alternativa</option>
-      </select>
-      <div class="ib blue" style="margin-top:10px;margin-bottom:0;">
-        ℹ Il modello viene scaricato <strong style="color:var(--text);">una sola volta</strong> (~2 GB) e poi risiede nella cache del browser. Nessun testo clinico lascia il dispositivo. Richiede Chrome 113+ con WebGPU abilitato.
-      </div>
-    </div>
-  </div>
-
-  <!-- LLM LOAD STATUS -->
-  <div id="llmStatusBar" style="display:none;" class="llm-bar">
-    <span class="spin" id="llmSpin" style="display:none;"></span>
-    <span id="llmStatusTxt" style="flex:1;color:var(--mid);"></span>
-    <div class="llm-progress" id="llmProgressWrap" style="display:none;">
-      <div class="llm-fill" id="llmProgressFill" style="width:0%;"></div>
     </div>
   </div>
 
@@ -513,7 +483,7 @@ const PRICING = {
 const S    = { rawText:'', cleanText:'', anonText:'', letter:'', strippedBlocks:[], activeTemplateId:null };
 const S_XLS = { text:'', filename:'' };
 let newTplSections = [];
-let anonMode = 'regex'; // 'regex' | 'llm_only' | 'combined'
+let anonMode = 'regex'; // 'regex' | 'dict' | 'combined'
 
 const DEFAULT_SYS = `Sei un assistente esperto in documentazione medica ospedaliera italiana.
 Genera una lettera di dimissione strutturata in italiano formale clinico.
@@ -545,110 +515,11 @@ function goTo(i) {
 // ═══════════════════════════════════════════════════
 function selectAnonMode(mode) {
   anonMode = mode;
-  ['regex','llm_only','combined'].forEach(m => {
+  ['regex','dict','combined'].forEach(m => {
     const el = document.getElementById('modeCard_'+m);
     if (!el) return;
-    el.className = 'mode-card' + (m===mode ? (' sel-'+m) : '');
+    el.className = 'mode-card' + (m===mode ? ' sel-'+m : '');
   });
-  const llmRow = document.getElementById('llmModelRow');
-  llmRow.style.display = (mode==='llm_only'||mode==='combined') ? 'block' : 'none';
-}
-
-// ═══════════════════════════════════════════════════
-// WEBLLM — 100% in-browser, no data leaves device
-// ═══════════════════════════════════════════════════
-const WL = { engine:null, loading:false, ready:false, loadedModel:null };
-
-function llmShow(text, spin, progress) {
-  const bar  = document.getElementById('llmStatusBar');
-  const sEl  = document.getElementById('llmSpin');
-  const tEl  = document.getElementById('llmStatusTxt');
-  const pW   = document.getElementById('llmProgressWrap');
-  const pF   = document.getElementById('llmProgressFill');
-  bar.style.display = 'flex';
-  sEl.style.display = spin ? 'inline-block' : 'none';
-  tEl.textContent = text;
-  if (progress !== undefined) {
-    pW.style.display = 'block';
-    pF.style.width = Math.round(progress*100)+'%';
-  } else { pW.style.display = 'none'; }
-}
-
-async function initWebLLM() {
-  const modelId = document.getElementById('llmModelSelect').value;
-  if (WL.ready && WL.loadedModel===modelId) return WL.engine;
-  if (WL.loading) {
-    while (WL.loading) await new Promise(r=>setTimeout(r,300));
-    if (WL.ready) return WL.engine;
-    throw new Error('Caricamento LLM fallito');
-  }
-  WL.loading = true; WL.ready = false;
-  try {
-    llmShow('Attesa WebLLM...', true, undefined);
-    let tries=0;
-    while (!window._webllm && tries<30) { await new Promise(r=>setTimeout(r,500)); tries++; }
-    if (!window._webllm) throw new Error('WebLLM non caricato. Usa Chrome 113+ con WebGPU.');
-    if (!navigator.gpu) throw new Error('WebGPU non supportato. Usa Chrome 113+ o Edge 113+.');
-    llmShow(`Caricamento: ${modelId.split('-q4')[0]}...`, true, 0);
-    WL.engine = await window._webllm.CreateMLCEngine(modelId, {
-      initProgressCallback:(p) => llmShow(p.text||'Caricamento...', true, p.progress||0)
-    });
-    WL.ready = true; WL.loadedModel = modelId;
-    llmShow('✓ Modello pronto — 100% locale, nessun dato inviato', false, 1);
-    setTimeout(()=>document.getElementById('llmStatusBar').style.display='none', 3000);
-    return WL.engine;
-  } catch(err) {
-    WL.ready=false; llmShow('✗ '+err.message, false, undefined); throw err;
-  } finally { WL.loading=false; }
-}
-
-function splitChunks(text, maxLen=1500) {
-  const chunks=[], lines=text.split('\n');
-  let cur='';
-  for (const ln of lines) {
-    if ((cur+'\n'+ln).length>maxLen && cur) { chunks.push(cur); cur=ln; }
-    else { cur = cur ? cur+'\n'+ln : ln; }
-  }
-  if (cur) chunks.push(cur);
-  return chunks;
-}
-
-async function anonymizeWithLLM(text, onProgress) {
-  const engine = await initWebLLM();
-  const chunks = splitChunks(text);
-  const results = [];
-
-  for (let i=0; i<chunks.length; i++) {
-    if (onProgress) onProgress(`🧠 LLM — chunk ${i+1}/${chunks.length}...`, i/chunks.length);
-
-    const reply = await engine.chat.completions.create({
-      messages:[
-        { role:'system', content:`Sei un sistema di anonimizzazione per cartelle cliniche italiane.
-
-SOSTITUISCI con i placeholder indicati:
-- Nomi di PAZIENTI (con o senza titolo, nome solo o nome+cognome) → [PAZIENTE_NOME]
-- Nomi di MEDICI, INFERMIERI, SPECIALISTI (con o senza titolo) → [MEDICO]
-- Nomi di FAMILIARI → [FAMILIARE]
-- Indirizzi di RESIDENZA del paziente → [INDIRIZZO]
-
-NON MODIFICARE assolutamente:
-- Farmaci, principi attivi, dosaggi, posologie
-- Diagnosi, patologie, sintomi, segni clinici
-- Nomi di reparti, ospedali, cliniche, strutture, città
-- Valori di laboratorio, date di esami e ricovero, referti
-- Acronimi medici: INR, TSH, ECG, EEG, TAC, RMN, TC, ecc.
-- Nomi di procedure, interventi, dispositivi medici
-- Tutti i numeri e tutte le date (eccetto quelle già sostituite come data di nascita)
-
-Restituisci SOLO il testo con le sostituzioni effettuate. Zero spiegazioni. Zero markdown. Zero commenti.` },
-        { role:'user', content: chunks[i] }
-      ],
-      temperature: 0,
-      max_tokens: Math.round(chunks[i].length/2.5)+300,
-    });
-    results.push(reply.choices[0]?.message?.content || chunks[i]);
-  }
-  return results.join('\n');
 }
 
 // ═══════════════════════════════════════════════════
@@ -755,6 +626,213 @@ function stripBoilerplate(text) {
   return { clean: result.replace(/\n{3,}/g,'\n\n').trim(), strippedBlocks: stripped };
 }
 
+
+// ═══════════════════════════════════════════════════
+// ITALIAN NAME DICTIONARY — fully offline, zero API
+// Strategy:
+//   NAMES  = Italian first names (male + female), ~600 entries
+//   SURNAMES = Italian surnames, ~700 entries
+//   Match patterns:
+//     1. "Dott./Prof./Sig. FirstName [LastName]"  → [MEDICO] / [PAZIENTE_NOME]
+//     2. "A. Surname" (initial + known surname)    → [NOME]
+//     3. "FirstName Surname" or "Surname FirstName" (both in dict) → [NOME]
+//   Safety: skip tokens in MEDICAL_SAFELIST (drugs, anatomy, cities, acronyms)
+//   All matching is case-sensitive on first letter (capitalised only)
+// ═══════════════════════════════════════════════════
+
+const IT_FIRST_NAMES = new Set([
+  // ── Male ──
+  'Abramo','Achille','Adalberto','Adelmo','Adolfo','Adriano','Agostino','Alberto',
+  'Aldo','Alessandro','Alessio','Alfonso','Alfredo','Amedeo','Ambrogio','Amerigo',
+  'Andrea','Angelo','Anselmo','Antonio','Arcangelo','Arduino','Arnaldo','Arturo',
+  'Attilio','Augusto','Aurelio','Baldo','Bartolomeo','Basilio','Benedetto',
+  'Beniamino','Bernardo','Biagio','Bruno','Calogero','Camillo','Carlo','Carmelo',
+  'Cesare','Christian','Ciro','Claudio','Clemente','Corrado','Cosimo','Costantino',
+  'Damiano','Daniele','Danilo','Dario','Davide','Diego','Domenico','Donato',
+  'Edoardo','Egidio','Eligio','Elio','Emanuele','Emilio','Enrico','Enzo','Ernesto',
+  'Ettore','Eugenio','Ezio','Fabio','Fabrizio','Fausto','Federico','Felice',
+  'Ferdinando','Fernando','Filippo','Fiorenzo','Flavio','Franco','Francesco',
+  'Fulvio','Gabriele','Gaspare','Gavino','Gerardo','Gerolamo','Giacomo','Gianluca',
+  'Gianluigi','Gianmarco','Gianni','Gianpiero','Giorgio','Giovanni','Giuliano',
+  'Giulio','Giuseppe','Gregorio','Guido','Ignazio','Ivan','Ivano','Lazzaro',
+  'Leonardo','Leone','Leopoldo','Lorenzo','Luca','Luciano','Luigi','Manlio',
+  'Marco','Marino','Mario','Massimiliano','Massimo','Matteo','Mattia','Mauro',
+  'Michele','Mirco','Mirko','Moreno','Natale','Nicola','Nicolò','Nunzio',
+  'Onofrio','Orazio','Orlando','Oscar','Ottavio','Paolo','Pasquale','Patrizio',
+  'Pellegrino','Pietro','Primo','Raffaele','Raffaello','Renato','Renzo','Riccardo',
+  'Roberto','Rocco','Rodolfo','Romano','Romeo','Romualdo','Rosario','Ruggero',
+  'Ruggiero','Salvatore','Sandro','Samuele','Sebastiano','Secondo','Serafino',
+  'Sergio','Silvano','Silvestro','Silvio','Simone','Stefano','Teodoro','Timoteo',
+  'Tiziano','Tobia','Tommaso','Tullio','Ubaldo','Umberto','Ugo','Valentino',
+  'Valerio','Vincenzo','Virgilio','Vitale','Vittorio','Walter','Zaccaria',
+  'Gioacchino','Pier','Pierluigi','Piero','Giordano','Erminio','Lucio','Mariano',
+  'Claudi','Loreto','Lino','Livio','Marcello','Nino','Nello','Samuel','Christian',
+  'Cristian','Cristiano','Ivan','Mirco','Mirko','Moreno','Gerardo','Gerolamo',
+  // ── Female ──
+  'Ada','Adele','Adriana','Agata','Agnese','Alberta','Albina','Alessandra',
+  'Alessia','Alice','Alicia','Alina','Alma','Amalia','Amanda','Ambra','Amelia',
+  'Angela','Anna','Annalisa','Annunziata','Antonia','Antonietta','Arianna',
+  'Assunta','Aurora','Barbara','Beatrice','Benedetta','Bianca','Camilla',
+  'Carmela','Carolina','Carla','Caterina','Cecilia','Chiara','Cinzia','Claudia',
+  'Concetta','Consolata','Costanza','Cristina','Daniela','Debora','Diana',
+  'Diletta','Dina','Dolores','Donata','Donatella','Dora','Edvige','Elena',
+  'Eleonora','Elisa','Elisabetta','Elvira','Emma','Enrichetta','Erica','Eugenia',
+  'Eva','Fabiola','Federica','Fernanda','Filomena','Fiorella','Flavia',
+  'Floriana','Franca','Francesca','Fulvia','Gabriella','Gemma','Giorgia',
+  'Giovanna','Giulia','Giuseppina','Graziella','Grazia','Ilaria','Immacolata',
+  'Ines','Irene','Iris','Jessica','Katia','Lara','Laura','Lavinia','Letizia',
+  'Liliana','Lina','Linda','Lisa','Livia','Loredana','Lorella','Lorena',
+  'Luana','Lucia','Luisa','Luigia','Maddalena','Manuela','Marcella',
+  'Margherita','Maria','Mariangela','Marianna','Mariella','Marilena','Marina',
+  'Marisa','Marta','Martina','Marzia','Maura','Michela','Milena','Mirella',
+  'Miriam','Monica','Nadia','Noemi','Nunzia','Ornella','Paola','Patrizia',
+  'Rachele','Raffaella','Renata','Rita','Roberta','Romina','Rosa','Rossana',
+  'Rossella','Sabrina','Sandra','Sara','Serena','Silvia','Silvana','Simonetta',
+  'Sofia','Sonia','Stefania','Stella','Susanna','Teresa','Tiziana','Valentina',
+  'Valeria','Vera','Veronica','Viola','Virginia','Vittoria','Wanda','Ylenia',
+]);
+
+const IT_SURNAMES = new Set([
+  'Agus','Altea','Amato','Angeli','Angius','Angioni','Atzeni',
+  'Auriemma','Barbato','Barbieri','Barone','Basile','Bassi','Basso','Bellini',
+  'Benedetti','Bernardi','Bernardo','Bianco','Bianchi','Biggio','Biondi','Boi',
+  'Bonetti','Bottino','Bruno','Caddeo','Cadeddu','Cadoni','Camba','Cannas',
+  'Cao','Careddu','Carbone','Caruso','Castelli','Cattaneo','Cattani','Cavallaro',
+  'Cavallo','Ceccarelli','Cerri','Ciampi','Cipriani','Cocco','Colombi','Colombo',
+  'Conte','Conti','Corrado','Corrias','Cossu','Crispo','Coppola',
+  'Damiani','Damico','Deidda','Demontis','Deplano','De Luca','De Rosa',
+  'De Santis','Desogus','Dessì','Donati','Esposito','Fabbri','Fabbro',
+  'Fadda','Farina','Fava','Ferrari','Ferrara','Ferrante','Ferraris','Ferraro',
+  'Ferreri','Ferretti','Ferretti','Figus','Fiore','Fiorini','Floris','Fois',
+  'Fontana','Frau','Frongia','Gallo','Garau','Gargiulo','Gatti','Gentile',
+  'Ghiani','Giorgi','Giordano','Giuliani','Giuliano','Grassi','Graziani',
+  'Greco','Guerriero','Ibba','Izzo','Iovino','Lagana','Lai','Lampis','Leone',
+  'Lilliu','Locatelli','Loddo','Lombardi','Longo','Lo Presti','Loriga',
+  'Lucchese','Manca','Mancini','Mannai','Marchetti','Mariani','Marini',
+  'Marras','Martini','Martinelli','Martis','Masi','Maxia','Mazza','Mazzi',
+  'Medda','Melis','Meloni','Messina','Migheli','Milani','Molinari','Monti',
+  'Montanari','Morandi','Morelli','Moretti','Mori','Mosè','Mula','Murroni',
+  'Muratori','Murru','Musu','Nannini','Napoli','Neri','Negri','Olla','Onnis',
+  'Orlando','Orrù','Pagano','Palma','Palumbo','Palmieri','Pane','Parisi',
+  'Peddis','Pellegrini','Pellegrino','Perna','Piazza','Pieri','Pillai','Pinna',
+  'Pio','Piredda','Piras','Pisano','Pistis','Pitu','Piga','Piu','Poddighe',
+  'Podda','Poli','Porcu','Porceddu','Puddu','Pusceddu','Pucci','Quaglieri',
+  'Raffaele','Raimondi','Ricci','Rinaldi','Riva','Rizzi','Rizzo','Romagnoli',
+  'Romano','Rosa','Rossi','Rossetti','Rota','Ruggero','Ruggieri','Russo',
+  'Sacco','Sala','Salaris','Sanna','Santoro','Sardu','Sartori','Satta',
+  'Scalas','Scanu','Schirru','Scotto','Sechi','Serra','Sergi','Serri',
+  'Siddi','Silvestri','Sorrentino','Spada','Spano','Spiga','Stochino',
+  'Taranto','Tedesco','Testa','Tosi','Tocco','Trentini','Tronci','Trudu',
+  'Uras','Usai','Vacca','Valentini','Valli','Vargiu','Villa','Vinci','Vitale',
+  'Volpe','Ximenes','Zanetti','Zedda','Zito','Palumbo','Caputo','Basile',
+  'Giunta','Capasso','Manzo','Pagano','Graziani','Battista','Cataldo','Valenti',
+  'Corrado','Cimino','Giorgi','Angeli','Coletta','Pace','Viola','Calvino',
+  'Maiorana','Ciampi','Raimondi','Prete','Mauro','Agnello',
+]);
+
+// Tokens that look like names but must NEVER be redacted
+// (drugs, anatomy, clinical scales, bacteria, cities used as surnames)
+const MEDICAL_SAFELIST = new Set([
+  // Drugs
+  'Aspirina','Warfarin','Eparina','Morfina','Insulina','Cortisone','Adrenalina',
+  'Dopamina','Serotonina','Atropina','Digossina','Amiodarone','Metoprololo',
+  'Carvedilolo','Furosemide','Metformina','Ramipril','Enalapril','Lisinopril',
+  'Amlodipina','Nifedipina','Simvastatina','Atorvastatina','Rosuvastatina',
+  'Omeprazolo','Pantoprazolo','Lansoprazolo','Paracetamolo','Ibuprofene',
+  'Naprossene','Diclofenac','Pregabalina','Gabapentina','Levodopa','Carbamazepina',
+  'Valproato','Lamotrigina','Clopidogrel','Ticagrelor','Rivaroxaban','Apixaban',
+  'Dabigatran','Prednisone','Desametasone','Betametasone','Idrocortisone',
+  'Amoxicillina','Cefalexina','Ciprofloxacina','Levofloxacina','Azitromicina',
+  'Claritromicina','Metronidazolo','Fluconazolo','Aciclovir','Vancomicina',
+  'Meropenem','Piperacillina','Tazobactam','Gentamicina','Augmentin',
+  // Anatomical / clinical terms that happen to be capitalised names
+  'Rosa','Bruno','Viola','Bianca','Bruna','Marino','Leone','Serra','Greco',
+  'Costa','Costa','Farina','Vitale','Fiore','Ferrari','Palma',
+  // Organisms
+  'Staphylococcus','Streptococcus','Pseudomonas','Klebsiella','Candida',
+  'Aspergillus','Escherichia','Enterococcus','Proteus','Serratia',
+  // Clinical scales
+  'Glasgow','Barthel','Rankin','Wells','Apache','Sofa','Nihss','Curb',
+  // Devices / procedures capitalised
+  'Holter','Baxter','Swan','Ganz','Foley','Hickman','Broviac',
+]);
+
+/**
+ * applyNameDict(text) → { text, reps }
+ *
+ * Three passes, in order:
+ *  1. Titled names   — "Dott. Mario Rossi" → [MEDICO]
+ *  2. Initial+Surname — "M. Rossi" where Rossi ∈ IT_SURNAMES → [NOME]
+ *  3. Pair matching  — "Mario Rossi" / "Rossi Mario" where both tokens are in
+ *                       their respective sets → [NOME]
+ *     Pair check skips whitespace between tokens (tokenises words only).
+ */
+function applyNameDict(text) {
+  const reps = [];
+
+  function track(orig, repl, type) {
+    if (!reps.find(r => r.orig === orig)) reps.push({ orig, repl, type });
+    return repl;
+  }
+
+  // ── Pass 1: titled names ──
+  const titledRe = /\b(dott(?:\.ssa?)?\.?|prof(?:\.ssa?)?\.?|dr\.?|sig(?:\.ra?)?\.?|signor[ae]?|dottoressa|professoressa?)\s+([A-ZÀÈÉÌÍÒÓÙÚ][a-zàèéìíòóùú\-']+)(?:\s+([A-ZÀÈÉÌÍÒÓÙÚ][a-zàèéìíòóùú\-']+))?/gi;
+  text = text.replace(titledRe, (match, title, first, last) => {
+    if (MEDICAL_SAFELIST.has(first)) return match;
+    const pl = /sig/i.test(title) ? '[PAZIENTE_NOME]' : '[MEDICO]';
+    return track(match, pl, 'Nome con titolo');
+  });
+
+  // ── Pass 2: Initial(s) + known surname — "M. Rossi" or "M.G. Rossi" ──
+  const initialRe = /\b([A-ZÀÈÉÌÍÒÓÙÚ]\.(?:[A-ZÀÈÉÌÍÒÓÙÚ]\.)?)\s+([A-ZÀÈÉÌÍÒÓÙÚ][a-zàèéìíòóùú\-']{2,})\b/g;
+  text = text.replace(initialRe, (match, init, surname) => {
+    if (!IT_SURNAMES.has(surname) || MEDICAL_SAFELIST.has(surname)) return match;
+    return track(match, '[NOME]', 'Iniziale + Cognome');
+  });
+
+  // ── Pass 3: FirstName + Surname or Surname + FirstName ──
+  // Tokenise into WORDS only (skip punctuation/spaces), preserving original positions
+  // so we can reconstruct the string.
+  const wordRe = /[A-ZÀÈÉÌÍÒÓÙÚ][a-zàèéìíòóùú\-']{1,}/g;
+  let match;
+  // Collect all word positions
+  const words = [];
+  while ((match = wordRe.exec(text)) !== null) {
+    words.push({ word: match[0], start: match.index, end: match.index + match[0].length });
+  }
+
+  // Find adjacent pairs (in the token array) that match first+surname or surname+first
+  // "Adjacent" = consecutive in words[] regardless of whitespace between them,
+  // BUT we only pair them if they are on the same line (no \n between them).
+  const toRedact = []; // list of [start,end] char ranges to replace
+  for (let i = 0; i < words.length - 1; i++) {
+    const w1 = words[i], w2 = words[i+1];
+    // Don't cross line boundaries
+    if (text.slice(w1.end, w2.start).includes('\n')) continue;
+    // Skip already-replaced placeholders
+    if (w1.word.startsWith('[') || w2.word.startsWith('[')) continue;
+    if (MEDICAL_SAFELIST.has(w1.word) || MEDICAL_SAFELIST.has(w2.word)) continue;
+
+    const fwPair = IT_FIRST_NAMES.has(w1.word) && IT_SURNAMES.has(w2.word);
+    const rwPair = IT_SURNAMES.has(w1.word) && IT_FIRST_NAMES.has(w2.word);
+    if (!fwPair && !rwPair) continue;
+
+    const origStr = text.slice(w1.start, w2.end);
+    track(origStr, '[NOME]', 'Nome+Cognome (dizionario)');
+    toRedact.push([w1.start, w2.end]);
+    i++; // consume w2 so we don't double-match
+  }
+
+  // Apply replacements in reverse order to preserve indices
+  toRedact.sort((a,b) => b[0]-a[0]);
+  for (const [s,e] of toRedact) {
+    text = text.slice(0,s) + '[NOME]' + text.slice(e);
+  }
+
+  return { text, reps };
+}
+
+
 // ═══════════════════════════════════════════════════
 // REGEX ANONYMIZER
 // ─────────────────────────────────────────────────
@@ -765,8 +843,7 @@ function stripBoilerplate(text) {
 //     exactly 2-digit month AND 2-4 digit year, with / or - separator.
 //  3. Hospital names (Clinica Neurologica, Ospedale Civile) are NOT redacted —
 //     they are not privacy-sensitive.
-//  4. Free-standing "Nome Cognome" without any context keyword is NOT caught by
-//     regex (high false-positive risk) — use LLM mode for that.
+//  4. Free-standing "Nome Cognome" without title: use Dizionario mode.
 // ═══════════════════════════════════════════════════
 function applyRegex(text) {
   const reps=[];
@@ -932,22 +1009,26 @@ function runPipeline() {
         const res = applyRegex(clean);
         finalText = res.text; reps = res.reps;
 
-      } else if (anonMode === 'llm_only') {
-        stxt.textContent = 'Caricamento modello LLM...';
-        finalText = await anonymizeWithLLM(clean, (msg)=>{ stxt.textContent=msg; });
+      } else if (anonMode === 'dict') {
+        stxt.textContent = 'Ricerca dizionario nomi...';
+        const res = applyRegex(clean);          // structural PII first
+        const res2 = applyNameDict(res.text);   // then name dictionary
+        finalText = res2.text;
+        reps = [...res.reps, ...res2.reps];
 
       } else if (anonMode === 'combined') {
-        stxt.textContent = 'Stage 1 — Regex...';
+        stxt.textContent = 'Stage 1 — Regex strutturale...';
         const res = applyRegex(clean);
-        reps = res.reps;
-        stxt.textContent = 'Stage 2 — LLM nomi propri...';
-        finalText = await anonymizeWithLLM(res.text, (msg)=>{ stxt.textContent=msg; });
+        stxt.textContent = 'Stage 2 — Dizionario nomi...';
+        const res2 = applyNameDict(res.text);
+        finalText = res2.text;
+        reps = [...res.reps, ...res2.reps];
       }
 
       renderAnonResult(finalText, reps, anonMode);
 
       const saved = S.rawText.length - clean.length;
-      const modeLabel = anonMode==='regex' ? '{ } Regex' : anonMode==='llm_only' ? '🧠 LLM' : '⚡ Regex+LLM';
+      const modeLabel = anonMode==='regex' ? '{ } Regex' : anonMode==='dict' ? '📖 Dizionario' : '🛡 Regex+Dizionario';
       stxt.textContent = `✓ ${strippedBlocks.length} blocchi rimossi (−${saved} char) · ${modeLabel} · verifica manualmente`;
       scard.style.borderColor = 'var(--green)';
 
@@ -975,13 +1056,13 @@ function renderAnonResult(anonText, reps, mode) {
   document.getElementById('anonText').value = anonText;
   const listEl = document.getElementById('repList');
 
-  if (mode==='llm_only') {
-    listEl.innerHTML = `<div class="ib purple" style="margin-bottom:11px;">🧠 Anonimizzazione completata con LLM in-browser — nessun dato trasmesso. I nomi identificati sono stati sostituiti direttamente. Verifica il risultato a destra.</div>`;
-  } else if (!reps.length) {
+  if (!reps.length) {
     listEl.innerHTML = '<div class="ib green" style="margin-bottom:11px;">✓ Nessun identificatore regex rilevato. Verifica manualmente.</div>';
   } else {
     const modeChip = mode==='combined'
-      ? `<span class="chip c-w" style="margin-left:6px;">{ } Regex (stage 1)</span><span class="chip c-purple" style="margin-left:4px;">🧠 LLM (stage 2)</span>`
+      ? `<span class="chip c-w" style="margin-left:6px;">{ } Regex</span><span class="chip c-ok" style="margin-left:4px;">📖 Dizionario</span>`
+      : mode==='dict'
+      ? `<span class="chip c-ok" style="margin-left:6px;">📖 Dizionario</span>`
       : `<span class="chip c-w" style="margin-left:6px;">{ } Regex Offline</span>`;
     let h = `<div class="rl"><div class="rtitle">${reps.length} sostituzion${reps.length===1?'e':'i'} ${modeChip}</div>`;
     for (const r of reps)
