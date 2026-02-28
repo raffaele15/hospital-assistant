@@ -145,7 +145,7 @@ hr.div{border:none;border-top:1px solid var(--border);margin:18px 0}
 <main>
 
 <!-- ═══ STEP 1 — TESTO CLINICO ═══ -->
-<div class="panel active" id="panel0">
+<div class="panel active" id="panel0" style="display:flex;flex-direction:column;height:calc(100vh - 52px);">
   <div class="ptitle">Testo Clinico</div>
   <div class="psub">// step 01 — incolla il testo copiato dal PDF</div>
 
@@ -185,7 +185,7 @@ hr.div{border:none;border-top:1px solid var(--border);margin:18px 0}
   </div>
 
   <label>Testo Completo del Paziente</label>
-  <textarea id="inp_raw" rows="26" placeholder="Incolla qui il testo copiato dal PDF...
+  <textarea id="inp_raw" style="height:calc(100vh - 420px);min-height:300px;" placeholder="Incolla qui il testo copiato dal PDF...
 
 Il blocco può contenere tutto:
 - Motivo del ricovero e anamnesi
@@ -208,87 +208,35 @@ Non è necessario strutturarlo preventivamente."></textarea>
 <!-- ═══ STEP 2 — ANONIMIZZAZIONE ═══ -->
 <div class="panel" id="panel1">
   <div class="ptitle">Anonimizzazione</div>
-  <div class="psub">// step 02 — checklist + regex offline → revisione manuale</div>
+  <div class="psub">// step 02 — regex offline → revisiona → procedi</div>
 
-  <!-- architecture card -->
-  <div class="card">
-    <div class="ctitle">Pipeline Privacy — Completamente Offline</div>
-    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;">
-      <div style="background:var(--surface2);border:1px solid var(--border);border-radius:var(--r);padding:11px;">
-        <div style="font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--dim);margin-bottom:5px;">LIVELLO 1</div>
-        <div style="font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--text);margin-bottom:3px;">Checklist manuale</div>
-        <div style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--dim);">Rimuovi i dati più ovvi direttamente nel testo prima di elaborare.</div>
-      </div>
-      <div style="background:var(--surface2);border:1px solid var(--border);border-radius:var(--r);padding:11px;">
-        <div style="font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--dim);margin-bottom:5px;">LIVELLO 2</div>
-        <div style="font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--text);margin-bottom:3px;">Regex locale</div>
-        <div style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--dim);">CF, telefoni, DOB, titoli+nomi. Gira nel browser — zero rete.</div>
-      </div>
-      <div style="background:var(--surface2);border:1px solid var(--border);border-radius:var(--r);padding:11px;">
-        <div style="font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--dim);margin-bottom:5px;">LIVELLO 3</div>
-        <div style="font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--text);margin-bottom:3px;">Revisione manuale</div>
-        <div style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--dim);">Tu verifichi e correggi il testo anonimizzato prima di procedere.</div>
-      </div>
+  <div class="ib acc">
+    Anonimizzazione con pattern regex — gira nel browser, <strong style="color:var(--text);">zero rete, zero trasmissione dati.</strong> Pattern configurabili nelle Impostazioni.
+  </div>
+
+  <div id="anonStatus" class="card" style="display:flex;align-items:center;gap:10px;padding:12px 14px;">
+    <span class="spin" id="anonSpin" style="display:none;"></span>
+    <span id="anonStatusTxt" style="font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--mid);">Pronto.</span>
+  </div>
+
+  <div id="repList"></div>
+
+  <div class="diff-grid">
+    <div>
+      <div class="dlabel">Testo originale — locale, non inviato</div>
+      <div class="dtext" id="origText" style="max-height:420px;overflow-y:auto;">—</div>
     </div>
-    <div class="ib" style="margin-top:12px;margin-bottom:0;">
-      I pattern regex sono configurabili nelle <strong style="color:var(--text);">Impostazioni</strong>. Nessun dato viene trasmesso durante l'anonimizzazione — tutto gira nel browser.
+    <div>
+      <div class="dlabel">Testo anonimizzato ✏ modificabile</div>
+      <textarea id="anonText" class="dtext" style="height:420px;font-size:11px;resize:vertical;"></textarea>
     </div>
   </div>
 
-  <!-- CHECKLIST -->
-  <div id="checklistPanel">
-    <div style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--accent);text-transform:uppercase;letter-spacing:.1em;margin-bottom:10px;">① Checklist Pre-Elaborazione</div>
-    <div class="ib" style="margin-bottom:11px;">
-      Prima di procedere, verifica di aver rimosso o sostituito i dati più evidenti direttamente nel testo dello Step 1. Questa checklist certifica la tua verifica.
-    </div>
+  <div class="ib red">⚠ Verifica il testo a destra. Correggi manualmente qualsiasi nome o dato rimasto prima di procedere.</div>
 
-    <div class="ci" onclick="toggleCheck(this,0)"><span class="cb" id="chk0">☐</span><span class="ct">Ho rimosso il <strong>cognome del paziente</strong> dal testo</span></div>
-    <div class="ci" onclick="toggleCheck(this,1)"><span class="cb" id="chk1">☐</span><span class="ct">Ho rimosso i <strong>nomi dei medici</strong> (es. "dott.ssa Giovanna", "con Sara")</span></div>
-    <div class="ci" onclick="toggleCheck(this,2)"><span class="cb" id="chk2">☐</span><span class="ct">Ho rimosso <strong>strutture/reparti specifici</strong> identificabili</span></div>
-    <div class="ci" onclick="toggleCheck(this,3)"><span class="cb" id="chk3">☐</span><span class="ct">Ho rimosso <strong>codice fiscale, data di nascita, telefono</strong></span></div>
-    <div class="ci" onclick="toggleCheck(this,4)"><span class="cb" id="chk4">☐</span><span class="ct">Ho rimosso <strong>indirizzi, numeri cartella, ID ospedalieri</strong></span></div>
-
-    <div id="chkErr" style="font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--red);margin:10px 0;display:none;">✗ Completa tutte le voci prima di procedere.</div>
-
-    <div class="btn-row">
-      <button class="btn btn-g" onclick="goTo(0)">← Indietro</button>
-      <button class="btn btn-p" onclick="startAnon()">✓ Avvia Anonimizzazione Regex</button>
-    </div>
-  </div>
-
-  <!-- RESULT -->
-  <div id="anonResult" style="display:none;">
-    <div id="anonStatus" class="card" style="display:flex;align-items:center;gap:10px;padding:12px 14px;">
-      <span class="spin" id="anonSpin" style="display:none;"></span>
-      <span id="anonStatusTxt" style="font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--mid);">Elaborazione...</span>
-    </div>
-
-    <div id="repList"></div>
-
-    <div class="diff-grid">
-      <div>
-        <div class="dlabel">Testo originale — locale, non inviato</div>
-        <div class="dtext" id="origText" style="max-height:380px;overflow-y:auto;">—</div>
-      </div>
-      <div>
-        <div class="dlabel">Testo anonimizzato ✏ modificabile</div>
-        <textarea id="anonText" class="dtext" style="height:380px;font-size:11px;resize:vertical;"></textarea>
-      </div>
-    </div>
-
-    <div class="ib red">⚠ Revisiona ogni riga del testo a destra. Correggi manualmente qualsiasi nome o dato identificativo rimasto prima di confermare.</div>
-
-    <div style="display:flex;align-items:center;gap:11px;margin-top:11px;">
-      <input type="checkbox" id="confirmAnon" style="accent-color:var(--accent);width:15px;height:15px;flex-shrink:0;">
-      <label for="confirmAnon" style="margin:0;font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--mid);text-transform:none;letter-spacing:0;cursor:pointer;">
-        Confermo di aver verificato il testo — nessun dato identificativo è rimasto
-      </label>
-    </div>
-
-    <div class="btn-row">
-      <button class="btn btn-g" onclick="resetAnon()">← Torna alla checklist</button>
-      <button class="btn btn-p" onclick="proceedToGenerate()">Avanti → Genera</button>
-    </div>
+  <div class="btn-row">
+    <button class="btn btn-g" onclick="goTo(0)">← Indietro</button>
+    <button class="btn btn-p" onclick="proceedToGenerate()">Avanti → Genera</button>
   </div>
 </div>
 
@@ -425,7 +373,6 @@ Non è necessario strutturarlo preventivamente."></textarea>
 // STATE
 // ═══════════════════════════════════════════════════
 const S = { rawText:'', anonText:'', letter:'' };
-const checks = [false,false,false,false,false];
 
 const DEFAULT_SYS = `Sei un assistente esperto in documentazione medica ospedaliera italiana.
 Genera una lettera di dimissione strutturata in italiano formale clinico.
@@ -454,41 +401,11 @@ function goToAnon() {
   const raw = document.getElementById('inp_raw').value.trim();
   if (!raw) { alert('Incolla prima il testo clinico nello Step 1.'); return; }
   S.rawText = raw;
-  resetAnon();
   goTo(1);
-}
-
-// ═══════════════════════════════════════════════════
-// CHECKLIST
-// ═══════════════════════════════════════════════════
-function toggleCheck(el, i) {
-  checks[i] = !checks[i];
-  el.classList.toggle('chk', checks[i]);
-  document.getElementById('chk'+i).textContent = checks[i] ? '☑' : '☐';
-}
-
-function startAnon() {
-  if (!checks.every(Boolean)) {
-    document.getElementById('chkErr').style.display = 'block';
-    return;
-  }
-  document.getElementById('chkErr').style.display = 'none';
-  document.getElementById('checklistPanel').style.display = 'none';
-  document.getElementById('anonResult').style.display = 'block';
   runRegex();
 }
 
-function resetAnon() {
-  checks.fill(false);
-  document.querySelectorAll('.ci').forEach(el => {
-    el.classList.remove('chk');
-    el.querySelector('.cb').textContent = '☐';
-  });
-  document.getElementById('chkErr').style.display = 'none';
-  document.getElementById('checklistPanel').style.display = 'block';
-  document.getElementById('anonResult').style.display = 'none';
-  document.getElementById('confirmAnon').checked = false;
-}
+// (checklist removed)
 
 // ═══════════════════════════════════════════════════
 // REGEX ANONYMIZER (fully offline)
@@ -586,11 +503,8 @@ function renderAnonResult(anonText, reps) {
 // PROCEED TO GENERATE
 // ═══════════════════════════════════════════════════
 function proceedToGenerate() {
-  if (!document.getElementById('confirmAnon').checked) {
-    alert('Conferma prima di aver verificato manualmente il testo anonimizzato.');
-    return;
-  }
   S.anonText = document.getElementById('anonText').value;
+  if (!S.anonText.trim()) { alert('Nessun testo anonimizzato. Torna allo Step 1.'); return; }
   if (!document.getElementById('systemPrompt').value.trim())
     document.getElementById('systemPrompt').value = DEFAULT_SYS;
   goTo(2);
@@ -873,13 +787,20 @@ let pdfjsLib = null;
 
 async function ensurePdfJs() {
   if (pdfjsLib) return pdfjsLib;
-  // Dynamic import of PDF.js ESM build
-  const mod = await import('https://cdn.jsdelivr.net/npm/pdfjs-dist@4.4.168/build/pdf.min.mjs');
-  pdfjsLib = mod;
-  // Point worker to CDN (runs in browser, no install needed)
-  pdfjsLib.GlobalWorkerOptions.workerSrc =
-    'https://cdn.jsdelivr.net/npm/pdfjs-dist@4.4.168/build/pdf.worker.min.mjs';
-  return pdfjsLib;
+  // Use PDF.js 3.11.174 — compatible with Chrome 80+, no Promise.withResolvers needed
+  return new Promise((resolve, reject) => {
+    if (window.pdfjsLib) { pdfjsLib = window.pdfjsLib; resolve(pdfjsLib); return; }
+    const script = document.createElement('script');
+    script.src = 'https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.min.js';
+    script.onload = () => {
+      pdfjsLib = window.pdfjsLib;
+      pdfjsLib.GlobalWorkerOptions.workerSrc =
+        'https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.worker.min.js';
+      resolve(pdfjsLib);
+    };
+    script.onerror = () => reject(new Error('Impossibile caricare PDF.js. Verifica la connessione internet.'));
+    document.head.appendChild(script);
+  });
 }
 
 function handlePdfDrop(e) {
