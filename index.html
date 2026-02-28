@@ -78,8 +78,8 @@ select{width:100%;background:var(--surface2);border:1px solid var(--border);bord
 @keyframes sp{to{transform:rotate(360deg)}}
 
 /* diff */
-.diff-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:13px}
-.diff-grid > div{display:flex;flex-direction:column}
+.diff-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:13px;align-items:stretch}
+.diff-grid > div{display:flex;flex-direction:column;flex:1}
 .dlabel{font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--dim);letter-spacing:.12em;text-transform:uppercase;margin-bottom:6px;padding:2px 6px;background:var(--surface2);border-radius:3px;display:inline-block}
 .dtext{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:12px 13px;font-family:'JetBrains Mono',monospace;font-size:11px;line-height:1.8;white-space:pre-wrap;overflow-y:auto;min-height:600px}
 .redacted{background:rgba(201,110,110,.18);color:var(--red);border-radius:2px;padding:0 2px}
@@ -262,11 +262,11 @@ hr.div{border:none;border-top:1px solid var(--border);margin:18px 0}
   <div class="diff-grid">
     <div>
       <div class="dlabel">Testo originale — locale, non inviato</div>
-      <div class="dtext" id="origText" style="min-height:600px;overflow-y:auto;">—</div>
+      <div class="dtext" id="origText" style="flex:1;min-height:80vh;overflow-y:auto;">—</div>
     </div>
     <div>
       <div class="dlabel">Testo anonimizzato ✏ modificabile</div>
-      <textarea id="anonText" class="dtext" style="font-size:11px;resize:vertical;min-height:600px;"></textarea>
+      <textarea id="anonText" class="dtext" style="flex:1;min-height:80vh;resize:none;"></textarea>
     </div>
   </div>
 
@@ -512,36 +512,105 @@ function goTo(i) {
 // NOT clinical content, hospital department names, or dates.
 // ═══════════════════════════════════════════════════
 const BOILERPLATE_PATTERNS = [
-  // Regional / company headers
-  { re:/^Regione\s+\w[\w\s]*$/im,                                                   tag:'Intestazione Regione' },
-  { re:/^AZIENDA\s+OSPEDALE[^\n]*/im,                                               tag:'Intestazione Azienda' },
-  { re:/^Azienda\s+Ospedaliera[^\n]*/im,                                            tag:'Intestazione Azienda' },
-  { re:/^AULSS\s*\d*[^\n]*/im,                                                      tag:'Intestazione AULSS' },
-  { re:/^ULSS\s*\d*[^\n]*/im,                                                       tag:'Intestazione ULSS' },
-  // Director / responsible lines
-  { re:/^Direttore[:\s]+[^\n]+$/im,                                                 tag:'Direttore' },
-  { re:/^Responsabile[:\s]+[^\n]+$/im,                                              tag:'Responsabile' },
-  // Admission metadata lines (not clinical content)
-  { re:/per il ricovero\s+[\d\/x]+\s+in\s+regime\s+\w+[^\n]*/i,                   tag:'Metadato ricovero' },
-  { re:/^Ricovero\s*(?:n\.|numero)?\s*[\d\/x]+[^\n]*/im,                           tag:'Numero ricovero' },
-  { re:/RICOVERO\s+[\dx\/]+[^\n]*/i,                                                tag:'Numero ricovero' },
-  // Document type headers (redundant if embedded in clinical text)
-  { re:/^LETTERA\s+DI\s+DIMISSIONE\s*$\n?/im,                                      tag:'Tipo documento' },
-  // Patient metadata header block (name+DOB in header, not clinical narrative)
-  { re:/^Paziente\s*:?\s*[A-ZÀÈÉÌÍÒÓÙÚ][^\n]*\n?(?:Data\s+di\s+(?:Nascita|nascita)\s*:?\s*[^\n]*)?\n?/im, tag:'Metadato paziente' },
-  // Page numbers / footers
+  // ── Regional / company headers ──
+  { re:/^REGIONE\s+DEL\s+\w+[^\n]*/gim,                                            tag:'Intestazione Regione' },
+  { re:/^Regione\s+(?:del\s+)?\w[\w\s]*$/gim,                                      tag:'Intestazione Regione' },
+  { re:/^AZIENDA\s+OSPEDALE[^\n]*/gim,                                              tag:'Intestazione Azienda' },
+  { re:/^AZIENDA\s+OSPEDALIERA[^\n]*/gim,                                           tag:'Intestazione Azienda' },
+  { re:/^Azienda\s+Ospedaliera[^\n]*/gim,                                           tag:'Intestazione Azienda' },
+  { re:/^AULSS\s*\d*[^\n]*/gim,                                                     tag:'Intestazione AULSS' },
+  { re:/^ULSS\s*\d*[^\n]*/gim,                                                      tag:'Intestazione ULSS' },
+  // ── Dip/DIDAS/Servizi lines ──
+  { re:/^Dip\.?\s+Didattico[^\n]*/gim,                                              tag:'Intestazione Dip' },
+  { re:/^Didas\s+[^\n]*/gim,                                                        tag:'Intestazione Didas' },
+  { re:/^Servizi\s+di\s+Diagnostica[^\n]*/gim,                                      tag:'Intestazione Servizi' },
+  { re:/^U\.O\.(?:C|S|D|SD)?\.?\s+[^\n]{3,60}$/gim,                               tag:'U.O. Reparto' },
+  // ── Director / responsible lines ──
+  { re:/^Direttore(?:\s+ad\s+interim)?\s*:?[^\n]*/gim,                             tag:'Direttore' },
+  { re:/^Responsabile\s*:?[^\n]*/gim,                                               tag:'Responsabile' },
+  // ── Admission metadata ──
+  { re:/per il ricovero\s+[\d\/x]+\s+in\s+regime\s+\w+[^\n]*/gi,                  tag:'Metadato ricovero' },
+  { re:/^Ricovero\s*(?:n\.|numero)?\s*[\d\/x]+[^\n]*/gim,                          tag:'Numero ricovero' },
+  { re:/RICOVERO\s+[\dx\/]+[^\n]*/gi,                                               tag:'Numero ricovero' },
+  { re:/^Episodio\s+RIC_AO_[^\n]*/gim,                                              tag:'Episodio RIC' },
+  { re:/^RIC_AO_[^\r\n]*/gm,                                                        tag:'ID Ricovero' },
+  // ── Document type headers ──
+  { re:/^LETTERA\s+DI\s+DIMISSIONE\s*$\n?/gim,                                     tag:'Tipo documento' },
+  { re:/^Diario\s+clinico\s*$/gim,                                                  tag:'Titolo diario' },
+  // ── Patient metadata header blocks ──
+  { re:/^Paziente\s*:?\s*[A-ZÀÈÉÌÍÒÓÙÚ][^\n]*\n?(?:Data\s+(?:di\s+)?[Nn]ascita\s*:?\s*[^\n]*)?\n?/gim, tag:'Metadato paziente' },
+  { re:/^(?:Nominativo|Paziente)\s*:\s*[A-ZÀÈÉÌÍÒÓÙÚ]{2,}[^\n]*/gim,              tag:'Metadato paziente' },
+  { re:/^Data\s+(?:di\s+)?[Nn]ascita\s*:\s*[^\n]*Sesso[^\n]*/gim,                 tag:'Metadato paziente' },
+  { re:/^Anni\s*:\s*\d+[^\n]*/gim,                                                  tag:'Metadato età' },
+  // ── Lab report header blocks ──
+  { re:/^Al\s+Medico\s+Curante\s*:?\s*[^\n]*/gim,                                  tag:'Intestazione lab' },
+  { re:/^Provenienza\s*:\s*[^\n]*/gim,                                              tag:'Provenienza lab' },
+  { re:/^Prelievo\s+del\s*:\s*[^\n]*/gim,                                           tag:'Data prelievo' },
+  { re:/^Ricevuto\s+il\s*:\s*[^\n]*/gim,                                            tag:'Data ricezione' },
+  { re:/^Referto\s+del\s*:\s*[^\n]*/gim,                                            tag:'Data referto' },
+  { re:/^Riferimento\s*:\s*[^\n]*/gim,                                              tag:'Riferimento lab' },
+  { re:/^Note\s+dal\s+richiedente[^\n]*/gim,                                        tag:'Note richiedente' },
+  { re:/^ASSIPCA\s*:\s*[^\n]*/gim,                                                  tag:'ASSIPCA' },
+  { re:/Ric\/Ref\s*:\s*[\d\s\/\-]+[^\n]*/gi,                                       tag:'Ric/Ref' },
+  { re:/^Num\.\s+(?:interno|esterno)\s*:\s*[^\n]*/gim,                              tag:'Num. lab' },
+  { re:/^Ref\.\s+SSI\s*:\s*[^\n]*/gim,                                              tag:'Ref SSI' },
+  // ── Page numbers / footers ──
+  { re:/Pagina\s*:\s*\d+[^\n]*/gi,                                                  tag:'Numero pagina' },
   { re:/Pagina\s+\d+\s*(?:di|\/)\s*\d+[^\n]*/gi,                                   tag:'Numero pagina' },
-  { re:/Pag\.\s*\d+\s*(?:di|\/)\s*\d+[^\n]*/gi,                                   tag:'Numero pagina' },
-  // Request metadata (VIS consultation lines)
-  { re:/Medico\s+refertante[^\n]*/gi,                                               tag:'Metadato refertante' },
-  { re:/Richiesta\s+in\s+data[^\n]*/gi,                                             tag:'Metadato richiesta' },
-  // Staff list rows (e.g. printed at end of document)
-  { re:/^(?:[A-ZÀÈÉÌÍÒÓÙÚ]{2,}[\s,]+){2,}(?:MEDICO|INFERMIERE|COORDINATORE)[^\n]*/gim, tag:'Lista personale' },
-  // Cost/DRG notice lines
+  { re:/Pag\.\s*\d+\s*(?:di|\/)\s*\d+[^\n]*/gi,                                    tag:'Numero pagina' },
+  { re:/^(\d+)Page\s+(\d+)\s+of\s+\d+[^\n]*/gim,                                   tag:'Numero pagina' },
+  { re:/^Page\s+\d+\s+of\s+\d+[^\n]*/gim,                                           tag:'Numero pagina' },
+  // ── Document number lines ──
+  { re:/^Documento\s+Numero\s*:?\s*\d*[^\n]*/gim,                                  tag:'Numero documento' },
+  { re:/^Versione\s+Referto\s*:\s*\d+[^\n]*/gim,                                   tag:'Versione referto' },
+  { re:/^N\.\s+Richiesta\s*:[^\n]*/gim,                                             tag:'N. Richiesta' },
+  // ── Signing / digital signature lines ──
+  { re:/Lettera\s+di\s+dimissione\s+firmata\s+digitalmente[^\n]*/gi,               tag:'Firma digitale' },
+  { re:/(?:Copia\s+di\s+(?:referto|documento)\s+firmato[^\n]*)\n?/gi,              tag:'Nota copia digitale' },
+  { re:/I\s+risultati\s+di\s+questo\s+referto[^\n]*/gi,                            tag:'Nota referto' },
+  { re:/Rappresentazione\s+di\s+un\s+referto\s+firmato[^\n]*/gi,                   tag:'Nota firma' },
+  { re:/Il\s+referto\s+è\s+conservato[^\n]*/gi,                                    tag:'Nota conservazione' },
+  { re:/^Validato\s+da[^\n]*/gim,                                                   tag:'Validazione' },
+  { re:/^\*{3}\s*Referto\s+Finale\s*\*{3}[^\n]*/gim,                               tag:'Referto finale' },
+  { re:/^Firmato\s+il\s+\d{1,2}\/\d{2}\/\d{4}[^\n]*/gim,                          tag:'Data firma' },
+  // ── Staff / footer lines ──
+  { re:/^Dirigenti\s+Medici\s*:[^\n]*/gim,                                          tag:'Lista staff' },
+  { re:/^(?:Coord(?:inatore)?\s*:|Inf\s*:)[^\n]*/gim,                              tag:'Lista staff' },
+  { re:/^Lab\.\s+Neurosonologia[^\n]*/gim,                                          tag:'Footer lab' },
+  { re:/^Segreteria\s+interni[^\n]*/gim,                                            tag:'Segreteria' },
+  { re:/^(?:Tel|Fax)\s*[\+\d\-\.\s]+$/gim,                                         tag:'Telefono footer' },
+  // ── Cost / DRG / GDPR notice blocks ──
+  { re:/INFORMAZIONE\s+AI\s+SENSI\s+DELLA\s+DELIBERAZIONE[^\n]*/gi,               tag:'Nota GDPR' },
+  { re:/Gentile\s+signore\/signora\s+desideriamo[^\n]*/gi,                          tag:'Nota costi' },
+  { re:/impiego\s+di\s+risorse\s+economiche[^\n]*/gi,                              tag:'Nota costi' },
   { re:/(?:DRG|tariffa|rimborso)\s*:?\s*[\d.,€$]+[^\n]*/gi,                       tag:'Nota costi DRG' },
-  { re:/Il\s+(?:costo|rimborso|contributo)\s+del\s+(?:ricovero|DRG)[^\n]*/gi,     tag:'Nota costi' },
-  // XLS lab patient header rows
-  { re:/^RIC_AO_[^\r\n]*/gm,                                                       tag:'ID Ricovero XLS' },
+  { re:/pari\s+ad\s+euro\s+[\d.,]+[^\n]*/gi,                                       tag:'Importo costi' },
+  // ── Diary table header row ──
+  { re:/^Data\s+nota\s+Nota\s+P\s+Operatore[^\n]*/gim,                             tag:'Header diario' },
+  // ── Diary timestamp lines (date + time alone on lines) ──
+  { re:/^\d{1,2}\/\d{2}\/\d{4}\n\d{2}:\d{2}(?:\n\d{1,2}\/\d{2}\/\d{4}\n\d{2}:\d{2})?(?:\nMotivo\s+Cancellazione[^\n]*)?\n/gm, tag:'Timestamp diario' },
+  // ── Vital signs chart footer with names in parentheses ──
+  { re:/(?:\([A-ZÀÈÉÌÍÒÓÙÚ][a-zàèéìíòóùú]{1,20}\s+[A-ZÀÈÉÌÍÒÓÙÚ][a-zàèéìíòóùú]{1,20}\)\s*)+/g, tag:'Operatori grafica' },
+  // ── Address lines (CAP + city + street) ──
+  { re:/^\d{5}\s+[A-ZÀÈÉÌÍÒÓÙÚ][a-zA-ZÀ-ú\s]+[-–]\s*(?:Via|Viale|Piazza|C\.so)[^\n]*/gim, tag:'Indirizzo' },
+  { re:/^(?:Via|Viale|Piazza|C\.so)\s+[^\n]{5,60}$/gim,                            tag:'Indirizzo' },
+  { re:/^Azienda\s+Ospedale\s+-\s+Università\s+Padova[^\n]*/gim,                  tag:'Footer azienda' },
+  // ── Legenda / footnote lines ──
+  { re:/^\(P\)\s+Profilo[^\n]*/gim,                                                 tag:'Legenda profilo' },
+  { re:/^Data\s+stampa\s*:[^\n]*/gim,                                               tag:'Data stampa' },
+  { re:/^L'ORARIO\s+DELLE\s+SOMMINISTRAZIONI[^\n]*/gim,                            tag:'Nota orario' },
+  { re:/^Legenda\s+vie\s*:[^\n]*/gim,                                               tag:'Legenda vie' },
+  { re:/^SARANNO\s+DISPONIBILI\s+ULTERIORI[^\n]*/gim,                              tag:'Nota completamento' },
+  // ── Radiology/consult request metadata ──
+  { re:/^Medico\s+[Rr]ichiedente\s*:[^\n]*/gim,                                    tag:'Medico richiedente' },
+  { re:/^Quesito\s+[Dd]iagnostico\s*:[^\n]*/gim,                                   tag:'Quesito' },
+  { re:/^(?:Equipe|Operatore)\s*:[^\n]*/gim,                                        tag:'Equipe' },
+  { re:/^T\.S\.R\.M\.[^\n]*/gim,                                                    tag:'TSRM' },
+  { re:/^Documento\s+firmato\s+digitalmente\s+il[^\n]*/gim,                        tag:'Firma digitale' },
+  { re:/^Frequenza\s+campionamento[^\n]*/gim,                                       tag:'Parametri ECG' },
+  // ── Physiatric consult footer ──
+  { re:/^(?:MFS|Dott\.?(?:ssa)?)\s+[A-ZÀÈÉÌÍÒÓÙÚ][^\n]{3,60}$/gim,              tag:'Firma fisiatria' },
+  { re:/^\d+\/\d+[A-ZÀÈÉÌÍÒÓÙÚ]+\s+[A-ZÀÈÉÌÍÒÓÙÚ]+\s+-\s+\d+\/\d+\/\d+/gm,    tag:'Footer consulenza' },
 ];
 
 function stripBoilerplate(text) {
@@ -613,48 +682,112 @@ function applyRegex(text) {
   const reps = []; let result = text;
 
   const patterns = [
-    // ── Codice Fiscale (16-char alphanumeric Italian tax code) ──
+
+    // ══ 1. CODICE FISCALE ══
     { re:/\b[A-Z]{6}\d{2}[A-Z]\d{2}[A-Z]\d{3}[A-Z]\b/gi,
       label:'Codice Fiscale', tag:'[CODICE_FISCALE]' },
 
-    // ── Birth dates only — MUST be preceded by birth context words ──
-    // Matches: "nata il 12/03/1980", "nato il 12.03.80", "Data di nascita: 12-03-1980"
-    // Does NOT match plain clinical dates like "il 15/01" or "in data 03/2024"
-    { re:/\b(?:nata?\s+(?:il\s+)?|Data\s+di\s+(?:[Nn]ascita)\s*:?\s*)\d{1,2}[\/\-.]\d{1,2}[\/\-.]\d{2,4}\b/gi,
+    // ══ 2. INLINE (d.n. DATE) BLOCKS — e.g. "(d.n.26/05/1941)" ══
+    { re:/\(\s*[Dd]\.?[Nn]\.?\s*\d{1,2}[\/\-.]\d{1,2}[\/\-.]\d{2,4}\s*\)/g,
+      label:'Blocco DN inline', tag:'' },
+
+    // ══ 3. BIRTH DATES — only when preceded by birth context ══
+    // Covers: "nata il", "nato il", "Data di nascita:", "D.N.:", "nato/a il", "Nato/a il"
+    { re:/\b(?:nata?\s+(?:il\s+)?|[Dd]ata\s+di\s+[Nn]ascita\s*:?\s*|[Dd]\.?[Nn]\.?\s*:?\s*|nato\/a\s+il\s+|Nato\/a\s+il\s+)\d{1,2}[\/\-.]\d{1,2}[\/\-.]\d{2,4}\b/gi,
       label:'Data Nascita', tag:'[DATA_NASCITA]' },
 
-    // ── Phone numbers ──
-    { re:/(?:\+39[\s\-]?)?\b0\d{1,4}[\s\-]?\d{6,8}\b/g,
+    // ══ 4. PHONE NUMBERS ══
+    { re:/(?:\+39[\s\-]?)?(?:\+039[\s\-]?)?\b0\d{1,4}[\s\-]?\d{5,8}\b/g,
       label:'Telefono fisso', tag:'[TELEFONO]' },
     { re:/\b3\d{2}[\s\-]?\d{3}[\s\-]?\d{4}\b/g,
       label:'Telefono mobile', tag:'[TELEFONO]' },
 
-    // ── Email ──
+    // ══ 5. EMAIL ══
     { re:/[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}/g,
       label:'Email', tag:'[EMAIL]' },
 
-    // ── Admission / record numbers ──
-    { re:/\b(?:ricovero|cartella|pratica|SDO|scheda)\s*(?:n\.|numero|nr\.?)?\s*[\dx\/]+/gi,
+    // ══ 6. ADMISSION / RECORD NUMBERS ══
+    { re:/\b(?:ricovero|cartella|pratica|SDO|scheda|nosografico)\s*(?:n\.|numero|nr\.?)?\s*[\dx\/]+/gi,
       label:'Nr.Ricovero', tag:'[NR_RICOVERO]' },
 
-    // ── Patient/staff IDs ──
-    { re:/\b(?:matricola|NPI|NHI|MRN)\s*[:\s]+[A-Z0-9\-]+/gi,
+    // ══ 7. PATIENT/STAFF IDs ══
+    { re:/\b(?:matricola|NPI|NHI|MRN|ASSIPCA)\s*[:\s]+[A-Z0-9\-]+/gi,
       label:'ID', tag:'[ID_PAZIENTE]' },
 
-    // ── Titled person names: Dott., Prof., Sig., Dr. followed by Name Surname ──
-    // FIX: also catches names in diary headers like "(Dott. Rossi Mario)" 
-    { re:/\b(?:Dott(?:\.ssa?|ssa?)?\.?|Prof(?:\.ssa?|ssa?)?\.?|Dr\.?|Sig(?:\.ra?\.?|ra?\.?)?)\s+[A-ZÀÈÉÌÍÒÓÙÚ][a-zàèéìíòóùú]+(?:\s+[A-ZÀÈÉÌÍÒÓÙÚ][a-zàèéìíòóùú]+)?/g,
-      label:'Medico/Paziente', tag:'[MEDICO]' },
+    // ══ 8. DIARY HEADER: Firstname\nSurname\n[role letter] (split over lines) ══
+    { re:/^([A-ZÀÈÉÌÍÒÓÙÚ][a-zàèéìíòóùú]{1,20})\n([A-ZÀÈÉÌÍÒÓÙÚ][a-zàèéìíòóùú]{1,20})\n[MITNOF]\b/gm,
+      label:'Intestazione diario split', tag:'[MEDICO]' },
 
-    // ── Untitled Firstname Lastname patterns in known PII contexts ──
-    // Matches: names in parentheses after role words, diary signature lines,
-    // e.g. "(refertato da Mario Rossi)", "Firma: Giovanni Bianchi"
-    { re:/(?:refertato\s+da|visitata?\s+da|seguita?\s+da|eseguita?\s+da|Firma\s*:?\s*|[Rr]edatto\s+da\s*|[Cc]omunicato\s+a\s+)\s*([A-ZÀÈÉÌÍÒÓÙÚ][a-zàèéìíòóùú]{1,20}\s+[A-ZÀÈÉÌÍÒÓÙÚ][a-zàèéìíòóùú]{1,20})/g,
-      label:'Nome contestuale', tag:'[NOME]' },
+    // ══ 9. DIARY HEADER: FirstnameSurname[role] concatenated no space ══
+    // e.g. "Rossana RagoneM", "EdoardoFabrisM", "ChiaraCaloreI"
+    { re:/\b([A-ZÀÈÉÌÍÒÓÙÚ][a-zàèéìíòóùú]{1,20})([A-ZÀÈÉÌÍÒÓÙÚ][a-zàèéìíòóùú]{1,20})[MITNOF](?=\s|$)/gm,
+      label:'Intestazione diario concat', tag:'[MEDICO]' },
 
-    // ── Admission/reply metadata with name inline ──
-    { re:/^Risposta\s*-\s*del\s+\d{1,2}\/\d{2}\/\d{4}[^\n]*/im,
+    // ══ 10. NAMES IN PARENTHESES — vital signs chart operators ══
+    // e.g. "(Formentin Arianna)", "(Filosa Ornella)"
+    { re:/\(([A-ZÀÈÉÌÍÒÓÙÚ][a-zàèéìíòóùú]{1,20}\s+[A-ZÀÈÉÌÍÒÓÙÚ][a-zàèéìíòóùú]{1,20})\)/g,
+      label:'Operatore in parentesi', tag:'([MEDICO])' },
+
+    // ══ 11. ALL-CAPS PATIENT NAME (Surname Firstname or Firstname Surname) ══
+    // Guards against matching clinical abbreviations: mmHg, bpm, ml, etc.
+    { re:/\b([A-ZÀÈÉÌÍÒÓÙÚ]{2,20})\s+([A-ZÀÈÉÌÍÒÓÙÚ]{2,20})\b(?!\s*(?:mmHg|bpm|ml|mg|g\/L|U\/L|ng|umol|mmol|%|Hz|mSv|cm|ms|INR|ECG|TC|RM|EAS|FA|IVU|TVP|ADL|VRE|PCR|MCH|MCV|RDW|LDL|HDL|TSH|FT3|FT4|HbA|INR|PLT|RBC|AST|ALT|ALP|LAD|TnI|PCR|INR|PT|APTT|IgM|IgG|HBs|HCV|SSI|SGQ|UNI|ISO|DLgs|CABG|LIMA|PICA|IMT|EAS|VIS|DPC|AIFA))/g,
+      label:'Nome tutto maiuscolo', tag:'[PAZIENTE_NOME]' },
+
+    // ══ 12. PATIENT NAME AFTER COURTESY TITLE ══
+    // "sig. Marcolin Marianno", "sig.ra Rossi Maria"
+    { re:/\b(?:sig\.?r?a?\.?|signora?)\s+[A-ZÀÈÉÌÍÒÓÙÚ][a-zàèéìíòóùú]{1,20}\s+[A-ZÀÈÉÌÍÒÓÙÚ][a-zàèéìíòóùú]{1,20}/gi,
+      label:'Paziente sig.', tag:'[PAZIENTE_NOME]' },
+
+    // ══ 13. NAME + AGE ANCHOR — "Marcolin Marianno di anni 84" ══
+    { re:/[A-ZÀÈÉÌÍÒÓÙÚ][a-zàèéìíòóùú]{1,20}\s+[A-ZÀÈÉÌÍÒÓÙÚ][a-zàèéìíòóùú]{1,20}(?:\s*,)?\s+(?:di\s+)?anni\s+\d{1,3}/g,
+      label:'Paziente + età', tag:'[PAZIENTE_NOME]' },
+
+    // ══ 14. TITLED NAMES — Dott./Prof./Dr./T.S.R.M. + Name ══
+    { re:/\b(?:Dott(?:\.ssa?|ssa?)?\.?|Prof(?:\.ssa?|ssa?)?\.?|Dr\.?|T\.S\.R\.M\.?|MFS)\s+[A-ZÀÈÉÌÍÒÓÙÚ][a-zA-ZÀ-ú.\s]{1,35}(?=[,\n\r;]|$)/gm,
+      label:'Medico con titolo', tag:'[MEDICO]' },
+
+    // ══ 15. ABBREVIATED TITLED NAMES — "Dott. G. Fredianelli", "F. VIARO" after label ══
+    { re:/\b(?:Dott(?:\.ssa?)?\.?|Prof(?:\.ssa?)?\.?|Dr\.?)\s+[A-Z]\.\s+[A-ZÀÈÉÌÍÒÓÙÚ][a-zA-ZÀ-ú]{1,20}/g,
+      label:'Medico abbreviato', tag:'[MEDICO]' },
+
+    // ══ 16. ALL-CAPS NAMES AFTER LABEL KEYWORDS ══
+    // "Medico Richiedente: CAVATORTI STEFANO", "Firmatario:PICCIONE FRANCESCO"
+    { re:/(?:Medico\s+[Rr]ichiedente|Firmatario|Operatore|Refertato\s+da)\s*:?\s*[A-ZÀÈÉÌÍÒÓÙÚ]{2,20}\s+[A-ZÀÈÉÌÍÒÓÙÚ]{2,20}/g,
+      label:'Nome dopo etichetta', tag:'[MEDICO]' },
+
+    // ══ 17. SIGNING PHRASES ══
+    // "Lettera di dimissione firmata da Viaro Federica il..."
+    // "Referto firmato digitalmente da: Fogar Paola"
+    // "Documento Firmato digitalmente da [name]"
+    { re:/(?:lettera\s+(?:di\s+dimissione\s+)?firmata?\s+da|referto\s+firmato\s+(?:digitalmente\s+)?da\s*:?|documento\s+firmato\s+(?:digitalmente\s+)?da\s*:?|Firmatario\s*:)\s*[A-ZÀÈÉÌÍÒÓÙÚ][a-zàèéìíòóùú]{1,20}\s+[A-ZÀÈÉÌÍÒÓÙÚ][a-zàèéìíòóùú]{1,20}/gi,
+      label:'Firma documento', tag:'[DOCUMENTO_FIRMATO_DA_MEDICO]' },
+
+    // ══ 18. CONTEXTUAL NAMES AFTER ROLE PHRASES ══
+    { re:/(?:refertato\s+da|visitata?\s+da|seguita?\s+da|eseguita?\s+da|firmata?\s+da|compilata?\s+da|dettata?\s+da|[Rr]edatto\s+da|[Cc]omunicato\s+a|con\s+(?:il\s+)?(?:dott|prof)\.?\s*)\s+([A-ZÀÈÉÌÍÒÓÙÚ][a-zàèéìíòóùú]{1,20}\s+[A-ZÀÈÉÌÍÒÓÙÚ][a-zàèéìíòóùú]{1,20})/gi,
+      label:'Nome contestuale', tag:'[MEDICO]' },
+
+    // ══ 19. "Giro visite con [MEDICO], [MEDICO]" — already [MEDICO] but catch raw names ══
+    { re:/(?:[Gg]iro\s+visite\s+con|[Ss]u\s+indicazione\s+(?:del\s+)?(?:dott\.?|prof\.?)?)\s+([A-ZÀÈÉÌÍÒÓÙÚ][a-zàèéìíòóùú]{1,20}\s+[A-ZÀÈÉÌÍÒÓÙÚ][a-zàèéìíòóùú]{1,20})/g,
+      label:'Medico in contesto', tag:'[MEDICO]' },
+
+    // ══ 20. NAME SPLIT ACROSS TWO LINES in lab/radiology headers ══
+    // "Sig. Marcolin\nMarianno" or bare surname\nfirstname
+    { re:/^(?:Sig\.?\s+)?([A-ZÀÈÉÌÍÒÓÙÚ]{2,20})\n([A-ZÀÈÉÌÍÒÓÙÚ][a-zàèéìíòóùú]{2,20})$/gm,
+      label:'Nome split riga', tag:'[PAZIENTE_NOME]' },
+
+    // ══ 21. ADMISSION/REPLY HEADER with date ══
+    { re:/^Risposta\s*-\s*del\s+\d{1,2}\/\d{2}\/\d{4}[^\n]*/gim,
       label:'Intestazione risposta', tag:'' },
+
+    // ══ 22. PATIENT CONTEXT PHRASES ══
+    { re:/\b(?:il|la|del|della)\s+paziente\s+[A-ZÀÈÉÌÍÒÓÙÚ][a-zàèéìíòóùú]{1,20}\s+[A-ZÀÈÉÌÍÒÓÙÚ][a-zàèéìíòóùú]{1,20}/gi,
+      label:'Paziente in contesto', tag:'[PAZIENTE_NOME]' },
+    { re:/\bassistit[oa]\s+[A-ZÀÈÉÌÍÒÓÙÚ][a-zàèéìíòóùú]{1,20}\s+[A-ZÀÈÉÌÍÒÓÙÚ][a-zàèéìíòóùú]{1,20}/gi,
+      label:'Paziente assistito', tag:'[PAZIENTE_NOME]' },
+    { re:/\bricoverat[oa]\s+[A-ZÀÈÉÌÍÒÓÙÚ][a-zàèéìíòóùú]{1,20}\s+[A-ZÀÈÉÌÍÒÓÙÚ][a-zàèéìíòóùú]{1,20}/gi,
+      label:'Paziente ricoverato', tag:'[PAZIENTE_NOME]' },
+    { re:/\bdimess[oa]\s+[A-ZÀÈÉÌÍÒÓÙÚ][a-zàèéìíòóùú]{1,20}\s+[A-ZÀÈÉÌÍÒÓÙÚ][a-zàèéìíòóùú]{1,20}/gi,
+      label:'Paziente dimesso', tag:'[PAZIENTE_NOME]' },
   ];
 
   // Apply custom patterns from settings
@@ -668,7 +801,7 @@ function applyRegex(text) {
     if (p.re.global) p.re.lastIndex = 0;
     result = result.replace(p.re, (match) => {
       const m = match.trim();
-      if (!p.tag) return ''; // strip with no replacement (e.g. metadata lines)
+      if (!p.tag) return ''; // strip with no replacement
       if (m.length > 1 && !reps.find(r => r.orig === m))
         reps.push({ orig: m, repl: p.tag, type: p.label });
       return p.tag;
@@ -1184,7 +1317,7 @@ async function generateLetter() {
       method:'POST', headers,
       body: JSON.stringify({
         model:       document.getElementById('modelSelect').value,
-        max_tokens:  3500,
+        max_tokens:  8192,
         temperature: parseInt(document.getElementById('tempSlider').value) / 10,
         system: [{ type:'text', text: document.getElementById('systemPrompt').value || DEFAULT_SYS,
                    ...(useCache ? { cache_control:{ type:'ephemeral' } } : {}) }],
