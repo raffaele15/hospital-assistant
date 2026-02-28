@@ -276,6 +276,13 @@ hr.div{border:none;border-top:1px solid var(--border);margin:18px 0}
     </div>
   </div>
 
+  <!-- ── RAG MATCH PREVIEW (step 3) ── -->
+  <div id="ragPreviewGen" style="display:none;" class="card">
+    <div class="ctitle">Casi Simili Trovati <span class="chip c-purple" style="margin-left:6px;">RAG auto</span></div>
+    <div id="ragMatchesGen"></div>
+    <div style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--dim);margin-top:8px;">Le lettere di questi casi vengono incluse nel prompt come esempi few-shot (con cache). Le cartelle restano locali.</div>
+  </div>
+
   <!-- ── LIVE TOKEN COST BREAKDOWN ── -->
   <div class="tok-panel" id="tokPanel">
     <div class="ctitle" style="margin-bottom:14px;">
@@ -367,59 +374,65 @@ hr.div{border:none;border-top:1px solid var(--border);margin:18px 0}
   </div>
 </div>
 
-<!-- ═══ STEP 6 — LIBRERIA STILI ═══ -->
+<!-- ═══ STEP 6 — LIBRERIA CASI ═══ -->
 <div class="panel" id="panel5">
-  <div class="ptitle">Libreria Stili</div>
-  <div class="psub">// template persistenti — fingerprint + prompt caching</div>
+  <div class="ptitle">Libreria Casi</div>
+  <div class="psub">// casi clinici precedenti — RAG + fingerprint + caching</div>
 
   <div class="ib blue">
-    <strong style="color:var(--text);">Strategia token ottimale:</strong> ogni template viene salvato come <em>fingerprint compresso</em> (~150 token) invece della lettera completa (~2000 token). Al momento della generazione, il blocco fingerprint viene marcato con <code style="background:var(--surface3);padding:1px 4px;border-radius:2px;">cache_control</code> — Anthropic lo memorizza e le chiamate successive costano solo il <strong style="color:var(--text);">10% del prezzo input</strong> per quella sezione. Templates salvati in <code style="background:var(--surface3);padding:1px 4px;border-radius:2px;">localStorage</code> — persistono tra sessioni.
+    <strong style="color:var(--text);">Come funziona:</strong> ogni caso memorizza la cartella anonimizzata (usata localmente per trovare il caso più simile), la lettera generata (iniettata come esempio few-shot), e un fingerprint stilistico compresso (cacheable). Al momento della generazione, il sistema recupera automaticamente i <strong style="color:var(--text);">1–2 casi più simili</strong> al paziente corrente tramite TF-IDF, e li usa come contesto — solo le loro <em>lettere</em>, non le cartelle complete. Tutto in localStorage, tutto offline.
   </div>
 
-  <!-- Template library grid -->
+  <!-- Case library grid -->
   <div class="card">
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
-      <div class="ctitle" style="margin:0;">Templates Salvati</div>
-      <div style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--dim);" id="libStats"></div>
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;flex-wrap:wrap;gap:8px;">
+      <div class="ctitle" style="margin:0;">Casi Salvati</div>
+      <div style="display:flex;align-items:center;gap:10px;">
+        <div style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--dim);" id="libStats"></div>
+        <label style="display:flex;align-items:center;gap:6px;margin:0;text-transform:none;font-size:11px;cursor:pointer;">
+          <input type="checkbox" id="ragToggle" checked style="width:auto;accent-color:var(--blue);">
+          <span style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--blue);">RAG auto</span>
+        </label>
+      </div>
     </div>
     <div id="tplGrid" class="tpl-grid"></div>
-    <div id="noTplMsg" class="ib" style="margin:0;">Nessun template ancora. Aggiungine uno qui sotto.</div>
+    <div id="noTplMsg" class="ib" style="margin:0;">Nessun caso ancora. Aggiungine uno qui sotto.</div>
   </div>
 
-  <!-- Add new template -->
+  <!-- RAG match preview (shown when anonText is ready) -->
+  <div id="ragPreview" style="display:none;" class="card">
+    <div class="ctitle">Casi Recuperati per il Paziente Corrente <span class="chip c-blue" style="margin-left:6px;">RAG</span></div>
+    <div id="ragMatches"></div>
+    <div style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--dim);margin-top:8px;">Solo le <em>lettere</em> di questi casi vengono inviate al modello come esempi. Le cartelle restano locali.</div>
+  </div>
+
+  <!-- Add new case -->
   <div class="card">
-    <div class="ctitle">Aggiungi / Importa Template</div>
+    <div class="ctitle">Aggiungi Caso</div>
     <div class="ib purple" style="margin-bottom:12px;">
-      <strong style="color:var(--text);">Due modi:</strong><br>
-      1. <strong style="color:var(--text);">Manuale</strong> — scrivi direttamente le frasi-chiave del tuo stile nelle sezioni sotto (~150 token totali).<br>
-      2. <strong style="color:var(--text);">Auto-estrazione</strong> — incolla una lettera già anonimizzata e Haiku la comprime automaticamente (richiede API key).
+      Salva una coppia cartella→lettera già elaborata. La cartella serve solo per il matching locale (mai inviata). La lettera viene usata come esempio few-shot. Il fingerprint stilistico viene estratto automaticamente (richiede API key) o puoi saltarlo.
     </div>
 
-    <label>Nome Template</label>
-    <input type="text" id="newTplName" placeholder='Es: "Neurologia — Stroke", "Psichiatria — Consulenza"'>
+    <label>Nome / Etichetta Caso</label>
+    <input type="text" id="newTplName" placeholder='Es: "Neurologia — Stroke ischemico", "Psichiatria — Consulenza BDZ"'>
 
-    <div style="margin-top:14px;">
-      <div style="display:flex;gap:8px;margin-bottom:10px;flex-wrap:wrap;">
-        <button class="btn btn-g" style="font-size:10px;" onclick="addTplSection('Apertura')">+ Apertura</button>
-        <button class="btn btn-g" style="font-size:10px;" onclick="addTplSection('Decorso tipo')">+ Decorso tipo</button>
-        <button class="btn btn-g" style="font-size:10px;" onclick="addTplSection('Terapia tipo')">+ Terapia tipo</button>
-        <button class="btn btn-g" style="font-size:10px;" onclick="addTplSection('Chiusura')">+ Chiusura</button>
-        <button class="btn btn-g" style="font-size:10px;" onclick="addTplSection('Custom')">+ Sezione custom</button>
-      </div>
-      <div id="newTplSections"></div>
-    </div>
+    <label>Cartella Clinica Anonimizzata <span style="color:var(--dim);font-size:9px;text-transform:none;letter-spacing:0;">(usata solo localmente per RAG — non inviata al modello)</span></label>
+    <textarea id="newCaseFolder" rows="8" placeholder="Incolla la cartella clinica già anonimizzata: esami, decorso, terapia, consulenze...&#10;&#10;Verrà usata per trovare automaticamente i casi simili al paziente corrente."></textarea>
 
-    <hr class="div">
-    <div class="ctitle">Oppure — Importa da lettera completa</div>
-    <textarea id="tplImportLetter" rows="7" placeholder="Incolla una lettera già anonimizzata — Haiku la comprime in ~150 token preservando solo lo stile..."></textarea>
-    <div class="btn-row" style="margin-top:10px;">
+    <label>Lettera di Dimissione Corrispondente <span style="color:var(--dim);font-size:9px;text-transform:none;letter-spacing:0;">(questa viene inviata come esempio few-shot)</span></label>
+    <textarea id="newCaseLetter" rows="8" placeholder="Incolla la lettera di dimissione già generata e revisionata per questo caso...&#10;&#10;Verrà usata come riferimento stilistico e clinico per casi simili."></textarea>
+
+    <div class="btn-row" style="margin-top:12px;">
       <button class="btn btn-g" onclick="autoExtractTemplate()">
         <span class="spin" id="tplExtSpin" style="display:none;"></span>
-        ✦ Auto-estrai fingerprint
+        ✦ Auto-estrai fingerprint (opzionale)
       </button>
-      <button class="btn btn-p" onclick="saveNewTemplate()">✓ Salva Template</button>
+      <button class="btn btn-p" onclick="saveNewTemplate()">✓ Salva Caso</button>
     </div>
     <div id="tplExtStatus" style="margin-top:8px;font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--dim);display:none;"></div>
+
+    <!-- fingerprint sections builder (populated by auto-extract or manually) -->
+    <div id="newTplSections" style="margin-top:10px;"></div>
   </div>
 </div>
 
@@ -616,7 +629,7 @@ function renderAnonResult(anonText, reps) {
 }
 
 // ═══════════════════════════════════════════════════
-// TEMPLATE LIBRARY (localStorage)
+// TEMPLATE LIBRARY (localStorage) — Case pair: folder + letter + fingerprint
 // ═══════════════════════════════════════════════════
 function loadLibrary() {
   try { return JSON.parse(localStorage.getItem('letteraai_lib') || '[]'); } catch(e) { return []; }
@@ -624,58 +637,164 @@ function loadLibrary() {
 function saveLibrary(lib) {
   localStorage.setItem('letteraai_lib', JSON.stringify(lib));
 }
+
 function renderLibrary() {
   const lib = loadLibrary();
   const grid = document.getElementById('tplGrid');
   const noMsg = document.getElementById('noTplMsg');
   const stats = document.getElementById('libStats');
-  const totalTok = lib.reduce((a, t) => a + Math.round((t.fingerprint||'').length/4), 0);
-  stats.textContent = `${lib.length} template · ~${totalTok} token totali`;
+  const totalFpTok = lib.reduce((a,t) => a + tok(t.fingerprint||''), 0);
+  const totalLetTok = lib.reduce((a,t) => a + tok(t.letter||''), 0);
+  stats.textContent = `${lib.length} casi · fingerprint ~${totalFpTok} tok · lettere ~${totalLetTok} tok`;
   if (!lib.length) { grid.innerHTML=''; noMsg.style.display='block'; return; }
   noMsg.style.display = 'none';
   grid.innerHTML = lib.map(t => {
-    const tok = Math.round((t.fingerprint||'').length/4);
+    const fpTok  = tok(t.fingerprint||'');
+    const letTok = tok(t.letter||'');
+    const folTok = tok(t.folder||'');
     const isActive = S.activeTemplateId === t.id;
+    const hasFolder = !!t.folder;
+    const hasLetter = !!t.letter;
+    const hasFp     = !!t.fingerprint;
     return `<div class="tpl-card${isActive?' active-tpl':''}" onclick="selectTemplate('${t.id}')">
       <button class="tpl-del" onclick="event.stopPropagation();deleteTemplate('${t.id}')">✕</button>
       <div class="tpl-name">${esc(t.name)}</div>
-      <div class="tpl-meta">${esc(t.type||'Generico')}</div>
-      <span class="tpl-tok">~${tok} token</span>
-      <span class="tpl-cached-badge">⚡ cacheable</span>
+      <div class="tpl-meta" style="margin-bottom:6px;">${new Date(t.createdAt).toLocaleDateString('it-IT')}</div>
+      <div style="display:flex;flex-wrap:wrap;gap:4px;">
+        ${hasFolder?`<span class="chip c-w">📁 cartella ~${folTok}t</span>`:''}
+        ${hasLetter?`<span class="chip c-ok">📄 lettera ~${letTok}t</span>`:''}
+        ${hasFp?`<span class="tpl-cached-badge">⚡ fp ~${fpTok}t</span>`:''}
+      </div>
     </div>`;
   }).join('');
+
+  // Update RAG preview if we have current patient text
+  updateRagPreview();
 }
 
 function selectTemplate(id) {
   S.activeTemplateId = (S.activeTemplateId === id) ? null : id;
   renderLibrary();
   updateTokenPanel();
-  // Show active template in status badge area
   const lib = loadLibrary();
   const t = lib.find(x => x.id === id);
-  if (t && S.activeTemplateId === id)
-    document.getElementById('statusBadge').textContent = `📚 ${t.name}`;
-  else
-    document.getElementById('statusBadge').textContent = '● Pronto';
+  document.getElementById('statusBadge').textContent =
+    (t && S.activeTemplateId === id) ? `📚 ${t.name}` : '● Pronto';
 }
 
 function deleteTemplate(id) {
-  if (!confirm('Eliminare questo template?')) return;
+  if (!confirm('Eliminare questo caso?')) return;
   if (S.activeTemplateId === id) S.activeTemplateId = null;
-  const lib = loadLibrary().filter(t => t.id !== id);
-  saveLibrary(lib);
+  saveLibrary(loadLibrary().filter(t => t.id !== id));
   renderLibrary();
   updateTokenPanel();
 }
 
 function getActiveFingerprint() {
   if (!S.activeTemplateId) return '';
-  const lib = loadLibrary();
-  const t = lib.find(x => x.id === S.activeTemplateId);
+  const t = loadLibrary().find(x => x.id === S.activeTemplateId);
   return t ? (t.fingerprint || '') : '';
 }
 
-// ── New template builder ──
+// ─── TF-IDF RAG ───────────────────────────────────
+// Simple in-browser TF-IDF similarity: no API calls needed.
+// Compares current anonymized text against stored folder texts.
+
+const STOPWORDS_IT = new Set(['il','la','lo','i','gli','le','un','una','uno','dei','delle','degli',
+  'di','da','in','con','su','per','tra','fra','a','al','alla','allo','ai','alle','agli',
+  'del','della','dello','e','ed','o','ma','se','non','si','che','è','era','sono','stato',
+  'stata','stati','state','ha','hanno','ho','nei','nelle','negli','nel','nella','nello',
+  'questo','questa','questi','queste','come','più','anche','dopo','prima','durante','presso',
+  'viene','veniva','venivano','si','al','dal','dal','dai','dalle','dagli']);
+
+function tokenizeForTfidf(text) {
+  return text.toLowerCase()
+    .replace(/\[[\w_]+\]/g, '') // remove placeholders
+    .replace(/[^a-zàèéìíòóùú\s]/g, ' ')
+    .split(/\s+/)
+    .filter(w => w.length > 3 && !STOPWORDS_IT.has(w));
+}
+
+function buildTfIdf(docs) {
+  // docs: array of token arrays
+  const N = docs.length;
+  const df = {};
+  for (const d of docs)
+    for (const w of new Set(d)) df[w] = (df[w]||0) + 1;
+  return docs.map(tokens => {
+    const tf = {};
+    for (const w of tokens) tf[w] = (tf[w]||0) + 1;
+    const vec = {};
+    for (const [w, c] of Object.entries(tf))
+      vec[w] = (c / tokens.length) * Math.log((N + 1) / ((df[w]||0) + 1));
+    return vec;
+  });
+}
+
+function cosineSim(a, b) {
+  let dot = 0, na = 0, nb = 0;
+  for (const [w, v] of Object.entries(a)) { dot += v * (b[w]||0); na += v*v; }
+  for (const v of Object.values(b)) nb += v*v;
+  return (na && nb) ? dot / (Math.sqrt(na) * Math.sqrt(nb)) : 0;
+}
+
+function findSimilarCases(queryText, topK = 2) {
+  const lib = loadLibrary().filter(t => t.folder && t.letter);
+  if (!lib.length) return [];
+  const queryToks = tokenizeForTfidf(queryText);
+  const allDocs = [queryToks, ...lib.map(t => tokenizeForTfidf(t.folder))];
+  const vecs = buildTfIdf(allDocs);
+  const queryVec = vecs[0];
+  const scored = lib.map((t, i) => ({ t, score: cosineSim(queryVec, vecs[i+1]) }));
+  scored.sort((a,b) => b.score - a.score);
+  return scored.slice(0, topK).filter(x => x.score > 0.05);
+}
+
+function updateRagPreview() {
+  const ragOn = document.getElementById('ragToggle')?.checked;
+  const matches = (ragOn && S.anonText) ? findSimilarCases(S.anonText) : [];
+
+  // Library panel preview
+  const preview = document.getElementById('ragPreview');
+  const matchesEl = document.getElementById('ragMatches');
+  if (preview) {
+    if (!matches.length || !S.anonText) { preview.style.display='none'; }
+    else {
+      preview.style.display='block';
+      matchesEl.innerHTML = matches.map(({t,score}) => `
+        <div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--border);">
+          <div style="flex:1;">
+            <div style="font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--text);">${esc(t.name)}</div>
+            <div style="font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--dim);margin-top:2px;">lettera: ~${tok(t.letter||'')} tok</div>
+          </div>
+          <div style="font-family:'JetBrains Mono',monospace;font-size:13px;font-weight:600;color:var(--blue);">${(score*100).toFixed(0)}%</div>
+        </div>`).join('');
+    }
+  }
+
+  // Generation panel preview
+  const previewGen = document.getElementById('ragPreviewGen');
+  const matchesGen = document.getElementById('ragMatchesGen');
+  if (previewGen) {
+    if (!matches.length || !S.anonText) { previewGen.style.display='none'; }
+    else {
+      previewGen.style.display='block';
+      matchesGen.innerHTML = matches.map(({t,score}) => `
+        <div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--border);">
+          <div style="flex:1;">
+            <div style="font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--text);">${esc(t.name)}</div>
+            <div style="font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--dim);margin-top:2px;">lettera ~${tok(t.letter||'')} tok · cartella locale ~${tok(t.folder||'')} tok (non inviata)</div>
+          </div>
+          <div style="text-align:right;">
+            <div style="font-family:'JetBrains Mono',monospace;font-size:13px;font-weight:600;color:var(--blue);">${(score*100).toFixed(0)}%</div>
+            <div style="font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--dim);">similarità</div>
+          </div>
+        </div>`).join('');
+    }
+  }
+}
+
+// ─── New case builder ─────────────────────────────
 function addTplSection(label) {
   const id = 'ntpl_' + Date.now();
   newTplSections.push({ id, label, text:'' });
@@ -688,32 +807,31 @@ function deleteNewTplSection(id) {
 function renderNewTplSections() {
   const el = document.getElementById('newTplSections');
   if (!newTplSections.length) { el.innerHTML=''; return; }
-  el.innerHTML = newTplSections.map(s => `
-    <div style="margin-bottom:10px;">
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;">
-        <span style="font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--accent);text-transform:uppercase;letter-spacing:.1em;">${esc(s.label)}</span>
-        <button class="fp-del" style="font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--red);cursor:pointer;background:none;border:none;" onclick="deleteNewTplSection('${s.id}')">✕</button>
+  el.innerHTML = `<div style="margin-top:10px;"><div style="font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--accent);text-transform:uppercase;letter-spacing:.1em;margin-bottom:8px;">Fingerprint stilistico estratto</div>`
+    + newTplSections.map(s => `
+    <div style="margin-bottom:8px;">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:3px;">
+        <span style="font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--dim);text-transform:uppercase;letter-spacing:.08em;">${esc(s.label)}</span>
+        <button style="font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--red);cursor:pointer;background:none;border:none;" onclick="deleteNewTplSection('${s.id}')">✕</button>
       </div>
-      <textarea rows="2" style="font-size:11px;margin-top:0;" placeholder="Frasi-chiave del tuo stile per '${s.label}'..." oninput="updateNewTplSection('${s.id}',this.value)">${esc(s.text||'')}</textarea>
-    </div>`).join('');
+      <textarea rows="2" style="font-size:11px;margin-top:0;" oninput="updateNewTplSection('${s.id}',this.value)">${esc(s.text||'')}</textarea>
+    </div>`).join('')
+    + `</div>`;
 }
 function updateNewTplSection(id, val) {
   const s = newTplSections.find(x => x.id === id);
   if (s) s.text = val;
 }
-
 function buildFingerprintFromSections(sections) {
   const active = sections.filter(s => s.text && s.text.trim());
   if (!active.length) return '';
-  let fp = '';
-  for (const s of active) fp += `[${s.label}]\n${s.text.trim()}\n\n`;
-  return fp.trim();
+  return active.map(s => `[${s.label}]\n${s.text.trim()}`).join('\n\n');
 }
 
 async function autoExtractTemplate() {
   const key = document.getElementById('apiKeyInput').value.trim();
-  const letter = document.getElementById('tplImportLetter').value.trim();
-  if (!letter) { alert('Incolla prima una lettera da comprimere.'); return; }
+  const letter = document.getElementById('newCaseLetter').value.trim();
+  if (!letter) { alert('Incolla prima la lettera nel campo sopra.'); return; }
   if (!key)    { alert('Inserisci la API key nella sezione Generazione.'); return; }
 
   const spin = document.getElementById('tplExtSpin');
@@ -721,7 +839,7 @@ async function autoExtractTemplate() {
   spin.style.display = 'inline-block';
   status.style.display = 'block';
   status.style.color = 'var(--mid)';
-  status.textContent = 'Estrazione fingerprint in corso con Haiku...';
+  status.textContent = 'Estrazione fingerprint con Haiku...';
 
   try {
     const resp = await fetch('https://api.anthropic.com/v1/messages', {
@@ -730,9 +848,9 @@ async function autoExtractTemplate() {
       body: JSON.stringify({
         model:'claude-haiku-4-5-20251001', max_tokens:500,
         system:`Estrai lo stile di scrittura da una lettera di dimissione medica italiana.
-Restituisci SOLO JSON con queste chiavi (solo quelle presenti nella lettera):
-{"apertura":"frase tipo (max 2 righe)","decorso":"1-2 frasi tipo registro clinico","terapia":"1 riga tipo presentazione terapia","chiusura":"frase tipo (max 2 righe)"}
-IMPORTANTE: solo stile/registro, NON dati clinici. Sostituisci dati specifici con [...]. Solo JSON, nessun testo extra.`,
+Restituisci SOLO JSON con queste chiavi (solo quelle presenti):
+{"apertura":"frase tipo apertura (max 2 righe)","decorso":"1-2 frasi tipo del decorso","terapia":"1 riga tipo presentazione terapia","chiusura":"frase tipo chiusura (max 2 righe)"}
+REGOLE: solo stile/registro, NON dati clinici reali. Sostituisci dati specifici con [...]. Solo JSON nudo, nessun testo extra.`,
         messages:[{ role:'user', content:`Lettera:\n\n${letter}` }],
       }),
     });
@@ -744,31 +862,34 @@ IMPORTANTE: solo stile/registro, NON dati clinici. Sostituisci dati specifici co
     for (const [k,label] of Object.entries(map))
       if (parsed[k]) newTplSections.push({ id:'ntpl_'+Date.now()+'_'+k, label, text:parsed[k] });
     renderNewTplSections();
-    document.getElementById('tplImportLetter').value = '';
-    const origTok = Math.round(letter.length/4);
-    const newTok = Math.round(buildFingerprintFromSections(newTplSections).length/4);
+    const origTok = tok(letter);
+    const newTok  = tok(buildFingerprintFromSections(newTplSections));
     status.style.color='var(--green)';
-    status.textContent=`✓ ${newTplSections.length} sezioni estratte · da ~${origTok} a ~${newTok} token (−${Math.round((1-newTok/origTok)*100)}%)`;
+    status.textContent=`✓ Fingerprint estratto · da ~${origTok} a ~${newTok} token (−${Math.round((1-newTok/origTok)*100)}%)`;
   } catch(err) {
     status.style.color='var(--red)'; status.textContent='✗ '+err.message;
   } finally { spin.style.display='none'; }
 }
 
 function saveNewTemplate() {
-  const name = document.getElementById('newTplName').value.trim();
-  if (!name) { alert('Inserisci un nome per il template.'); return; }
+  const name   = document.getElementById('newTplName').value.trim();
+  const folder = document.getElementById('newCaseFolder').value.trim();
+  const letter = document.getElementById('newCaseLetter').value.trim();
+  if (!name)   { alert('Inserisci un nome per il caso.'); return; }
+  if (!letter) { alert('La lettera di dimissione è obbligatoria.'); return; }
   const fp = buildFingerprintFromSections(newTplSections);
-  if (!fp) { alert('Aggiungi almeno una sezione con del testo.'); return; }
   const lib = loadLibrary();
-  lib.push({ id:'tpl_'+Date.now(), name, type: name, fingerprint: fp, createdAt: new Date().toISOString() });
+  lib.push({ id:'tpl_'+Date.now(), name, folder, letter, fingerprint: fp, createdAt: new Date().toISOString() });
   saveLibrary(lib);
-  // Reset
+  // Reset form
   newTplSections = [];
   renderNewTplSections();
   document.getElementById('newTplName').value = '';
-  document.getElementById('tplExtStatus').style.display='none';
+  document.getElementById('newCaseFolder').value = '';
+  document.getElementById('newCaseLetter').value = '';
+  document.getElementById('tplExtStatus').style.display = 'none';
   renderLibrary();
-  alert(`Template "${name}" salvato.`);
+  alert(`Caso "${name}" salvato.${!folder?' Nota: senza cartella questo caso non parteciperà al RAG automatico.':''}`);
 }
 
 // ═══════════════════════════════════════════════════
@@ -782,45 +903,46 @@ function updateTokenPanel() {
   const price = PRICING[model] || PRICING['claude-sonnet-4-6'];
   const sysTxt   = document.getElementById('systemPrompt').value || DEFAULT_SYS;
   const fp       = getActiveFingerprint();
-  const template = buildLetterTemplate();
+  const ragOn    = document.getElementById('ragToggle')?.checked;
+  const ragMatches = (ragOn && S.anonText) ? findSimilarCases(S.anonText) : [];
+  const templateTxt = buildLetterTemplate();
   const clinical = S.anonText;
 
   const tSys      = tok(sysTxt);
   const tFp       = tok(fp);
-  const tTemplate = tok(template);
+  const tRag      = ragMatches.reduce((a,{t}) => a + tok(t.letter||''), 0);
+  const tTemplate = tok(templateTxt);
   const tClinical = tok(clinical);
-  const tOut      = 900; // estimated output
-  const tTotal    = tSys + tFp + tTemplate + tClinical;
+  const tOut      = 900;
+  const tCacheableBlock = tFp + tRag; // what gets cached
+  const tTotal    = tSys + tFp + tRag + tTemplate + tClinical;
 
-  const cacheActive = fp.length > 0;
+  const cacheActive = tCacheableBlock > 0;
 
-  // Cost calculation
-  // With caching: fp block is written once (1.25x), then read (0.1x)
-  // Without caching: everything at normal rate
-  const costNoCacheIn  = (tTotal / 1_000_000) * price.in;
-  const costCacheWrite = cacheActive ? ((tFp / 1_000_000) * price.in_cache_write) : 0;
-  const costCacheRead  = cacheActive ? ((tFp / 1_000_000) * price.in_cache_read) : 0;
-  const costNonCached  = ((tSys + tTemplate + tClinical) / 1_000_000) * price.in;
-  const costWithCacheFirstCall = costCacheWrite + costNonCached;
-  const costWithCacheSubseq    = costCacheRead  + costNonCached;
-  const costOut = (tOut / 1_000_000) * price.out;
+  const costNoCacheIn        = (tTotal / 1e6) * price.in;
+  const costCacheWrite       = cacheActive ? (tCacheableBlock / 1e6) * price.in_cache_write : 0;
+  const costCacheRead        = cacheActive ? (tCacheableBlock / 1e6) * price.in_cache_read  : 0;
+  const costNonCached        = ((tSys + tTemplate + tClinical) / 1e6) * price.in;
+  const costWithCacheFirst   = costCacheWrite + costNonCached;
+  const costWithCacheSubseq  = costCacheRead  + costNonCached;
+  const costOut              = (tOut / 1e6) * price.out;
 
   const sections = [
-    { label:'System Prompt',   tokens: tSys,      color:'#7a6340', cached:false },
-    { label:'Fingerprint Stile', tokens: tFp,     color:'#6ea8c9', cached:cacheActive },
-    { label:'Template lettera',  tokens: tTemplate,color:'#7a7570', cached:false },
-    { label:'Testo clinico',     tokens: tClinical,color:'#c9a96e', cached:false },
-    { label:'Output stimato',    tokens: tOut,     color:'#6ec98a', cached:false },
-  ];
+    { label:'System Prompt',                tokens: tSys,      color:'#7a6340', cached:false },
+    { label:'Fingerprint Stile',            tokens: tFp,       color:'#6ea8c9', cached:cacheActive && tFp>0 },
+    { label:`Esempi RAG (${ragMatches.length} casi)`, tokens: tRag, color:'#a96ec9', cached:cacheActive && tRag>0 },
+    { label:'Template lettera',             tokens: tTemplate, color:'#7a7570', cached:false },
+    { label:'Testo clinico',                tokens: tClinical, color:'#c9a96e', cached:false },
+    { label:'Output stimato',               tokens: tOut,      color:'#6ec98a', cached:false },
+  ].filter(s => s.tokens > 0);
 
   const maxTok = Math.max(...sections.map(s=>s.tokens), 1);
 
   let html = `<div style="margin-bottom:12px;">`;
   for (const s of sections) {
     const pct = Math.round((s.tokens/maxTok)*100);
-    const costStr = s.label==='Output stimato'
-      ? `$${((s.tokens/1_000_000)*price.out).toFixed(4)}`
-      : `$${((s.tokens/1_000_000)*price.in).toFixed(4)}`;
+    const unitPrice = s.label==='Output stimato' ? price.out : price.in;
+    const costStr = `$${((s.tokens/1e6)*unitPrice).toFixed(4)}`;
     html += `<div class="tok-row">
       <span class="tok-label">${s.label}${s.cached?`<span class="tok-cached">⚡ cached</span>`:''}</span>
       <div class="tok-bar-wrap"><div class="tok-bar" style="width:${pct}%;background:${s.color};"></div></div>
@@ -837,19 +959,23 @@ function updateTokenPanel() {
       <div class="tsub">${(tTotal+tOut).toLocaleString()} token totali</div>
     </div>
     <div class="tok-total-box" style="${cacheActive?'border-color:var(--blue);':''}">
-      <div class="tlabel">${cacheActive?'Con caching (1ª chiamata)':'Con caching (no template)'}</div>
-      <div class="tval" style="color:${cacheActive?'var(--blue)':'var(--accent)'};">$${(costWithCacheFirstCall+costOut).toFixed(4)}</div>
-      <div class="tsub">${cacheActive?`Successive: $${(costWithCacheSubseq+costOut).toFixed(4)}`:'Seleziona un template per attivare'}</div>
+      <div class="tlabel">${cacheActive?'Con caching (1ª chiamata)':'Con caching (nessun caso/template)'}</div>
+      <div class="tval" style="color:${cacheActive?'var(--blue)':'var(--accent)'};">$${(costWithCacheFirst+costOut).toFixed(4)}</div>
+      <div class="tsub">${cacheActive?`Successive: $${(costWithCacheSubseq+costOut).toFixed(4)}`:'Seleziona un caso o aggiungi cartelle'}</div>
     </div>
   </div>`;
 
   if (cacheActive) {
-    const saving = ((costNoCacheIn - costWithCacheSubseq) / costNoCacheIn * 100).toFixed(0);
-    html += `<div class="tok-cache-note">⚡ Cache attiva — Il blocco fingerprint (${tFp} token) viene memorizzato da Anthropic. Dalla 2ª chiamata in poi risparmio stimato: <strong>${saving}%</strong> sul costo input.</div>`;
+    const saving = costNoCacheIn > 0 ? ((costNoCacheIn - costWithCacheSubseq) / costNoCacheIn * 100).toFixed(0) : 0;
+    const ragNote = ragMatches.length ? ` + ${ragMatches.length} lettera${ragMatches.length>1?'e':''} RAG (${tRag} tok)` : '';
+    html += `<div class="tok-cache-note">⚡ Cache attiva — fingerprint${ragNote} = ${tCacheableBlock} token cacheable. Dalla 2ª chiamata risparmio stimato: <strong>${saving}%</strong> sul costo input.</div>`;
   }
 
   document.getElementById('tokRows').innerHTML = html;
   document.getElementById('cacheActiveBadge').style.display = cacheActive ? 'inline-flex' : 'none';
+
+  // Also refresh RAG preview
+  updateRagPreview();
 }
 
 // ═══════════════════════════════════════════════════
@@ -923,31 +1049,51 @@ ${dott.padEnd(46)}${prof}
 
 function buildMessages() {
   const fp = getActiveFingerprint();
-  let userContent = '';
-  if (fp) {
-    userContent += `## RIFERIMENTO STILISTICO — frasi-chiave del tuo stile (NON dati clinici reali)\n\n${fp}\n\n---\n\n`;
-  }
-  userContent += `## DATI CLINICI ANONIMIZZATI\n\n<clinical_input>\n${S.anonText}\n</clinical_input>\n\n---\n\n`;
-  userContent += buildLetterTemplate();
+  const ragOn = document.getElementById('ragToggle')?.checked;
+  const ragMatches = (ragOn && S.anonText) ? findSimilarCases(S.anonText) : [];
 
-  // If cache active, split into cacheable (fp block) + rest
+  // Build content blocks
+  const blocks = [];
+
+  // Block 1 (cacheable): fingerprint — stable across calls with same template
   if (fp) {
-    const fpBlock = `## RIFERIMENTO STILISTICO — frasi-chiave del tuo stile (NON dati clinici reali)\n\n${fp}\n\n---\n\n`;
-    const rest = `## DATI CLINICI ANONIMIZZATI\n\n<clinical_input>\n${S.anonText}\n</clinical_input>\n\n---\n\n` + buildLetterTemplate();
-    return [
-      { role:'user', content:[
-        { type:'text', text: fpBlock, cache_control:{ type:'ephemeral' } },
-        { type:'text', text: rest }
-      ]}
-    ];
+    blocks.push({ type:'text', text:
+      `## RIFERIMENTO STILISTICO — frasi-chiave del tuo stile (NON dati clinici reali)\n\n${fp}\n\n---\n\n`,
+      cache_control:{ type:'ephemeral' }
+    });
   }
-  return [{ role:'user', content: userContent }];
+
+  // Block 2 (cacheable): RAG few-shot letters — stable for similar case sets
+  if (ragMatches.length) {
+    let ragBlock = `## ESEMPI DI RIFERIMENTO — casi clinici simili già elaborati\n\nUsa questi esempi come riferimento per stile, struttura e ragionamento clinico. NON copiare dati clinici specifici.\n\n`;
+    ragMatches.forEach(({t, score}, i) => {
+      ragBlock += `### Esempio ${i+1} — ${esc(t.name)} (similarità ${(score*100).toFixed(0)}%)\n\n${t.letter}\n\n---\n\n`;
+    });
+    blocks.push({ type:'text', text: ragBlock, cache_control:{ type:'ephemeral' } });
+  }
+
+  // Block 3 (NOT cached): current patient data — changes every call
+  blocks.push({ type:'text', text:
+    `## DATI CLINICI ANONIMIZZATI\n\n<clinical_input>\n${S.anonText}\n</clinical_input>\n\n---\n\n` +
+    buildLetterTemplate()
+  });
+
+  const useCache = fp || ragMatches.length;
+  return [{ role:'user', content: useCache ? blocks : blocks.map(b => b.text).join('') }];
 }
 
 function buildUserPromptStr() {
   const fp = getActiveFingerprint();
+  const ragOn = document.getElementById('ragToggle')?.checked;
+  const ragMatches = (ragOn && S.anonText) ? findSimilarCases(S.anonText) : [];
   let p = '';
   if (fp) p += `## RIFERIMENTO STILISTICO\n\n${fp}\n\n---\n\n`;
+  if (ragMatches.length) {
+    p += `## ESEMPI DI RIFERIMENTO — casi simili\n\n`;
+    ragMatches.forEach(({t,score},i) => {
+      p += `### Esempio ${i+1} — ${t.name} (${(score*100).toFixed(0)}%)\n\n${t.letter}\n\n---\n\n`;
+    });
+  }
   p += `## DATI CLINICI ANONIMIZZATI\n\n<clinical_input>\n${S.anonText}\n</clinical_input>\n\n---\n\n`;
   p += buildLetterTemplate();
   return p;
@@ -962,6 +1108,7 @@ function proceedToGenerate() {
   if (!document.getElementById('systemPrompt').value.trim())
     document.getElementById('systemPrompt').value = DEFAULT_SYS;
   goTo(2);
+  updateRagPreview();
 }
 
 // ═══════════════════════════════════════════════════
@@ -979,12 +1126,14 @@ async function generateLetter() {
   document.getElementById('statusBadge').textContent = '⟳ Generando...';
 
   const fp = getActiveFingerprint();
+  const ragOn = document.getElementById('ragToggle')?.checked;
+  const ragMatches = (ragOn && S.anonText) ? findSimilarCases(S.anonText) : [];
+  const useCache = fp || ragMatches.length > 0;
   const headers = {
     'Content-Type':'application/json','x-api-key':key,
     'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true',
   };
-  // Add beta header if using cache_control
-  if (fp) headers['anthropic-beta'] = 'prompt-caching-2024-07-31';
+  if (useCache) headers['anthropic-beta'] = 'prompt-caching-2024-07-31';
 
   try {
     const resp = await fetch('https://api.anthropic.com/v1/messages', {
@@ -994,7 +1143,7 @@ async function generateLetter() {
         max_tokens:  3500,
         temperature: parseInt(document.getElementById('tempSlider').value) / 10,
         system: [{ type:'text', text: document.getElementById('systemPrompt').value || DEFAULT_SYS,
-                   ...(fp ? { cache_control:{ type:'ephemeral' } } : {}) }],
+                   ...(useCache ? { cache_control:{ type:'ephemeral' } } : {}) }],
         messages: buildMessages(),
       }),
     });
