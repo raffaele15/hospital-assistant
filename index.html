@@ -580,15 +580,16 @@ function applyRegex(text) {
     { re:/\b[A-Z]{6}\d{2}[A-Z]\d{2}[A-Z]\d{3}[A-Z]\b/gi,              label:'Codice Fiscale', tag:'[CODICE_FISCALE]' },
     { re:/\bnata?\s+(?:il\s+)?\d{1,2}[\/\-.]\d{1,2}[\/\-.]\d{2,4}\b/gi,label:'Data Nascita',  tag:'[DATA_NASCITA]' },
     { re:/\b(?:nato|nata)\s+\d{1,2}[\/\-.]\d{1,2}[\/\-.]\d{2,4}\b/gi, label:'Data Nascita',  tag:'[DATA_NASCITA]' },
-    { re:/\b(\d{1,2})[\/\-\.](\d{1,2})[\/\-\.](\d{2}|\d{4})\b/g,      label:'Data',           tag:'[DATA]' },
-    { re:/(?:\+39\s?)?(?:0\d{1,4}[\s\-]?\d{5,8}|\d{3}[\s\-]\d{3}[\s\-]\d{4}|\b\d{10}\b)/g, label:'Telefono', tag:'[TELEFONO]' },
-    { re:/[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}/g,          label:'Email',          tag:'[EMAIL]' },
+    { re:/\b\d{1,2}[\/\-.]\d{1,2}[\/\-.]\d{2,4}\b/g,                  label:'Data',           tag:'[DATA]' },
+    { re:/(?:\+39[\s\-]?)?\b0\d{1,4}[\s\-]?\d{6,8}\b/g,               label:'Telefono fisso', tag:'[TELEFONO]' },
+    { re:/\b3\d{2}[\s\-]?\d{3}[\s\-]?\d{4}\b/g,                       label:'Telefono mobile',tag:'[TELEFONO]' },
+    { re:/[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}/g,         label:'Email',          tag:'[EMAIL]' },
     { re:/\b(?:ricovero|cartella|pratica|SDO)\s*(?:n\.|numero|nr\.?)?\s*[\dx\/]+/gi, label:'Nr.Ricovero', tag:'[NR_RICOVERO]' },
-    { re:/\b(?:matricola|NPI|NHI|MRN)\s*[:\s]+[A-Z0-9\-]+/gi,          label:'ID',             tag:'[ID_PAZIENTE]' },
-    { re:/\b(?:Dott(?:\.?ssa?)?\.?|Prof(?:\.?ssa?)?\.?|Dr\.?)\s+[A-ZÀÈÉÌÍÒÓÙÚ][a-zàèéìíòóùú]+(?:\s+[A-ZÀÈÉÌÍÒÓÙÚ][a-zàèéìíòóùú]+)?\b/g, label:'Medico', tag:'[MEDICO]' },
-    { re:/\bSig(?:\.?ra?\.?)\s+[A-ZÀÈÉÌÍÒÓÙÚ][a-zàèéìíòóùú]+(?:\s+[A-ZÀÈÉÌÍÒÓÙÚ][a-zàèéìíòóùú]+){0,2}\b/g, label:'Paziente', tag:'[PAZIENTE_NOME]' },
-    { re:/\b(?:Ospedale|Clinica|Policlinico|ULSS|AULSS|Azienda\s+Ospedaliera|A\.O\.)\s+[A-ZÀÈÉÌÍÒÓÙÚ][a-zA-ZÀ-ú\s\.]{2,30}(?=[\s,\.\n\r])/g, label:'Struttura', tag:'[STRUTTURA]' },
-    { re:/\bnosocomio\s+di\s+[A-ZÀÈÉÌÍÒÓÙÚ][a-zàèéìíòóùú]+/gi,        label:'Struttura',      tag:'[STRUTTURA]' },
+    { re:/\b(?:matricola|NPI|NHI|MRN)\s*[:\s]+[A-Z0-9\-]+/gi,         label:'ID',             tag:'[ID_PAZIENTE]' },
+    { re:/\b(?:Dott(?:\.ssa?|ssa?)?\.?|Prof(?:\.ssa?|ssa?)?\.?|Dr\.?)\s+[A-ZÀÈÉÌÍÒÓÙÚ][a-zàèéìíòóùú]+(?:\s+[A-ZÀÈÉÌÍÒÓÙÚ][a-zàèéìíòóùú]+)?\b/g, label:'Medico', tag:'[MEDICO]' },
+    { re:/\bSig(?:\.ra?\.?|ra?\.?)\s+[A-ZÀÈÉÌÍÒÓÙÚ][a-zàèéìíòóùú]+(?:\s+[A-ZÀÈÉÌÍÒÓÙÚ][a-zàèéìíòóùú]+)?\b/g, label:'Paziente', tag:'[PAZIENTE_NOME]' },
+    { re:/\b(?:Ospedale|Clinica|Policlinico|ULSS|AULSS|A\.O\.)\s+(?:di\s+)?[A-ZÀÈÉÌÍÒÓÙÚ][a-zA-ZÀ-ú]{1,20}(?:\s+[A-ZÀÈÉÌÍÒÓÙÚ][a-zA-ZÀ-ú]{1,20}){0,2}/g, label:'Struttura', tag:'[STRUTTURA]' },
+    { re:/\bnosocomio\s+di\s+[A-ZÀÈÉÌÍÒÓÙÚ][a-zàèéìíòóùú]+/gi,       label:'Struttura',      tag:'[STRUTTURA]' },
   ];
   try {
     const raw = document.getElementById('cfg_regex').value.trim();
@@ -597,16 +598,18 @@ function applyRegex(text) {
   } catch(e) {}
   for (const p of patterns) {
     if (p.re.global) p.re.lastIndex = 0;
-    const matches = [...result.matchAll(p.re)];
-    for (const m of matches)
-      if (m[0].trim().length > 1 && !reps.find(r => r.orig === m[0]))
-        reps.push({ orig: m[0], repl: p.tag, type: p.label });
-    result = result.replace(p.re, p.tag);
+    result = result.replace(p.re, (match) => {
+      if (match.trim().length > 1 && !reps.find(r => r.orig === match))
+        reps.push({ orig: match, repl: p.tag, type: p.label });
+      return p.tag;
+    });
   }
-  const ctxRe = /\b((?:con|dalla?|dal|refertato\s+da|visitata?\s+da|seguita?\s+da|eseguita?\s+da|infermier[ae])\s+)([A-ZÀÈÉÌÍÒÓÙÚ][a-zàèéìíòóùú]{2,})\b/g;
-  for (const m of [...result.matchAll(ctxRe)])
-    if (!reps.find(r => r.orig === m[2])) reps.push({ orig: m[2], repl:'[NOME]', type:'Nome contestuale' });
-  result = result.replace(ctxRe, '$1[NOME]');
+  // Contextual names: "con Dottoressa", "visitata da Mario" etc.
+  const ctxRe = /\b((?:con|refertato\s+da|visitata?\s+da|seguita?\s+da|eseguita?\s+da|dall[ao])\s+)([A-ZÀÈÉÌÍÒÓÙÚ][a-zàèéìíòóùú]{2,})\b/g;
+  result = result.replace(ctxRe, (match, pre, name) => {
+    if (!reps.find(r => r.orig === name)) reps.push({ orig: name, repl:'[NOME]', type:'Nome contestuale' });
+    return pre + '[NOME]';
+  });
   return { text: result, reps };
 }
 
