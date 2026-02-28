@@ -1184,7 +1184,7 @@ async function generateLetter() {
       method:'POST', headers,
       body: JSON.stringify({
         model:       document.getElementById('modelSelect').value,
-        max_tokens:  3500,
+        max_tokens:  8192,
         temperature: parseInt(document.getElementById('tempSlider').value) / 10,
         system: [{ type:'text', text: document.getElementById('systemPrompt').value || DEFAULT_SYS,
                    ...(useCache ? { cache_control:{ type:'ephemeral' } } : {}) }],
