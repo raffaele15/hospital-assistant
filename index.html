@@ -34,8 +34,15 @@ aside{background:var(--surface);border-right:1px solid var(--border);padding:14p
 .ni.active .sn{background:var(--accent-d);border-color:var(--accent);color:var(--accent)}
 
 main{overflow-y:auto;background:var(--bg)}
+
+/* ── PANEL VISIBILITY ── */
+/* All panels hidden by default */
 .panel{display:none;padding:28px 32px;max-width:920px}
+/* Only the active panel is shown — flex for panel0, block for others */
 .panel.active{display:block}
+/* panel0 needs flex layout when active */
+#panel0.active{display:flex;flex-direction:column;height:calc(100vh - 52px)}
+
 .ptitle{font-size:24px;font-weight:300;margin-bottom:3px;letter-spacing:-.01em}
 .psub{font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--dim);margin-bottom:22px;letter-spacing:.06em}
 
@@ -145,7 +152,8 @@ hr.div{border:none;border-top:1px solid var(--border);margin:18px 0}
 <main>
 
 <!-- ═══ STEP 1 — TESTO CLINICO ═══ -->
-<div class="panel active" id="panel0" style="display:flex;flex-direction:column;height:calc(100vh - 52px);">
+<!-- NOTE: no inline style here anymore — CSS handles display via #panel0.active -->
+<div class="panel active" id="panel0">
   <div class="ptitle">Testo Clinico</div>
   <div class="psub">// step 01 — incolla il testo copiato dal PDF</div>
 
@@ -185,7 +193,7 @@ hr.div{border:none;border-top:1px solid var(--border);margin:18px 0}
   </div>
 
   <label>Testo Completo del Paziente</label>
-  <textarea id="inp_raw" style="height:calc(100vh - 420px);min-height:300px;" placeholder="Incolla qui il testo copiato dal PDF...
+  <textarea id="inp_raw" style="flex:1;min-height:200px;" placeholder="Incolla qui il testo copiato dal PDF...
 
 Il blocco può contenere tutto:
 - Motivo del ricovero e anamnesi
@@ -391,10 +399,10 @@ REGOLE ASSOLUTE:
 // NAVIGATION
 // ═══════════════════════════════════════════════════
 function goTo(i) {
-  document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
-  document.querySelectorAll('.ni').forEach(n=>n.classList.remove('active'));
-  document.getElementById('panel'+i).classList.add('active');
-  document.getElementById('nav'+i).classList.add('active');
+  document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.ni').forEach(n => n.classList.remove('active'));
+  document.getElementById('panel' + i).classList.add('active');
+  document.getElementById('nav' + i).classList.add('active');
 }
 
 function goToAnon() {
@@ -405,20 +413,17 @@ function goToAnon() {
   runRegex();
 }
 
-// (checklist removed)
-
 // ═══════════════════════════════════════════════════
 // REGEX ANONYMIZER (fully offline)
 // ═══════════════════════════════════════════════════
 function runRegex() {
-  const spin = document.getElementById('anonSpin');
-  const stxt = document.getElementById('anonStatusTxt');
+  const spin  = document.getElementById('anonSpin');
+  const stxt  = document.getElementById('anonStatusTxt');
   const scard = document.getElementById('anonStatus');
   spin.style.display = 'inline-block';
-  stxt.textContent = 'Regex: elaborazione in corso...';
+  stxt.textContent   = 'Regex: elaborazione in corso...';
   scard.style.borderColor = 'var(--border)';
 
-  // slight delay to let UI update
   setTimeout(() => {
     const { text, reps } = applyRegex(S.rawText);
     renderAnonResult(text, reps);
@@ -433,26 +438,17 @@ function applyRegex(text) {
   let result = text;
 
   const patterns = [
-    // Codice fiscale
-    { re:/\b[A-Z]{6}\d{2}[A-Z]\d{2}[A-Z]\d{3}[A-Z]\b/gi, label:'Codice Fiscale', tag:'[CODICE_FISCALE]' },
-    // Data di nascita con "nata/nato il"
-    { re:/\bnata?\s+(?:il\s+)?\d{1,2}[\/\-.]\d{1,2}[\/\-.]\d{2,4}\b/gi, label:'Data Nascita', tag:'[DATA_NASCITA]' },
-    { re:/\b(?:nato|nata)\s+(?:il\s+)?\d{1,2}[\/\-.]\d{1,2}[\/\-.]\d{2,4}\b/gi, label:'Data Nascita', tag:'[DATA_NASCITA]' },
-    // Telefono
-    { re:/(?:\+39\s?)?(?:0\d{1,4}[\s\-]?\d{5,8}|\d{3}[\s\-]\d{3}[\s\-]\d{4}|\b\d{10}\b)/g, label:'Telefono', tag:'[TELEFONO]' },
-    // Email
-    { re:/[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}/g, label:'Email', tag:'[EMAIL]' },
-    // ID strutturati
-    { re:/\b(?:matricola|NPI|NHI|MRN|cartella\s*n\.?)\s*[:\s]+[A-Z0-9\-]+/gi, label:'ID', tag:'[ID_PAZIENTE]' },
-    // Titoli + nome: Dott., Prof., Dr., Dottoressa
+    { re:/\b[A-Z]{6}\d{2}[A-Z]\d{2}[A-Z]\d{3}[A-Z]\b/gi,                                          label:'Codice Fiscale', tag:'[CODICE_FISCALE]' },
+    { re:/\bnata?\s+(?:il\s+)?\d{1,2}[\/\-.]\d{1,2}[\/\-.]\d{2,4}\b/gi,                           label:'Data Nascita',   tag:'[DATA_NASCITA]' },
+    { re:/\b(?:nato|nata)\s+(?:il\s+)?\d{1,2}[\/\-.]\d{1,2}[\/\-.]\d{2,4}\b/gi,                  label:'Data Nascita',   tag:'[DATA_NASCITA]' },
+    { re:/(?:\+39\s?)?(?:0\d{1,4}[\s\-]?\d{5,8}|\d{3}[\s\-]\d{3}[\s\-]\d{4}|\b\d{10}\b)/g,      label:'Telefono',       tag:'[TELEFONO]' },
+    { re:/[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}/g,                                     label:'Email',          tag:'[EMAIL]' },
+    { re:/\b(?:matricola|NPI|NHI|MRN|cartella\s*n\.?)\s*[:\s]+[A-Z0-9\-]+/gi,                     label:'ID',             tag:'[ID_PAZIENTE]' },
     { re:/\b(?:Dott(?:\.?ssa?)?\.?|Prof(?:\.?ssa?)?\.?|Dr\.?)\s+[A-ZÀÈÉÌÍÒÓÙÚ][a-zàèéìíòóùú]+(?:\s+[A-ZÀÈÉÌÍÒÓÙÚ][a-zàèéìíòóùú]+)?\b/g, label:'Medico', tag:'[MEDICO]' },
-    // Sig. / Sig.ra + nome
     { re:/\bSig(?:\.?ra?\.?)\s+[A-ZÀÈÉÌÍÒÓÙÚ][a-zàèéìíòóùú]+(?:\s+[A-ZÀÈÉÌÍÒÓÙÚ][a-zàèéìíòóùú]+){0,2}\b/g, label:'Paziente', tag:'[PAZIENTE_NOME]' },
-    // Strutture ospedaliere
     { re:/\b(?:Ospedale|Clinica|Policlinico|ULSS|AULSS|Azienda\s+Ospedaliera|A\.O\.)\s+[A-ZÀÈÉÌÍÒÓÙÚ][a-zA-ZÀ-ú\s\.]{2,30}(?=[\s,\.\n\r])/g, label:'Struttura', tag:'[STRUTTURA]' },
   ];
 
-  // Custom patterns from settings
   try {
     const raw = document.getElementById('cfg_regex').value.trim();
     if (raw) JSON.parse(raw).forEach(cp =>
@@ -467,7 +463,6 @@ function applyRegex(text) {
     result = result.replace(p.re, p.tag);
   }
 
-  // Contextual bare names after clinical keywords
   const ctxRe = /\b((?:con|dalla?|dal|refertato\s+da|visitata?\s+da|seguita?\s+da|eseguita?\s+da|infermier[ae])\s+)([A-ZÀÈÉÌÍÒÓÙÚ][a-zàèéìíòóùú]{2,})\b/g;
   for (const m of [...result.matchAll(ctxRe)])
     if (!reps.find(r => r.orig === m[2]))
@@ -480,7 +475,6 @@ function applyRegex(text) {
 function renderAnonResult(anonText, reps) {
   document.getElementById('anonText').value = anonText;
 
-  // Replacements list
   const listEl = document.getElementById('repList');
   if (!reps.length) {
     listEl.innerHTML = '<div class="ib green" style="margin-bottom:11px;">✓ Nessun identificatore strutturato rilevato dai pattern regex. Verifica manualmente il testo.</div>';
@@ -492,7 +486,6 @@ function renderAnonResult(anonText, reps) {
     listEl.innerHTML = h;
   }
 
-  // Highlight originals in left panel
   let hi = esc(S.rawText);
   for (const r of reps)
     hi = hi.replace(new RegExp(escR(esc(r.orig)),'g'), `<span class="redacted">${esc(r.orig)}</span>`);
@@ -629,7 +622,7 @@ async function generateLetter() {
       }),
     });
 
-    if (!resp.ok) { const e=await resp.json(); throw new Error(e.error?.message||`HTTP ${resp.status}`); }
+    if (!resp.ok) { const e = await resp.json(); throw new Error(e.error?.message || `HTTP ${resp.status}`); }
 
     S.letter = (await resp.json()).content[0].text;
     document.getElementById('letterOut').textContent = S.letter;
@@ -756,12 +749,12 @@ function saveSettings() {
 function loadSettings() {
   try {
     const c = JSON.parse(sessionStorage.getItem('cfg')||'{}');
-    if(c.citta)   document.getElementById('cfg_citta').value   = c.citta;
-    if(c.reparto) document.getElementById('cfg_reparto').value = c.reparto;
-    if(c.dott)    document.getElementById('cfg_dott').value    = c.dott;
-    if(c.prof)    document.getElementById('cfg_prof').value    = c.prof;
-    if(c.regex)   document.getElementById('cfg_regex').value   = c.regex;
-    if(c.ex)      document.getElementById('cfg_examples').value= c.ex;
+    if(c.citta)   document.getElementById('cfg_citta').value    = c.citta;
+    if(c.reparto) document.getElementById('cfg_reparto').value  = c.reparto;
+    if(c.dott)    document.getElementById('cfg_dott').value     = c.dott;
+    if(c.prof)    document.getElementById('cfg_prof').value     = c.prof;
+    if(c.regex)   document.getElementById('cfg_regex').value    = c.regex;
+    if(c.ex)      document.getElementById('cfg_examples').value = c.ex;
   } catch(e){}
 }
 
@@ -780,14 +773,10 @@ function clearAll() {
 // ═══════════════════════════════════════════════════
 // PDF.js TEXT EXTRACTION — fully offline
 // ═══════════════════════════════════════════════════
-// Loads PDF.js from CDN once, then all processing is local.
-// Reads the actual text layer — no OCR, no image processing.
-
 let pdfjsLib = null;
 
 async function ensurePdfJs() {
   if (pdfjsLib) return pdfjsLib;
-  // Use PDF.js 3.11.174 — compatible with Chrome 80+, no Promise.withResolvers needed
   return new Promise((resolve, reject) => {
     if (window.pdfjsLib) { pdfjsLib = window.pdfjsLib; resolve(pdfjsLib); return; }
     const script = document.createElement('script');
@@ -841,12 +830,10 @@ async function processPdf(file) {
       const page    = await pdf.getPage(i);
       const content = await page.getTextContent();
 
-      // Reconstruct page text preserving line breaks
       let pageText = '';
       let lastY = null;
       for (const item of content.items) {
         if ('str' in item) {
-          // New line if Y position changed significantly
           if (lastY !== null && Math.abs(item.transform[5] - lastY) > 5) {
             pageText += '\n';
           }
@@ -861,21 +848,18 @@ async function processPdf(file) {
       stxt.textContent = `Pagina ${i} / ${total}...`;
     }
 
-    // Clean up excessive blank lines
     fullText = fullText.replace(/\n{3,}/g, '\n\n').trim();
 
-    // Append to existing text or replace
     const existing = document.getElementById('inp_raw').value.trim();
     document.getElementById('inp_raw').value = existing
       ? existing + '\n\n--- ' + file.name + ' ---\n\n' + fullText
       : fullText;
 
-    bar.style.width  = '100%';
+    bar.style.width    = '100%';
     spin.style.display = 'none';
-    stxt.style.color = 'var(--green)';
-    stxt.textContent = `✓ ${total} pagina${total===1?'':'e'} estratta${total===1?'':'e'} da "${file.name}" — ${fullText.length.toLocaleString()} caratteri`;
+    stxt.style.color   = 'var(--green)';
+    stxt.textContent   = `✓ ${total} pagina${total===1?'':'e'} estratta${total===1?'':'e'} da "${file.name}" — ${fullText.length.toLocaleString()} caratteri`;
 
-    // Reset file input so same file can be re-uploaded
     document.getElementById('pdfFileInput').value = '';
 
   } catch(err) {
