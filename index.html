@@ -17,8 +17,9 @@
   --red:#c96e6e; --green:#6ec98a; --blue:#6ea8c9; --purple:#a96ec9; --r:6px;
 }
 *{box-sizing:border-box;margin:0;padding:0}
-body{background:var(--bg);color:var(--text);font-family:'Crimson Pro',Georgia,serif;font-size:17px;line-height:1.6;min-height:100vh}
-.app{display:grid;grid-template-columns:210px 1fr;grid-template-rows:52px 1fr;min-height:100vh}
+html,body{height:100%;overflow:hidden}
+body{background:var(--bg);color:var(--text);font-family:'Crimson Pro',Georgia,serif;font-size:17px;line-height:1.6;height:100vh}
+.app{display:grid;grid-template-columns:210px 1fr;grid-template-rows:52px 1fr;height:100vh;overflow:hidden}
 header{grid-column:1/-1;background:var(--surface);border-bottom:1px solid var(--border);display:flex;align-items:center;padding:0 22px;gap:14px}
 .logo{font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:500;letter-spacing:.14em;color:var(--accent);text-transform:uppercase}
 .logo span{color:var(--dim)}
@@ -31,10 +32,10 @@ aside{background:var(--surface);border-right:1px solid var(--border);padding:14p
 .ni.done .sn{background:rgba(110,201,138,.15);border-color:var(--green);color:var(--green)}
 .sn{width:17px;height:17px;border-radius:50%;background:var(--surface3);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:9px;flex-shrink:0;transition:all .12s}
 .ni.active .sn{background:var(--accent-d);border-color:var(--accent);color:var(--accent)}
-main{overflow-y:auto;background:var(--bg);display:flex;flex-direction:column}
-.panel{display:none;padding:28px 32px;width:100%;flex:1}
-.panel.active{display:block}
-#panel0.active{display:flex;flex-direction:column;height:calc(100vh - 52px)}
+main{overflow:hidden;background:var(--bg);display:flex;flex-direction:column}
+.panel{display:none;padding:28px 32px;width:100%;flex:1;overflow-y:auto}
+.panel.active{display:flex;flex-direction:column;overflow:hidden;padding:20px 28px}
+#panel0.active{display:flex;flex-direction:column;height:100%}
 .ptitle{font-size:24px;font-weight:300;margin-bottom:3px;letter-spacing:-.01em}
 .psub{font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--dim);margin-bottom:22px;letter-spacing:.06em}
 label{display:block;font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--dim);letter-spacing:.1em;text-transform:uppercase;margin-bottom:5px;margin-top:16px}
@@ -65,12 +66,12 @@ select{width:100%;background:var(--surface2);border:1px solid var(--border);bord
 .c-purple{background:rgba(169,110,201,.12);color:var(--purple);border:1px solid rgba(169,110,201,.25)}
 .spin{display:inline-block;width:13px;height:13px;border:2px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:sp .7s linear infinite}
 @keyframes sp{to{transform:rotate(360deg)}}
-.diff-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:13px}
-.diff-grid>div{display:flex;flex-direction:column}
-.diff-col{display:flex;flex-direction:column;flex:1}
-.diff-scroll{flex:1;overflow-y:auto;height:560px}
+.diff-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;flex:1;min-height:0;margin-bottom:0}
+.diff-grid>div{display:flex;flex-direction:column;min-height:0}
+.diff-col{display:flex;flex-direction:column;flex:1;min-height:0}
+.diff-scroll{flex:1;overflow-y:auto;min-height:0}
 .dlabel{font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--dim);letter-spacing:.12em;text-transform:uppercase;margin-bottom:6px;padding:2px 6px;background:var(--surface2);border-radius:3px;display:inline-block}
-.dtext{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:12px 13px;font-family:'JetBrains Mono',monospace;font-size:11px;line-height:1.8;white-space:pre-wrap;overflow-y:auto;height:100%;box-sizing:border-box}
+.dtext{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:12px 13px;font-family:'JetBrains Mono',monospace;font-size:11px;line-height:1.8;white-space:pre-wrap;min-height:100%}
 .collapsible-section{margin-bottom:11px}
 .collapsible-toggle{display:flex;align-items:center;gap:8px;width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:var(--r);padding:8px 12px;cursor:pointer;font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--mid);text-align:left;transition:border-color .14s}
 .collapsible-toggle:hover{border-color:var(--border-hi);color:var(--text)}
@@ -259,7 +260,7 @@ hr.div{border:none;border-top:1px solid var(--border);margin:18px 0}
     <div class="diff-col">
       <div class="dlabel">Testo anonimizzato ✏ modificabile</div>
       <div class="diff-scroll" id="anonScroll">
-        <textarea id="anonText" class="dtext" style="font-size:11px;resize:none;width:100%;"></textarea>
+        <textarea id="anonText" class="dtext" style="font-size:11px;resize:none;width:100%;height:100%;min-height:300px;"></textarea>
       </div>
     </div>
   </div>
@@ -630,31 +631,61 @@ const ANON_CONFIG = {
     // Patient
     'Marcolin','Marianno','MARCOLIN','MARIANNO',
     // Stroke Unit physicians
-    'Baracchini','Cavatorti','Favaretto','Ragone',
-    'Minicuci','Minicucci','Petrosino','Fredianelli',
-    'Mozzetta','Pieroni','Fabris','Viaro','Rubino',
+    'Baracchini','Claudio',
+    'Cavatorti','Stefano',
+    'Favaretto','Silvia',
+    'Ragone','Rossana',
+    'Minicuci','Minicucci',
+    'Petrosino','Angela',
+    'Fredianelli','Giorgio',
+    'Mozzetta','Pieroni',
+    'Fabris','Edoardo','Giulia',
+    'Bruno',
+    'Viaro','Federica',
+    'Rubino','Clara',
     // Nurses
-    'Biscari','Filosa','Calore','Tommasin','Cuzzilla',
-    'Lorioni','Formentin','Nuzzo','Venuto',
+    'Biscari','Alessandra',
+    'Filosa','Ornella',
+    'Calore','Chiara',
+    'Tommasin','Alessandro',
+    'Cuzzilla','Susanna',
+    'Lorioni','Erica',
+    'Formentin','Arianna',
+    'Nuzzo','Claudia',
+    'Venuto','Roberta',
     // FKT
-    'Pernice',
+    'Pernice','Salvatore',
     // Lab / Radiology
-    'Montagnana','Fogar','Faggian','Cattai','Carraro',
-    'Manara','Vincentis','Librizzi','Mazzi','Rigato',
-    'Muffatto','Camporese',
+    'Montagnana','Martina',
+    'Fogar','Paola',
+    'Faggian','Diego',
+    'Cattai','Margherita',
+    'Carraro',
+    'Manara','Renzo',
+    'Vincentis',
+    'Librizzi','Giovanni',
+    'Mazzi','Lorenzo',
+    'Rigato','Ilaria',
+    'Muffatto','Massimiliano',
+    'Camporese','Giovanna',
     // Cardiology
-    'Corrado','Baritussio','Bauce','Brunello','Caforio','Cardaioli',
+    'Corrado','Domenico',
+    'Baritussio',
+    'Bauce','Brunello','Caforio','Cardaioli',
     'Cecchetto','Cecere','Cipriani','Lazzari','Michieli',
     'Famoso','Fraccaro','Giordani','Licchelli','Mancuso',
     'Masiero','Mattesi','Migliore','Fovino','Napodano',
     'Naso','Marra','Pergola','Previtero','Schiavon',
     'Susana','Tona','Zorzi','Anglani','Errico','Gabrieli',
     'Bova','Valeggia','Borsari','Causin',
+    'Tiziana','Donato','Romano',
     // Physiatry
-    'Piccione','Bettio',
+    'Piccione','Francesco','Bettio',
+    // Microbiology
+    'Tos','Angelo',
     // Admin
-    'Santoro','Caldon','Cernaz','Pauro','Tavarner',
-    'Dona','Palermo','Quotti','Tubi',
+    'Santoro','Caldon','Cernaz','Pauro','Rosa',
+    'Tavarner','Dona','Palermo','Quotti','Tubi',
   ],
 
   // ── 3. BOILERPLATE LINE PATTERNS (match entire lines) ────────────────────
@@ -743,11 +774,12 @@ function applyRegex(text) {
   const reps = [];
   let result = text;
 
-  // Custom patterns from settings
+  // Build combined rules: base + custom (do NOT mutate ANON_CONFIG)
+  const rules = [...ANON_CONFIG.regexRules];
   try {
     const raw = document.getElementById('cfg_regex').value.trim();
     if (raw) JSON.parse(raw).forEach(cp => {
-      ANON_CONFIG.regexRules.push({
+      rules.push({
         pattern: new RegExp(cp.pattern, 'gi'),
         label: cp.replace,
         type: 'id'
@@ -755,7 +787,7 @@ function applyRegex(text) {
     });
   } catch(e) {}
 
-  for (const rule of ANON_CONFIG.regexRules) {
+  for (const rule of rules) {
     const re = new RegExp(rule.pattern.source, rule.pattern.flags);
     if (re.global) re.lastIndex = 0;
     result = result.replace(re, (match) => {
@@ -896,15 +928,9 @@ function renderAnonResult(anonText, reps) {
     hi = hi.replace(new RegExp(escR(esc(r.orig)),'g'), `<span class="redacted">${esc(r.orig)}</span>`);
   document.getElementById('origText').innerHTML = hi;
 
-  // Sync scroll between columns and match textarea height
+  // Sync scroll between columns (bind once)
   const origScroll = document.getElementById('origText').parentElement;
   const anonScroll = document.getElementById('anonScroll');
-  const ta = document.getElementById('anonText');
-  // Let browser render, then match textarea height to content div
-  requestAnimationFrame(() => {
-    const h = Math.max(origScroll.querySelector('#origText').scrollHeight, 560);
-    ta.style.height = h + 'px';
-  });
   if (!origScroll._syncBound) {
     origScroll._syncBound = true;
     let syncing = false;
