@@ -484,25 +484,20 @@ function goTo(i) {
 }
 
 // ═══════════════════════════════════════════════════
-// ANON_CONFIG — v2 with full audit fixes
-// Changes from v1:
-//   + Dr./Dr.ssa pattern (was only catching Dott./Prof.)
-//   + D. Initial prefix pattern (e.g. "D. Quotti Tubi")
-//   + Standalone full DD/MM/YYYY birthdate catch-all
-//   + Numeric patient ID (7-8 digit) context-aware
-//   + CUP/booking footer line
-//   + ECG device metadata lines
-//   + Partial timestamp fragments after page redaction
-//   + Internal lab page numbers "Pag. 001"
-//   + Radiology referto number lines
-//   + boilerplateLinePatterns: diary page headers, equipe list lines,
-//     "giorno ricovero N^" lines, SpecialistiAmbulatoriali header
-//   KEPT: vital signs, note date/M/I operator markers, FARMACI AL BISOGNO
+// MODE SELECTOR
+// ═══════════════════════════════════════════════════
+
+
+// ═══════════════════════════════════════════════════
+// ANON_CONFIG — rebuilt engine (AO Padova Stroke Unit)
+// Replaces previous BOILERPLATE_PATTERNS + applyRegex + applyNameDict
+// External API unchanged: stripBoilerplate(), applyRegex(), applyNameDict()
 // ═══════════════════════════════════════════════════
 
 const ANON_CONFIG = {
 
   // ── 1. REGEX PATTERNS ──────────────────────────────────────────────────
+  // { pattern: RegExp, label: string, type: 'name'|'id'|'date'|'boiler' }
   regexRules: [
 
     // Codice fiscale (Italian 16-char format with strict month code)
@@ -531,21 +526,6 @@ const ANON_CONFIG = {
     { pattern: /di\s+anni\s+\d{1,3}\s+\(d\.n\.\d{2}\/\d{2}\/\d{4}\)/gi,
       label: '[ETA_DN]', type: 'date' },
 
-    // ── NEW v2: Standalone full birthdate DD/MM/YYYY (4-digit year 19xx/200x-201x) ──
-    // Catches "26/05/1941", "04/03/1952" etc. that appear raw in headers.
-    // Only matches historical/birth-range years (1900–2019) to avoid catching
-    // current clinical procedure dates (2020+) used throughout the record.
-    { pattern: /\b(0?[1-9]|[12]\d|3[01])\/(0?[1-9]|1[0-2])\/(19\d{2}|200\d|201\d)\b/g,
-      label: '[DATA_NASCITA]', type: 'date' },
-
-    // ── NEW v2: Numeric patient ID — known AO Padova 8-digit format ──
-    // Matches standalone 8-digit IDs that appear next to patient data (e.g. "47208240")
-    { pattern: /\b\d{8}\b(?=\s*(?:Data\s+Esame|Anni:|Sesso:|26\/05|nato|nata))/gi,
-      label: '[ID_PAZIENTE]', type: 'id' },
-    // Also catch 8-digit IDs that appear concatenated just before a date (e.g. "4720824026/05/1941")
-    { pattern: /\b(\d{8})(?=\d{2}\/\d{2}\/\d{4})/g,
-      label: '[ID_PAZIENTE]', type: 'id' },
-
     // Episode header line (name embedded)
     { pattern: /Episodio\s+RIC_AO_\S+\s+[A-Z]+\s+[A-Z]+\s+nato\/a\s+il\s+[\d\/]+/gi,
       label: '[INTESTAZIONE_EPISODIO]', type: 'boiler' },
@@ -554,11 +534,11 @@ const ANON_CONFIG = {
     { pattern: /(?:Paziente|Nominativo)\s*:\s*[A-Z\u00C0-\u00D6\u00D8-\u00DE][a-zA-Z\u00C0-\u00F6\u00F8-\u00FF]+(?:\s+[A-Z\u00C0-\u00D6\u00D8-\u00DE][a-zA-Z\u00C0-\u00F6\u00F8-\u00FF]+)*/g,
       label: '[PAZIENTE]', type: 'name' },
 
-    // "dimettiamo in data odierna il Sig. Nome Cognome,"
+    // "dimettiamo in data odierna il Sig. Nome Cognome," — any capitalised words
     { pattern: /dimettiamo\s+in\s+data\s+odierna\s+(?:il\s+Sig\.?|la\s+Sig\.?ra)\s+[A-Z][a-zA-Z\u00C0-\u00FF]+(?:\s+[A-Z][a-zA-Z\u00C0-\u00FF]+)?,/gi,
       label: 'dimettiamo in data odierna il Sig. [PAZIENTE],', type: 'name' },
 
-    // "il sig. Cognome" / "la sig.ra Cognome" standalone
+    // "il sig. Cognome" / "la sig.ra Cognome" standalone in clinical text
     { pattern: /\bil\s+[Ss]ig\.\s+([A-Z][a-zA-Z\u00C0-\u00FF]+)/g,
       label: 'il sig. [PAZIENTE]', type: 'name' },
     { pattern: /\bla\s+[Ss]ig\.?ra\.?\s+([A-Z][a-zA-Z\u00C0-\u00FF]+)/g,
@@ -572,33 +552,11 @@ const ANON_CONFIG = {
     { pattern: /(?:Tel\.|Fax\.?|Tel\s+)\s*\+?\d[\d\s\.\-]{7,}/gi,
       label: '[TELEFONO]', type: 'id' },
 
-    // ── NEW v2: Hospital CUP/booking phone footer (repeats on every page) ──
-    { pattern: /049\.821\.\d+,Prenotazioni\s+CUP:\d+[^\n]*/g,
-      label: '[FOOTER_AZ]', type: 'boiler' },
-
-    // ── NEW v2: ECG device metadata ──
-    { pattern: /Frequenza\s+campionamento[^\n]*/gi,
-      label: '[METADATI_ECG]', type: 'boiler' },
-    { pattern: /Device:\s*PageWriter[^\n]*/gi,
-      label: '[METADATI_ECG]', type: 'boiler' },
-
-    // ── NEW v2: Partial timestamp fragments left after page-number redaction ──
-    { pattern: /\[PAGINA\]\/\d{2}\/\d{4}\s+\d{2}[\.:h]\d{2}/g,
-      label: '[TIMESTAMP]', type: 'boiler' },
-
-    // ── NEW v2: Internal lab report page numbers "Pag. 001" ──
-    { pattern: /^Pag\.\s+0*\d+\s*$/gm,
-      label: '[PAGINA_LAB]', type: 'boiler' },
-
-    // ── NEW v2: Radiology referto number lines ──
-    { pattern: /^Referto:\s*\d+(?:-\d+-ADT)?\s*$/gm,
-      label: '[NUM_REFERTO]', type: 'boiler' },
-
     // Certification numbers
     { pattern: /(?:Certificato\s+n\.|SGQ\s+UNI.*?Certiquality)[^\n]*/gi,
       label: '[CERTIFICAZIONE]', type: 'boiler' },
 
-    // Numeric patient ID (keyword-prefixed)
+    // Numeric patient ID
     { pattern: /(?:ID\s+paziente|ID\s+Persona)\s*:?\s*\d+/gi,
       label: '[ID_PAZIENTE]', type: 'id' },
 
@@ -657,13 +615,21 @@ const ANON_CONFIG = {
     // Provenienza
     { pattern: /Provenienza\s*:\s*[^\n]+/gi, label: '[PROVENIENZA]', type: 'boiler' },
 
-    // Medico Richiedente / Refertante (ALL CAPS surname)
-    { pattern: /Medico\s+[Rr]ichiedente\s*:\s*[A-ZÀÈÉÌÒÙ]+(?:\s+[A-ZÀÈÉÌÒÙ]+)+/g,
+    // Medico Richiedente / Refertante — requires at least one lowercase letter (blocks all-caps drugs)
+    // Matches: "Ragone Rossana", "M. Bianchi" but NOT "ACIDO ACETILSALICILICO"
+    { pattern: /Medico\s+[Rr]ichiedente\s*:\s*[A-Z][a-z\u00C0-\u00FF][a-zA-Z\u00C0-\u00FF]*(?:\s+[A-Z][a-zA-Z\u00C0-\u00FF]+)*/g,
       label: 'Medico richiedente: [OPERATORE]', type: 'name' },
-    { pattern: /Medico\s+[Rr]efertante\s*:\s*[A-ZÀÈÉÌÒÙ]+(?:\s+[A-ZÀÈÉÌÒÙ]+)+/g,
+    { pattern: /Medico\s+[Rr]efertante\s*:\s*[A-Z][a-z\u00C0-\u00FF][a-zA-Z\u00C0-\u00FF]*(?:\s+[A-Z][a-zA-Z\u00C0-\u00FF]+)*/g,
       label: 'Medico refertante: [OPERATORE]', type: 'name' },
-    { pattern: /Medico\s+[Rr]ichiedente\s*:\s*[A-Z][a-zàèéìòù]+(?:\s+[A-Z][a-zàèéìòù]+)+/g,
-      label: 'Medico richiedente: [Operatore]', type: 'name' },
+    // "Refertato da: Cognome" — require lowercase char (blocks ALL CAPS)
+    { pattern: /Refertato\s+da\s*:\s*[A-Z][a-z\u00C0-\u00FF][a-zA-Z\u00C0-\u00FF]*(?:\s+[A-Z][a-zA-Z\u00C0-\u00FF]+)*/g,
+      label: 'Refertato da: [OPERATORE]', type: 'name' },
+    // "Responsabile: Dr. X" — always has Dr./Prof. prefix so safe
+    { pattern: /Responsabile(?:\s+[A-Za-z]+)?\s*:\s*(?:Dr\.?(?:ssa\.?)?|Prof\.?(?:ssa\.?)?)\s*[A-Z][a-zA-Z\u00C0-\u00FF]+(?:\s+[A-Z][a-zA-Z\u00C0-\u00FF]+)*/gi,
+      label: 'Responsabile: [OPERATORE]', type: 'name' },
+    // "Operatore: Name" — require lowercase (blocks all-caps)
+    { pattern: /Operatore\s*:\s*[A-Z][a-z\u00C0-\u00FF][a-zA-Z\u00C0-\u00FF]*(?:\s+[A-Z][a-zA-Z\u00C0-\u00FF]+)*/g,
+      label: 'Operatore: [OPERATORE]', type: 'name' },
 
     // Richiesta in data
     { pattern: /Richiesta\s+in\s+data\s*:\s*[\d\/\s:]+(?:per\s+il[\d\/\s:]+)?/gi,
@@ -676,132 +642,24 @@ const ANON_CONFIG = {
       label: '[INDIRIZZO]', type: 'boiler' },
     { pattern: /C\.F\.\s+P\.IVA\s+\d{11}/gi, label: '[CF_PIVA_AZ]', type: 'boiler' },
 
-    // ── NEW v2: Signature block — Dott./Prof. (existing) + Dr./Dr.ssa (new) ──
-    // "Dott. Nome Cognome" / "Dott.ssa Nome Cognome" / "Prof. Nome Cognome"
-    { pattern: /(?:Dott\.(?:ssa)?|Prof\.(?:ssa)?)\s+[A-Z][a-zA-Z\u00C0-\u00FF]+(?:\s+[A-Z][a-zA-Z\u00C0-\u00FF]+)+/g,
-      label: '[OPERATORE]', type: 'name' },
-
-    // NEW v2: "Dr. Nome Cognome" / "Dr.ssa Nome Cognome" — used in neuroradiology/cardiology equipe
-    { pattern: /(?:Dr\.(?:ssa)?)\s+[A-Z][a-zA-Z\u00C0-\u00FF]+(?:\s+[A-Z][a-zA-Z\u00C0-\u00FF]+)+/g,
-      label: '[OPERATORE]', type: 'name' },
-
-    // NEW v2: "D. Quotti Tubi" style — single letter initial + dot prefix
-    { pattern: /\bD\.\s+[A-Z][a-zA-Z\u00C0-\u00FF]+(?:\s+[A-Z][a-zA-Z\u00C0-\u00FF]+)*/g,
-      label: '[OPERATORE]', type: 'name' },
-
-    // ── STRUCTURAL v4: Diary operator type marker ───────────────────────────
-    // Diary lines have the form: "[NOME] SurnameMText..." or "[NOME] SurnameIText..."
-    // where M=Medico, I=Infermiere, F=Fisioterapista is concatenated directly onto the surname.
-    // Pattern: after "[NOME] " a capitalized word immediately followed by M/I/F + uppercase letter.
-    // This catches ANY surname in this position without knowing it in advance.
-    { pattern: /(?<=\[NOME\]\s+)[A-ZÀÈÉÌÒÙ][a-zàèéìòùA-ZÀÈÉÌÒÙ\-']+(?=[MIF][A-Z])/g,
-      label: '[NOME]', type: 'name' },
-
-    // STRUCTURAL v4: Compound surname before operator type (e.g. "Di Mare" before "M")
-    // Catches "Di MareMPaziente" → the "Di " prefix + surname + type letter
-    { pattern: /(?<=\[NOME\]\s+)Di\s+[A-ZÀÈÉÌÒÙ][a-zàèéìòùA-ZÀÈÉÌÒÙ]+(?=[MIF][A-Z])/g,
-      label: '[NOME]', type: 'name' },
-
-    // STRUCTURAL v4: Surname+newline+first-name block in diary vitals table
-    // "(Gobbato Lara [NOME])" — two-word name inside parens before [NOME]
-    // Also catches "(Iemmolo [NOME])" — single surname before [NOME] inside parens
-    { pattern: /\([A-ZÀÈÉÌÒÙ][a-zàèéìòùA-ZÀÈÉÌÒÙ\-']+(?:\s+[A-ZÀÈÉÌÒÙ][a-zàèéìòùA-ZÀÈÉÌÒÙ\-']+)?\s+\[NOME\]\)/g,
-      label: '([NOME])', type: 'name' },
-
-    // STRUCTURAL v4: ALL-CAPS full name lines in OR/surgical table
-    // Entire token sequence of 2+ ALL-CAPS words (≥4 chars each) = staff name row
-    // Excludes known acronyms like STROKE, NIHSS, ACI, etc. by requiring ≥5 chars
-    { pattern: /\b[A-Z]{5,}\s+[A-Z]{5,}\b/g,
-      label: '[OPERATORE]', type: 'name' },
-
-    // NEW v3: "CCPARVIT.rep" internal system tag with optional timestamp
-    { pattern: /CCPARVIT\.rep\s*/g, label: '', type: 'boiler' },
-
-    // NEW v3: "5Page X of[DATA_STAMPA]" / "Page X of X" lab pagination artifact
-    { pattern: /\d?Page\s+\d+\s+of\s*(?:\d+)?(?:\[DATA_STAMPA\])?/g,
-      label: '', type: 'boiler' },
-
-    // NEW v3: Standalone patient surname in vitals tables / lab reports
-    // "MAZZOCCA NOME" or standalone "Mazzocca" followed by [NOME]
-    { pattern: /\bMazzocca\s+\[NOME\]/g, label: '[PAZIENTE]', type: 'name' },
-    { pattern: /\bMAZZOCCA\s+\[NOME\]/g, label: '[PAZIENTE]', type: 'name' },
-
-    // NEW v3: "LUCA MAZZOCCA - [ID_RICOVERO]" — full patient name in report footer
-    { pattern: /LUCA\s+MAZZOCCA\s*[-–]\s*\[ID_RICOVERO\]/g,
-      label: '[PAZIENTE] - [ID_RICOVERO]', type: 'name' },
-
-    // NEW v3: Patient DOB 18/04/1962 appearing raw (different format than guarded pattern)
-    { pattern: /\b18\/04\/1962\b/g, label: '[DATA_NASCITA]', type: 'date' },
-
-    // NEW v3: Partial CF code "MZZLCU62D18H238Y" appearing in neuroradiology headers
-    { pattern: /[A-Z]{6}\d{2}[A-Z]\d{2}[A-Z]\d{3}[A-Z]/g,
+    // Codice fiscale (Italian tax ID): 6 letters + 2 digits + letter + 2 digits + letter + 3 digits + letter
+    { pattern: /\b[A-Z]{6}\d{2}[A-Z]\d{2}[A-Z]\d{3}[A-Z]\b/g,
+      label: '[CODICE_FISCALE]', type: 'id' },
+    // CF: label followed by code
+    { pattern: /C\.?F\.?\s*:\s*[A-Z]{6}\d{2}[A-Z]\d{2}[A-Z]\d{3}[A-Z]/g,
       label: '[CODICE_FISCALE]', type: 'id' },
 
-    // NEW v3: "Mazzocca" standalone in lab sub-headers (after [PAGINA_LAB] block)
-    { pattern: /\bMazzocca\b/g, label: '[PAZIENTE]', type: 'name' },
-    { pattern: /\bMAZZOCCA\b/g, label: '[PAZIENTE]', type: 'name' },
-    { pattern: /\bMazzucco\b/g, label: '[PAZIENTE]', type: 'name' },
+    // Parentheses pattern removed — caused false positives on medical test names like (Stroop Test)
 
-    // NEW v3: Staff credit line "Dr.ssa F.Boscaro, Dr. D.Ceccato, Dr.ssa A.Poretto"
-    { pattern: /Staff\s*:\s*(?:Dr\.(?:ssa)?\s+[A-Z]\.[A-Za-z]+(?:,\s*)?)+/g,
-      label: 'Staff: [OPERATORI]', type: 'name' },
-
-    // STRUCTURAL v4: "Giro visite referente [OPERATORE] 139/80" or similar
-    // Any capitalized word(s) between "referente" keyword and a blood pressure number
-    { pattern: /\b(?:referente|Referente)\s+[A-ZÀÈÉÌÒÙ][a-zàèéìòùA-ZÀÈÉÌÒÙ\s\.]+?(?=\s+\d{2,3}\/\d{2})/g,
-      label: 'referente [OPERATORE]', type: 'name' },
-
-    // STRUCTURAL v4: "firmato da COGNOME NOME il DATE" — ALL CAPS name after "da"
-    // Already partially caught, but ensure ALL-CAPS names in this context are caught
-    { pattern: /(?<=\bda\s+)[A-Z]{3,}(?:\s+[A-Z]{3,})+(?=\s+il\b)/g,
+    // Signature block: "Dott./Dr./Prof. Nome Cognome" and variants
+    // Matches 1+ words after the title prefix — handles "Dr. F. Causin", "Prof.ssa B. Rossi"
+    { pattern: /(?:Dott\.(?:ssa\.?)?|Dr\.(?:ssa\.?)?|Prof\.(?:ssa\.?)?)\s+(?:[A-Z]\.\s+)?[A-Z][a-zA-Z\u00C0-\u00FF]+(?:\s+[A-Z][a-zA-Z\u00C0-\u00FF]+)*/g,
+      label: '[OPERATORE]', type: 'name' },
+    // "D. Quotti Tubi" style (single initial D. = Dott.)
+    { pattern: /\bD\.\s+[A-Z][a-zA-Z\u00C0-\u00FF]+(?:\s+[A-Z][a-zA-Z\u00C0-\u00FF]+)+/g,
       label: '[OPERATORE]', type: 'name' },
 
-    // STRUCTURAL v4: "Referto firmato da COGNOME NOME il DATE" — whole line
-    { pattern: /Referto\s+firmato\s+da\s+[A-Z][A-Z\s]+(?:il\s+[\d\/.\s]+)?/g,
-      label: '[FIRMA_DIGITALE]', type: 'boiler' },
-
-    // STRUCTURAL v4: surname immediately before [NOME] (lab/consult sub-headers)
-    // e.g. "MAZZOCCA [NOME]" or "Mazzocca [NOME]"
-    // Catches any CapWord or ALL-CAPS word directly before [NOME]
-    { pattern: /[A-ZÀÈÉÌÒÙ][a-zàèéìòùA-ZÀÈÉÌÒÙ\-']{2,}\s+\[NOME\]/g,
-      label: '[PAZIENTE]', type: 'name' },
-
-    // STRUCTURAL v4: "WORD [NOME]" ALL-CAPS variant
-    { pattern: /[A-ZÀÈÉÌÒÙ]{3,}\s+\[NOME\]/g,
-      label: '[PAZIENTE]', type: 'name' },
-
-    // STRUCTURAL v4: surname + [NOME] + [DATA_NASCITA] pattern in consult headers
-    // "[PAZIENTE] [DATA_NASCITA] (63 anni)" — strip age token
-    { pattern: /\(\d{1,3}\s+anni\)/g, label: '', type: 'boiler' },
-
-    // NEW v3: Phone number patterns appearing in lab/report footers
-    { pattern: /\b049\.\d{3}\.\d{4}\b/g, label: '[TELEFONO]', type: 'id' },
-
-    // NEW v3: Email patterns
-    { pattern: /[a-z0-9._%-]+@[a-z0-9.-]+\.[a-z]{2,}/gi, label: '[EMAIL]', type: 'id' },
-
-    // NEW v3: Via Nicolò Giustiniani address in doppler footer
-    { pattern: /Via\s+Nicol[oò]\s+Giustiniani[^\n]*/gi, label: '[INDIRIZZO_AZ]', type: 'boiler' },
-
-    // NEW v3: "Cartellino Amb X X/" lab/consult pagination artifact  
-    { pattern: /Cartellino\s+Amb\s+\d+\s+\d+\//gi, label: '', type: 'boiler' },
-
-    // NEW v3: "Referto firmato da COGNOME NOME il DATA ora ORA" — radiology sign lines
-    { pattern: /Referto\s+firmato\s+da\s+[A-Z][A-Z\s]+il\s+[\d\/]+\s+[\d.]+\./gi,
-      label: '[FIRMA_DIGITALE]', type: 'boiler' },
-
-    // NEW v3: "2Pagina X di Y" — lab radiology pagination artifact
-    { pattern: /\d+Pagina\s+\d+\s+di\s+\d+/gi, label: '', type: 'boiler' },
-
-    // NEW v3: "[PAGINA]/02/2026 XX.XX" — partial timestamp after page redaction
-    { pattern: /\[PAGINA\]\/\d{2}\/\d{4}\s+\d{2}[\.:]\d{2}/g,
-      label: '[TIMESTAMP]', type: 'boiler' },
-
-    // NEW v3: Standalone 6-digit report numbers (radiology referto IDs)
-    { pattern: /\b(?:107026|108275|108385|108408|113058|115985|130399786-1|182728265-1-ADT)\b/g,
-      label: '[NUM_REFERTO]', type: 'boiler' },
-
-    // "firmata da Cognome Nome [il date]" in digital signature footer
+    // "firmata da Cognome Nome [il date]" in digital signature footer  
     { pattern: /firmata?\s+da\s+[A-Z][a-zA-Z\u00C0-\u00FF]+(?:\s+[A-Z][a-zA-Z\u00C0-\u00FF]+)+/gi,
       label: 'firmata da [OPERATORE]', type: 'name' },
 
@@ -812,10 +670,55 @@ const ANON_CONFIG = {
     // Padova hospital footer repeated line
     { pattern: /\d{5}\s+Padova\s*-\s*Ospedale[^\n]*/gi,
       label: '[INTESTAZIONE_AZ]', type: 'boiler' },
+
+    // Repeated episode diary header "Episodio RIC_... NOME DATA_NASCITA"
+    { pattern: /^Episodio\s+[A-Z0-9_\-]+\s+[A-Z]+\s+[A-Z]+\s+[\d\/]+$/gim,
+      label: '[INTESTAZIONE_EPISODIO]', type: 'boiler' },
+
+    // "Data nota Nota P OperatoreData ins." — column header artifact
+    { pattern: /Data\s+nota\s+Nota\s+P\s+OperatoreData\s+ins\.?/gi,
+      label: '[INTESTAZIONE_COLONNE]', type: 'boiler' },
+
+    // Repeated phone/booking footer in discharge letter
+    { pattern: /049\.821\.\d{4}(?:[^\n]*Prenotazioni[^\n]*)?/g,
+      label: '[TELEFONO_AZ]', type: 'boiler' },
+
+    // "Pag. 001" / "Pag. 002" etc. in lab reports
+    { pattern: /^Pag\.\s+\d{3}$/gim,
+      label: '[PAGINA_LAB]', type: 'boiler' },
+
+    // "Page X of Y" pagination
+    { pattern: /\d+Page\s+\d+\s+of\s+\d+/gi,
+      label: '[PAGINA]', type: 'boiler' },
+
+    // "FINE DOCUMENTO - PAGINA FINALE"
+    { pattern: /FINE\s+DOCUMENTO\s*[-–]\s*PAGINA\s+FINALE/gi,
+      label: '[FINE_DOCUMENTO]', type: 'boiler' },
+
+    // Drug administration signature pairs "[NOME] (date)" 
+    { pattern: /\[NOME\]\s*\(\d{2}\/\d{2}\/\d{4}\s+[\d:]+\)/g,
+      label: '[OPERATORE_FARMACO]', type: 'boiler' },
+
+    // "(S) FARMACO ..." confirmation lines in drug chart
+    { pattern: /^\(S\)\s+[A-Z][A-Z\s\d\.\*]+$/gim,
+      label: '[CONFERMA_FARMACO]', type: 'boiler' },
+
+    // Standalone dates that look like birthdates (DD/MM/YYYY) near patient ID context
+    // Only when preceded by age, sex indicator, or CF
+    { pattern: /(?:anni\s+\d{1,3}|Sesso:\s*[MF]|C\.F\.:|nato\s+il)[^\n]{0,40}(\d{2}\/\d{2}\/\d{4})/gi,
+      label: '[DATI_PAZIENTE]', type: 'date' },
+
+    // ECG/device metadata
+    { pattern: /Frequenza\s+campionamento[^\n]*/gi,
+      label: '[METADATI_ECG]', type: 'boiler' },
+    { pattern: /Device:\s*[A-Za-z]+[^\n]*/gi,
+      label: '[METADATI_ECG]', type: 'boiler' },
   ],
 
-  // ── 2. DICTIONARY — loaded externally at runtime ─────────────────────────
+  // ── 2. DICTIONARY — loaded externally at runtime (see NAME_SOURCES below) ─
+  // Fallback used only if network fetch fails
   nameDict_fallback: [
+    // Stroke Unit (AO Padova)
     'Marcolin','Marianno','MARCOLIN','MARIANNO',
     'Baracchini','Cavatorti','Favaretto','Ragone','Minicuci','Petrosino',
     'Fredianelli','Mozzetta','Pieroni','Fabris','Viaro','Rubino',
@@ -825,9 +728,10 @@ const ANON_CONFIG = {
     'Muffatto','Camporese','Corrado','Baritussio','Bauce','Brunello',
     'Caforio','Cecchetto','Famoso','Fraccaro','Giordani','Schiavon',
     'Piccione','Bettio','Santoro','Caldon','Cernaz','Palermo',
+    // Clinica Neurologica / Neurodegenerative Unit
     'Acerbi','Campagnolo','Raccanello','Antonini','Rozzi','Boschini',
     'Bolgan','Bolgon',
-    // Common Italian first names
+    // Common Italian first names (broad coverage)
     'Amedeo','Marta','Sofia','Angelo','Martina','Laura',
     'Giovanni','Maria','Giuseppe','Anna','Antonio','Rosa','Mario','Lucia',
     'Francesco','Teresa','Luigi','Carmela','Salvatore','Angela','Sergio',
@@ -839,23 +743,9 @@ const ANON_CONFIG = {
     'Cristina','Massimo','Alfredo','Monica','Bruno','Rossana','Diego',
     'Claudia','Renzo','Arianna','Lorenzo','Ilaria','Edoardo','Silvia',
     'Federica','Tiziana','Domenico','Romano','Donato','Francesco',
-    // NEW v2: Additional names found in this document
-    'Erica','Susanna','Causin','Anglani','Errico','Gabrieli','Valeggia',
-    'Borsari','Cavaliere','Fichera','Giorgi','Zuliani',
-    // NEW v4: Names needed for positions NOT covered by structural patterns
-    // (i.e. names appearing in free text, not in diary/OR/lab structural slots)
-    // Diary operators — covered by structural [NOME]+SurnameM/I/F pattern above,
-    // but kept here as fallback for any appearance in free text prose
-    'Iemmolo','Piazza','Gobbato','Lara','Grassi','Guerra','Ferrati',
-    'Di Mare','Cavinato','Previtero','Boscaro','Ceccato','Poretto',
-    'Turatti','Tirrito','Regazzo','Pisoni',
-    'Geraldini','Gazzillo','Bolun','Adraman',
   ],
 
-  // ── 3. BOILERPLATE LINE PATTERNS ─────────────────────────────────────────
-  // NOTE: These strip ENTIRE LINES.
-  // KEPT (not in this list): vital sign values, note dates, M/I/F operator type,
-  // FARMACI AL BISOGNO section header and content.
+  // ── 3. BOILERPLATE LINE PATTERNS (match entire lines) ────────────────────
   boilerplateLinePatterns: [
     /^Regione\s+(?:del\s+)?[Vv]eneto\s*$/,
     /^REGIONE\s+(?:DEL\s+)?VENETO\s*$/,
@@ -910,104 +800,11 @@ const ANON_CONFIG = {
     /^Cordiali\s+saluti\s*,?\s*$/i,
     /^Il\s+medico\s+strutturato\s+Dott\./i,
     /^MFS\s+Dott\.sse?\s+/i,
-
-    // ── NEW v2: Diary page-top repeated headers ──────────────────────────
-    // "Data nota  Nota P  OperatoreData ins." column header (repeats on every diary page)
-    /^Data\s+nota\s+Nota\s+P\s+Operatore/i,
-    // "- giorno ricovero 1^" / "- giorno ricovero 2^" pagination lines
-    /^-\s+giorno\s+ricovero\s+\d+\^\s*$/i,
-    // Repeated "Episodio [ID_EPISODIO] [NOME] [DATA_NASCITA]" page-top header lines
-    // (already partially caught by regex above; belt-and-suspenders here)
-    /^Episodio\s+[\w\[\]_]+\s+[\[\w\]]+\s+[\[\w\]]+\s*$/i,
-
-    // ── NEW v2: Radiology equipe list lines ──────────────────────────────
-    // These appear as multi-line lists of "Dr. F. Causin" etc. at the top of reports
-    /^Dr\.(?:ssa)?\s+[A-Z]\./,
-    /^Prof\.(?:ssa)?\s+[A-Z]\./,
-    // "D. Quotti Tubi" style equipe lines
-    /^D\.\s+[A-Z][a-z]+/,
-    // "SpecialistiAmbulatoriali:" header
-    /^SpecialistiAmbulatoriali\s*:/i,
-
-    // ── NEW v3: Additional boilerplate identified in output ───────────────
-    // "CCPARVIT.rep" internal system report tag line
-    /CCPARVIT\.rep/,
-    // "5Page X of" / "Page X of X" pagination artifact from medications section
-    /^\d?Page\s+\d+\s+of/i,
-    // "Staff: Dr.ssa F.Boscaro, Dr. D.Ceccato..." credit lines
-    /^Staff\s*:/i,
-    // "SISTEMA DI GESTIONE QUALITA'" quality cert lines
-    /^SISTEMA\s+DI\s+GESTIONE\s+QUALIT/i,
-    // "CERTIFICATO DA CERTIQUALITY" cert lines
-    /^DA\s+CERTIQUALITY/i,
-    // "Cartellino Amb X X/" consult pagination  
-    /^Cartellino\s+Amb/i,
-    // "X/YLUCA MAZZOCCA - [ID_RICOVERO]" physiatry report footer
-    /\bLUCA\s+MAZZOCCA\s*-/,
-    // "Referto firmato da COGNOME NOME il DATE" — already caught by firmata da but catching ALL CAPS variant
-    /^Referto\s+firmato\s+da\s+[A-Z]/,
-    // "2Pagina X di Y" radiology pagination artifact
-    /^\d+Pagina\s+\d+\s+di\s+\d+/i,
-    // "Stampa referto del: DD/MM/YYYY [NOME]" — partial patient name in lab header
-    /^Stampa\s+referto\s+del\s*:/i,
-    // "[PAZIENTE]: Sesso: M [ID_PAZIENTE] DD/MM/YYYY ID paziente:" neuroradiology header lines
-    /^\[PAZIENTE\]\s*:\s*Sesso\s*:/i,
-    // "MZZLCU62D18H238YCF:" — partial codice fiscale with CF label
-    /^[A-Z]{6}\d{2}[A-Z]\d{2}[A-Z]\d{3}[A-Z]CF\s*:/,
-    // "n° pr. YYYY/NNN" — procedure number
-    /^n°\s+pr\.\s+\d{4}\/\d+/i,
-    // "DESCRIZIONE INTERVENTO :" header
-    /^DESCRIZIONE\s+INTERVENTO\s*:/i,
-    // "SALA OPERATORIA: XXXXX NEURORAD. SR ANGIOGRAF." header
-    /^SALA\s+OPERATORIA\s*:/i,
-    // "1° OperatoreAtto informatico n° XXXXXXX" OR header
-    /^1°\s+Operatore/i,
-    // "INTERVENTO:" label line in OR table
-    /^INTERVENTO\s*:\s*$/i,
-    // "PRIMO OPERATORE / ANESTESISTA / INFERMIERE / TECNICO" role labels in OR table
-    /^(?:PRIMO\s+OPERATORE|ANESTESISTA|INFERMIERE\s+DI\s+SALA|TECNICO\s+DI\s+RADIOLOGIA)\s*$/i,
-    // STRUCTURAL v4: ALL-CAPS staff name lines in OR table
-    // Catches "FEDERICO GERALDINI", "VINCENZO GAZZILLO" etc. without knowing names
-    // Both words must be ≥4 chars to avoid matching clinical acronyms (ACI, ACM...)
-    /^[A-Z]{4,}(?:\s+[A-Z]{4,})+\s*$/,
-    // "Inizio intervento h: / Fine intervento h:" OR timing table header
-    /^Inizio\s+intervento\s+h\s*:/i,
-    // "Ordinario Urgente Ambulatoriale D.S." OR type line
-    /^Ordinario\s+Urgente\s+Ambulatoriale/i,
-    // "INDICAZIONE DIAGNOSTICA:" in OR table
-    /^INDICAZIONE\s+DIAGNOSTICA\s*:/i,
-    // "TIPO ANESTESIA" column header
-    /^(?:LOCALE\s+)?TIPO\s+ANESTESIA\s*$/i,
-    // "INTERVENTO/I (ICD9-CM):" with codes — structural
-    /^INTERVENTO\/I\s*\(ICD9/i,
-    // "ARTERIOGRAFIA DI ARTERIE CEREBRALI" procedure codes  
-    /^\d{4}\s+[A-Z]/,
-    // "REPARTO GIURIDICO:" line
-    /^REPARTO\s+GIURIDICO\s*:/i,
-    // "DIAGNOSI (ICD9-CM):" line  
-    /^DIAGNOSI\s+\(ICD9/i,
-    // "Unità Operativa Complessa di Neuroradiologia" / "Unità Operativa Radiologia Ospedaliera" headings
-    /^Unit[àa]\s+Operativa/i,
-    // "Dipartimento di NEUROSCIENZE ED ORGANI DI SENSO" heading
-    /^Dipartimento\s+di\s+NEUROSCIENZE/i,
-    // "UOSD STROKE UNIT" heading
-    /^UOSD\s+STROKE\s+UNIT\s*$/i,
-    // "AZIENDA OSPEDALIERA - UNIVERSITA' DI PADOVA" heading
-    /^AZIENDA\s+OSPEDALIERA\s*-\s*UNIVERSITA/i,
-    // "Responsabile:" line 
-    /^Responsabile\s*:\s*\[OPERATORE\]/i,
-    // "Reparto inviante:" line
-    /^Reparto\s+inviante\s*:/i,
-    // "Si prega di riportare i referti ad ogni successivo controllo"
-    /^Si\s+prega\s+di\s+riportare\s+i\s+referti/i,
-    // "Referto firmato digitalmente e conservato presso il servizio emittente"
-    /^Referto\s+firmato\s+digitalmente\s+e\s+conservato/i,
-    // "Operatore: dott.ssa [NOME] Pisoni" — partially redacted operator line
-    /^Operatore\s*:\s*dott\.?ssa?\s+/i,
   ],
 };
 
-// ── stripBoilerplate ──────────────────────────────────────────────────────
+// ── stripBoilerplate: wraps ANON_CONFIG.boilerplateLinePatterns ──────────
+// Returns { clean: string, strippedBlocks: [{text, tag}] }
 function stripBoilerplate(text) {
   const stripped = [];
   const lines = text.split('\n');
@@ -1028,11 +825,13 @@ function stripBoilerplate(text) {
   };
 }
 
-// ── applyRegex ───────────────────────────────────────────────────────────
+// ── applyRegex: wraps ANON_CONFIG.regexRules ─────────────────────────────
+// Returns { text: string, reps: [{orig, repl, type}] }
 function applyRegex(text) {
   const reps = [];
   let result = text;
 
+  // Build combined rules: base + custom (do NOT mutate ANON_CONFIG)
   const rules = [...ANON_CONFIG.regexRules];
   try {
     const raw = document.getElementById('cfg_regex').value.trim();
@@ -1068,19 +867,22 @@ function applyRegex(text) {
 // EXTERNAL NAME DICTIONARY + FUZZY ENGINE
 // ═══════════════════════════════════════════════════════════════════════════
 
+// Source URLs — raw GitHub CSVs (no CORS issues)
 const NAME_SOURCES = {
   firstNames: 'https://raw.githubusercontent.com/mrblasco/genderNamesITA/master/gender_firstnames_ITA.csv',
   surnames:   'https://raw.githubusercontent.com/PaoloSarti/lista_cognomi_italiani/main/cognomi.txt',
 };
 
+// Runtime name stores (populated by loadNameDictionary)
 const NAMES_DB = {
-  firstNames: [],
-  surnames:   [],
+  firstNames: [],   // lowercase
+  surnames:   [],   // lowercase
   loaded: false,
   loading: false,
   error: null,
 };
 
+// ── Force reload dictionary (called from settings) ───────────────────────
 async function reloadNameDictionary() {
   NAMES_DB.loaded = false;
   NAMES_DB.loading = false;
@@ -1095,9 +897,10 @@ async function reloadNameDictionary() {
   if (el && statusEl) el.textContent = statusEl.textContent;
 }
 
+// ── Levenshtein distance (fast iterative) ────────────────────────────────
 function levenshtein(a, b) {
   const m = a.length, n = b.length;
-  if (Math.abs(m - n) > 2) return 99;
+  if (Math.abs(m - n) > 2) return 99; // fast reject
   if (m === 0) return n;
   if (n === 0) return m;
   let prev = Array.from({length: n + 1}, (_, i) => i);
@@ -1112,8 +915,10 @@ function levenshtein(a, b) {
   return prev[n];
 }
 
+// ── BK-Tree for fast fuzzy lookup ────────────────────────────────────────
 class BKTree {
   constructor() { this.root = null; }
+
   add(word) {
     if (!this.root) { this.root = {word, children: {}}; return; }
     let node = this.root;
@@ -1124,6 +929,8 @@ class BKTree {
       else { node.children[d] = {word, children: {}}; return; }
     }
   }
+
+  // Returns all words within maxDist of query
   search(query, maxDist) {
     if (!this.root) return [];
     const results = [];
@@ -1140,9 +947,11 @@ class BKTree {
   }
 }
 
+// BK-trees built once after load
 let bkSurnames   = new BKTree();
 let bkFirstNames = new BKTree();
 
+// ── Load + parse name sources ─────────────────────────────────────────────
 async function loadNameDictionary() {
   if (NAMES_DB.loaded || NAMES_DB.loading) return;
   NAMES_DB.loading = true;
@@ -1150,17 +959,20 @@ async function loadNameDictionary() {
   const statusEl = document.getElementById('dictStatus');
   if (statusEl) statusEl.textContent = '⏳ Caricamento dizionario nomi...';
 
+  // Use custom URLs from settings if provided
   const customSurnamesUrl   = document.getElementById('cfg_surnames_url')?.value.trim();
   const customFirstNamesUrl = document.getElementById('cfg_firstnames_url')?.value.trim();
   const surnamesUrl   = customSurnamesUrl   || NAME_SOURCES.surnames;
   const firstNamesUrl = customFirstNamesUrl || NAME_SOURCES.firstNames;
 
   try {
+    // Fetch surnames (one per line, plain text)
     const [surnameResp, firstNameResp] = await Promise.all([
       fetch(surnamesUrl),
       fetch(firstNamesUrl),
     ]);
 
+    // Parse surnames
     if (surnameResp.ok) {
       const text = await surnameResp.text();
       const names = text.split('\n')
@@ -1170,9 +982,10 @@ async function loadNameDictionary() {
       names.forEach(n => bkSurnames.add(n));
     }
 
+    // Parse firstnames CSV (columns: name, male_freq, female_freq or similar)
     if (firstNameResp.ok) {
       const text = await firstNameResp.text();
-      const lines = text.split('\n').slice(1);
+      const lines = text.split('\n').slice(1); // skip header
       const names = lines
         .map(l => l.split(',')[0].replace(/['"]/g,'').trim().toLowerCase())
         .filter(n => n.length >= 3 && n.length <= 20 && /^[a-zàèéìòùäöü'\- ]+$/.test(n));
@@ -1182,13 +995,16 @@ async function loadNameDictionary() {
 
     NAMES_DB.loaded = true;
     NAMES_DB.error = null;
+    const total = NAMES_DB.surnames.length + NAMES_DB.firstNames.length;
     const msg = `✓ Dizionario: ${NAMES_DB.surnames.length.toLocaleString()} cognomi · ${NAMES_DB.firstNames.length.toLocaleString()} nomi`;
     if (statusEl) statusEl.textContent = msg;
     const settingsEl = document.getElementById('dictStatusSettings');
     if (settingsEl) settingsEl.textContent = msg;
+    console.log(`[NameDict] Loaded ${total} names`);
 
   } catch(e) {
     NAMES_DB.error = e.message;
+    // Fall back to inline dict
     const fb = ANON_CONFIG.nameDict_fallback;
     fb.forEach(n => { bkSurnames.add(n.toLowerCase()); bkFirstNames.add(n.toLowerCase()); });
     NAMES_DB.surnames = fb.map(n => n.toLowerCase());
@@ -1197,22 +1013,31 @@ async function loadNameDictionary() {
     if (statusEl) statusEl.textContent = errMsg;
     const settingsEl = document.getElementById('dictStatusSettings');
     if (settingsEl) settingsEl.textContent = errMsg;
+    console.warn('[NameDict] Fetch failed, using fallback:', e.message);
   }
   NAMES_DB.loading = false;
 }
 
+// ── Fuzzy match a single token against a BK-tree ─────────────────────────
 function isFuzzyName(token, bkTree, maxDist) {
   if (token.length < 3) return false;
   const q = token.toLowerCase();
   return bkTree.search(q, maxDist).length > 0;
 }
 
+// ── Fuzzy pair detection threshold by word length ─────────────────────────
 function fuzzyThreshold(word) {
+  // length ≤ 5 → max 1 edit; longer → max 2 edits
   return word.length <= 5 ? 1 : 2;
 }
 
+// ── Main name anonymisation function ─────────────────────────────────────
+// Pass 1: exact full-name pairs (Cognome Nome, Nome Cognome, N. Cognome)
+// Pass 2: fuzzy full-name pairs (only capitalised word pairs)
+// Pass 3: exact individual names from loaded dict
 function applyNameDict(text) {
   if (!NAMES_DB.loaded) {
+    // Dict not ready — skip silently (pipeline will warn)
     return { text, reps: [] };
   }
 
@@ -1224,14 +1049,20 @@ function applyNameDict(text) {
       reps.push({ orig, repl: '[NOME]', type });
   };
 
+  // ── PASS 1: exact pairs ──────────────────────────────────────────────────
+  // Patterns: "Cognome Nome", "Nome Cognome", "X. Cognome", "Dott. X Cognome"
+  // We use word-token scanning for flexibility
   const exactSurnameSet = new Set(NAMES_DB.surnames);
   const exactFirstSet   = new Set(NAMES_DB.firstNames);
 
+  // Also add fallback dict to exact sets
   ANON_CONFIG.nameDict_fallback.forEach(n => {
     exactSurnameSet.add(n.toLowerCase());
     exactFirstSet.add(n.toLowerCase());
   });
 
+  // Tokenise: preserve positions so we can reconstruct the string
+  // Token = {text, start, end, isCapWord}
   function tokenise(str) {
     const tokens = [];
     const re = /\S+/g;
@@ -1245,7 +1076,9 @@ function applyNameDict(text) {
     return tokens;
   }
 
+  // Replace spans in result string, tracking offset drift
   function applyReplacements(str, spans) {
+    // spans: [{start, end, orig}] sorted by start
     spans.sort((a, b) => a.start - b.start);
     let out = '', prev = 0;
     for (const s of spans) {
@@ -1274,14 +1107,15 @@ function applyNameDict(text) {
 
     const isPair = (w1isSurname && w2isFirstName) ||
                    (w1isFirstName && w2isSurname) ||
-                   (w1isSurname && w2isSurname);
+                   (w1isSurname && w2isSurname);  // e.g. De Rossi
 
     if (isPair) {
       pass1Spans.push({ start: t1.start, end: t2.end, orig: t1.text + ' ' + t2.text });
-      i++;
+      i++; // skip t2
       continue;
     }
 
+    // "N. Cognome" pattern (initial + dot + surname)
     if (/^[A-Z]\.$/.test(t1.text) && w2isSurname) {
       pass1Spans.push({ start: t1.start, end: t2.end, orig: t1.text + ' ' + t2.text });
       i++;
@@ -1290,17 +1124,21 @@ function applyNameDict(text) {
 
   result = applyReplacements(result, pass1Spans);
 
+  // ── PASS 2: fuzzy pairs ──────────────────────────────────────────────────
+  // Re-tokenise (result has changed)
   const tokens2 = tokenise(result);
   const pass2Spans = [];
 
   for (let i = 0; i < tokens2.length - 1; i++) {
     const t1 = tokens2[i], t2 = tokens2[i+1];
     if (!t1.isCapWord || !t2.isCapWord) continue;
+    // Skip already-redacted tokens
     if (t1.text === '[NOME]' || t2.text === '[NOME]') continue;
 
     const w1 = t1.text.replace(/[.,;:!?]$/,'').toLowerCase();
     const w2 = t2.text.replace(/[.,;:!?]$/,'').toLowerCase();
 
+    // Skip short/common words that generate false positives
     if (w1.length < 4 || w2.length < 4) continue;
 
     const th1 = fuzzyThreshold(w1), th2 = fuzzyThreshold(w2);
@@ -1319,6 +1157,7 @@ function applyNameDict(text) {
     }
   }
 
+  // Apply pass2 spans (need to re-sort and rebuild)
   pass2Spans.sort((a, b) => a.start - b.start);
   let out2 = '', prev2 = 0;
   for (const s of pass2Spans) {
@@ -1328,12 +1167,17 @@ function applyNameDict(text) {
   }
   result = out2 + result.slice(prev2);
 
+  // ── PASS 3: exact individual names ──────────────────────────────────────
+  // Only surnames (more distinctive; first names alone cause too many false positives)
+  // Use a combined set of loaded surnames + fallback
   const allSurnames = [...exactSurnameSet];
+  // Sort by length desc to avoid partial shadowing
   allSurnames.sort((a, b) => b.length - a.length);
 
   for (const name of allSurnames) {
-    if (name.length < 4) continue;
+    if (name.length < 4) continue; // skip very short surnames
     const escaped = name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    // Case-insensitive word boundary match
     const re = new RegExp(`(?<![\\w\\u00C0-\\u024F])${escaped}(?![\\w\\u00C0-\\u024F])`, 'gi');
     if (re.test(result)) {
       result = result.replace(re, (m) => { addRep(m, 'Cognome (esatto)'); return '[NOME]'; });
@@ -1365,6 +1209,7 @@ function runPipeline() {
 
   setTimeout(async () => {
     try {
+      // Stage 1 — boilerplate (always)
       const { clean, strippedBlocks } = stripBoilerplate(S.rawText);
       S.cleanText = clean;
       S.strippedBlocks = strippedBlocks;
@@ -1444,11 +1289,13 @@ function renderAnonResult(anonText, reps) {
     listEl.innerHTML = h;
   }
 
+  // Highlight redacted in original
   let hi = esc(S.cleanText);
   for (const r of reps)
     hi = hi.replace(new RegExp(escR(esc(r.orig)),'g'), `<span class="redacted">${esc(r.orig)}</span>`);
   document.getElementById('origText').innerHTML = hi;
 
+  // Sync scroll between columns (bind once)
   const origScrollEl = document.getElementById('origText').parentElement;
   const anonScrollEl = document.getElementById('anonScroll');
   if (!origScrollEl._syncBound) {
@@ -1465,6 +1312,7 @@ function renderAnonResult(anonText, reps) {
       syncing = false;
     });
   }
+  // Trigger scroll-driven resize now that content is populated
   updateDiffHeight();
 }
 
@@ -1659,6 +1507,7 @@ function getActiveFingerprint(){
   return t?(t.fingerprint||''):'';
 }
 
+// TF-IDF RAG
 const STOPWORDS_IT=new Set(['il','la','lo','i','gli','le','un','una','uno','dei','delle','degli','di','da','in','con','su','per','tra','fra','a','al','alla','allo','ai','alle','agli','del','della','dello','e','ed','o','ma','se','non','si','che','è','era','sono','stato','stata','stati','state','ha','hanno','ho','nei','nelle','negli','nel','nella','nello','questo','questa','questi','queste','come','più','anche','dopo','prima','durante','presso','viene','veniva','venivano','dal','dai','dalle','dagli']);
 
 function tokenizeForTfidf(text){
@@ -1715,6 +1564,7 @@ function updateRagPreview(){
   show('ragPreviewGen','ragMatchesGen',true);
 }
 
+// New case builder
 function deleteNewTplSection(id){newTplSections=newTplSections.filter(s=>s.id!==id);renderNewTplSections();}
 function renderNewTplSections(){
   const el=document.getElementById('newTplSections');
@@ -2071,7 +1921,6 @@ function loadBaseSettings(){
 }
 
 // ═══════════════════════════════════════════════════
-// UTILS
 // ═══════════════════════════════════════════════════
 function esc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
 function escR(s){return s.replace(/[.*+?^${}()|[\]\\]/g,'\\$&');}
@@ -2082,22 +1931,39 @@ function clearAll(){
 }
 
 // ── SCROLL-DRIVEN DIFF RESIZE ──────────────────────────────────────────────
+// As the user scrolls panel1, the diff-grid grows from its natural height
+// up to full viewport height. Once full height, scrolling is trapped inside.
 function updateDiffHeight() {
   const panel = document.getElementById('panel1');
   if (!panel.classList.contains('active')) return;
   const grid = panel.querySelector('.diff-grid');
   if (!grid) return;
-  const HEADER_H = 52;
+
+  const HEADER_H = 52; // px — app header height
   const VIEWPORT_H = window.innerHeight;
   const MAX_H = VIEWPORT_H - HEADER_H;
+
+  // How far the panel has been scrolled
   const scrolled = panel.scrollTop;
+
+  // Distance from top of grid to top of panel content (the "above" content height)
+  // Measure it dynamically: grid's offsetTop within the panel
   const aboveH = grid.offsetTop;
+
+  // Initially the grid can be as tall as remaining viewport space
+  // As we scroll, the available viewport for the grid grows (above content scrolls away)
+  // naturalH = how tall the grid would be if it filled from its current visible top to viewport bottom
+  // When scrolled >= aboveH, the grid top hits the panel top → full MAX_H available
+
   const scrolledIntoAbove = Math.min(scrolled, aboveH);
   const targetH = Math.min(MAX_H, (VIEWPORT_H - HEADER_H - aboveH) + scrolledIntoAbove);
-  const clampedH = Math.max(300, targetH);
+  const clampedH = Math.max(300, targetH); // never smaller than 300px
+
   grid.style.height = clampedH + 'px';
+
+  // Sync the two scroll containers to the same height
   const cols = grid.querySelectorAll('.diff-scroll');
-  cols.forEach(c => { c.style.height = (clampedH - 28) + 'px'; });
+  cols.forEach(c => { c.style.height = (clampedH - 28) + 'px'; }); // 28 = dlabel height approx
 }
 
 // ── INIT ──
@@ -2108,8 +1974,10 @@ document.getElementById('systemPrompt').addEventListener('input',()=>{updateToke
 loadBaseSettings();
 document.getElementById('systemPrompt').value=DEFAULT_SYS;
 renderLibrary();
+// Pre-load name dictionary in background so it's ready when needed
 loadNameDictionary();
 
+// Bind scroll listener to panel1 for diff resize
 document.getElementById('panel1').addEventListener('scroll', updateDiffHeight);
 window.addEventListener('resize', updateDiffHeight);
 </script>
