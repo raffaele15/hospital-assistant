@@ -513,6 +513,9 @@ const ANON_CONFIG = {
     // Date of birth — ONLY near keywords (standalone dates kept for clinical value)
     { pattern: /(?:nato\/a?\s+il|d\.n\.|Data\s+(?:di\s+)?[Nn]ascita\s*:?)\s*\d{1,2}[\/\-\.]\d{1,2}[\/\-\.]\d{4}/gi,
       label: '[DATA_NASCITA]', type: 'date' },
+    // Bare date after [PAZIENTE] — catches ": 19/05/1963" left when "Nato il" was consumed
+    { pattern: /\[PAZIENTE\][^\n]{0,50}?:\s*(\d{2}[\/\.]\d{2}[\/\.]\d{4})/g,
+      label: '[PAZIENTE]: [DATA_NASCITA]', type: 'date' },
     { pattern: /\bDN\s+\d{2}[\/\.]\d{2}[\/\.]\d{4}\b/gi,
       label: '[DATA_NASCITA]', type: 'date' },
     { pattern: /\(d\.n\.\d{2}\/\d{2}\/\d{4}\)/gi,
@@ -531,7 +534,7 @@ const ANON_CONFIG = {
       label: '[INTESTAZIONE_EPISODIO]', type: 'boiler' },
 
     // Patient name — generic: any capitalised word(s) after "Paziente:" or "Nominativo:"
-    { pattern: /(?:Paziente|Nominativo)\s*:\s*[A-Z\u00C0-\u00D6\u00D8-\u00DE][a-zA-Z\u00C0-\u00F6\u00F8-\u00FF]+(?:\s+[A-Z\u00C0-\u00D6\u00D8-\u00DE][a-zA-Z\u00C0-\u00F6\u00F8-\u00FF]+)*/g,
+    { pattern: /(?:Paziente|Intestatario|Nominativo)\s*:?\s*(?!(?:Nato|Data|Sesso|Cod|RIC)\b)[A-Z][a-z\u00C0-\u00FF]+(?:\s+(?!(?:Nato|Data|Sesso|Cod|RIC)\b)[A-Z][a-z\u00C0-\u00FF]+)?/g,
       label: '[PAZIENTE]', type: 'name' },
 
     // "dimettiamo in data odierna il Sig. Nome Cognome," — any capitalised words
@@ -576,7 +579,7 @@ const ANON_CONFIG = {
     { pattern: /[A-Z]{2,}(?:\s+[A-Z]{2,})+(?=\s*(?:Paziente\s*:|\[PAZIENTE\]))/g,
       label: '[PAZIENTE]', type: 'name' },
     // ALL CAPS after Paziente: label
-    { pattern: /(?:Paziente|Intestatario|Nominativo)\s*:?\s*[A-Z]{2,}(?:\s+[A-Z]{2,})+/gi,
+    { pattern: /(?:Paziente|Intestatario|Nominativo)\s*:?\s*[A-Z]{2,}(?:\s+[A-Z]{2,})?(?=\s|$|[A-Z][a-z])/gi,
       label: '[PAZIENTE]', type: 'name' },
 
     // Standalone birthdate DD/MM/YYYY (not preceded by clinical date context)
@@ -593,7 +596,7 @@ const ANON_CONFIG = {
       label: '[ID_RICOVERO]', type: 'id' },
 
     // MMG/PLS: treating physician name — match up to 3 capitalised words max
-    { pattern: /(?:MMG|PLS)(?:\s*\/\s*(?:MMG|PLS))?\s*:?\s*[A-Z][A-Za-z\u00C0-\u00FF]+(?:\s+[A-Z][A-Za-z\u00C0-\u00FF]+){0,2}/g,
+    { pattern: /(?:MMG|PLS)(?:\s*\/\s*(?:MMG|PLS))?\s*:?\s*[A-Z][A-Za-z\u00C0-\u00FF]+(?:\s+[A-Z][A-Za-z\u00C0-\u00FF]+)?(?=\s{2,}|\s*[\r\n]|\s+(?:Data|Telefono|Indirizzo|Nosologico|Anamnesi|Reparto|Ricovero|[A-Z][a-z]))/g,
       label: 'MMG/PLS: [OPERATORE]', type: 'name' },
 
     // Diary note operator: "Firstname Lastname" immediately before role code M/I/F/R
