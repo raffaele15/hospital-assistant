@@ -618,7 +618,7 @@ const ANON_CONFIG = {
       label: 'dimettiamo in data odierna il Sig. [PAZIENTE],', type: 'name' },
 
     // "il sig. Cognome" / "la sig.ra Cognome" standalone in clinical text
-    { pattern: /\bil\s+[Ss]ig\.(?:ra)?\s+([A-Z][a-zA-Z\u00C0-\u00FF]+(?:\s+[A-Z][a-zA-Z\u00C0-\u00FF]+)?)/g,
+    { pattern: /\bil\s+(?:[Ss]ig\.(?:ra)?|[Pp]aziente)\s+([A-Z][a-zA-Z\u00C0-\u00FF]+(?:\s+[A-Z][a-zA-Z\u00C0-\u00FF]+)?)/g,
       label: 'il sig. [PAZIENTE]', type: 'name' },
     { pattern: /\bla\s+[Ss]ig\.?ra\.?\s+([A-Z][a-zA-Z\u00C0-\u00FF]+)/g,
       label: 'la sig.ra [PAZIENTE]', type: 'name' },
@@ -784,6 +784,10 @@ const ANON_CONFIG = {
       label: '[INDIRIZZO]', type: 'boiler' },
     { pattern: /C\.F\.\s+P\.IVA\s+\d{11}/gi, label: '[CF_PIVA_AZ]', type: 'boiler' },
 
+    // ALL CAPS name fragment stuck to form keywords (no space): "LUCACognome" "MARIONome"
+    { pattern: /[A-Z]{2,}(?=Cognome|Nome|Sesso|Reparto|Diagnosi|Data\b)/g,
+      label: '[PAZIENTE]', type: 'name' },
+
     // Codice fiscale (Italian tax ID): 6 letters + 2 digits + letter + 2 digits + letter + 3 digits + letter
     { pattern: /\b[A-Z]{6}\d{2}[A-Z]\d{2}[A-Z]\d{3}[A-Z]\b/g,
       label: '[CODICE_FISCALE]', type: 'id' },
@@ -813,16 +817,24 @@ const ANON_CONFIG = {
     // ECG standalone birthdate: 'DD/MM/YYYY  Maschio' or 'DD/MM/YYYY  Femmina'
     { pattern: /\b\d{2}[\/\.]\d{2}[\/\.]\d{4}(?=\s+(?:Maschio|Femmina|M\b|F\b))/g,
       label: '[DATA_NASCITA]', type: 'date' },
-    // ALL CAPS patient name + date: "MAZZUCCA LINO 10/01/1963 (63 anni)"
-    { pattern: /\b[A-Z]{2,}(?:\s+[A-Z]{2,})+(?=\s+\d{2}[\/\.]\d{2}[\/\.]\d{4})/g,
+    // ALL CAPS full name alone on its own line (surgical team roster format)
+    { pattern: /^[A-Z]{2,}(?:\s+[A-Z]{2,})+$/gm,
+      label: '[OPERATORE]', type: 'name' },
+    // ALL CAPS single word on own line — only when 5+ chars and not a known keyword
+    // Catches "MAZZOCCA" alone in surgical form header
+    { pattern: /^(?!(?:STROKE|URGENTE|ORDINARIO|AMBULATORIALE|DIAGNOSI|REPARTO|COGNOME|NOME|SESSO|DATA|INTERVENTO|PRIMO|SECONDO|ANESTESISTA|INFERMIERE|TECNICO|CHIRURGO|OPERATORE)$)[A-Z]{5,}$/gm,
+      label: '[PAZIENTE]', type: 'name' },
+
+    // ALL CAPS patient name + date: "MAZZUCCA LINO 10/01/1963 (63 anni)" 
+    { pattern: /\b[A-Z]{2,}(?:\s+[A-Z]{2,})+(?=\s+(?:\d{2}[\/\.]\d{2}[\/\.]\d{4}|\())/g,
       label: '[PAZIENTE]', type: 'name' },
 
     // Signature block: "Dott./Dr./Prof. Nome Cognome" and variants
     // Matches 1+ words after the title prefix — handles "Dr. F. Causin", "Prof.ssa B. Rossi"
-    { pattern: /(?:Dott\.(?:ssa\.?)?|Dr\.(?:ssa\.?)?|Prof\.?(?:ssa\.?)?|prof\.?(?:ssa\.?)?|dott\.(?:ssa\.?)?|dr\.(?:ssa\.?)?)\s+(?:[A-Z]\.\s*)?[A-Z][a-zA-Z\u00C0-\u00FF]+(?:\s+(?!(?:Dott|Dr|Prof|prof|dott|dr)\.)[A-Z][a-zA-Z\u00C0-\u00FF]+)*/g,
+    { pattern: /(?:Dott\.(?:ssa\.?)?|Dr\.(?:ssa\.?)?|Prof\.?(?:ssa\.?)?|prof\.?(?:ssa\.?)?|dott\.(?:ssa\.?)?|dr\.(?:ssa\.?)?)\s+(?:[A-Z]\.\s*){0,4}[A-Z][a-zA-Z\u00C0-\u00FF]+(?:\s+(?!(?:Dott|Dr|Prof|prof|dott|dr)\.)[A-Z][a-zA-Z\u00C0-\u00FF]+)*/g,
       label: '[OPERATORE]', type: 'name' },
     // "D. Quotti Tubi" style (single initial D. = Dott.)
-    { pattern: /\bD\.\s+[A-Z][a-zA-Z\u00C0-\u00FF]+(?:\s+[A-Z][a-zA-Z\u00C0-\u00FF]+)+/g,
+    { pattern: /\bD\.\s+[A-Z][a-zA-Z\u00C0-\u00FF]{2,}(?:\s+[A-Z][a-zA-Z\u00C0-\u00FF]+)+/g,
       label: '[OPERATORE]', type: 'name' },
 
     // "firmata da Cognome Nome [il date]" in digital signature footer  
@@ -1310,6 +1322,13 @@ function applyNameDict(text) {
     // Skip short/common words that generate false positives
     if (w1.length < 4 || w2.length < 4) continue;
 
+    // Skip clinical/anatomical/form keywords
+    const SKIP2 = new Set(['nascita','cognome','nome','sesso','reparto','diagnosi',
+      'anamnesi','terapia','esame','referto','paziente','medico','infermiere',
+      'ambulatorio','ricovero','dimissione','urgente','ordinario','stroke',
+      'setto','atrio','mitrale','aortica','ventricolo','valvola','data','ora']);
+    if (SKIP2.has(w1) || SKIP2.has(w2)) continue;
+
     const th1 = fuzzyThreshold(w1), th2 = fuzzyThreshold(w2);
 
     const w1fuzSurname   = isFuzzyName(w1, bkSurnames, th1);
@@ -1343,8 +1362,24 @@ function applyNameDict(text) {
   // Sort by length desc to avoid partial shadowing
   allSurnames.sort((a, b) => b.length - a.length);
 
+  // Clinical/form keywords that must never be redacted as names
+  const CLINICAL_KEYWORDS = new Set([
+    'nascita','cognome','nome','sesso','reparto','diagnosi','anamnesi',
+    'terapia','esame','referto','paziente','medico','infermiere',
+    'ambulatorio','ricovero','dimissione','urgente','ordinario',
+    'stroke','unita','scala','valore','misura','dato','nota',
+    'stato','grado','tipo','data','ora','firma','timbro',
+    'mese','anno','giorno','settimana',
+    // anatomical terms that could match surnames
+    'setto','atrio','mitrale','aortica','ventricolo','valvola',
+    // common false positives from Italian surname lists
+    'romano','ferrari','ferrari','russo','esposito','bianchi',
+    'greco','lombardi','ricci','marino','gallo','conti','de',
+  ]);
+
   for (const name of allSurnames) {
     if (name.length < 4) continue; // skip very short surnames
+    if (CLINICAL_KEYWORDS.has(name.toLowerCase())) continue; // skip clinical keywords
     const escaped = name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
     // Case-insensitive word boundary match
     const re = new RegExp(`(?<![\\w\\u00C0-\\u024F])${escaped}(?![\\w\\u00C0-\\u024F])`, 'gi');
