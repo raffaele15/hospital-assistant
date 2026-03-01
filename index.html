@@ -532,7 +532,7 @@ REGOLE ASSOLUTE:
 - NON aggiungere diagnosi, valori di laboratorio, farmaci, dosi o date non esplicitamente forniti.
 - Se una sezione manca, scrivi: "Non documentato."
 - NON usare nomi di pazienti, medici, ospedali o qualsiasi identificativo personale.
-- Usa il passato remoto per eventi durante il ricovero.
+- USA ESCLUSIVAMENTE passato remoto o imperfetto per eventi durante il ricovero. MAI il passato prossimo (ha eseguito → eseguì / venne eseguito; è stata avviata → venne avviata / fu avviata; è stato ricoverato → venne ricoverato; ha presentato → presentò; è stato sottoposto → venne sottoposto). Regola: se puoi scrivere "venne" o "fu" al posto di "è stato/è stata", fallo sempre.
 - Mantieni il registro formale della medicina clinica italiana.
 - Segui esattamente la struttura del template fornito.
 - Restituisci SOLO la lettera, senza preamboli o commenti.
@@ -1655,7 +1655,7 @@ function updateTokenPanel(){
   const templateTxt=buildLetterTemplate();
   const tSys=tok(sysTxt),tFp=tok(fp);
   const tRag=ragMatches.reduce((a,{t})=>a+tok(t.letter||''),0);
-  const tTemplate=tok(templateTxt),tClinical=tok(S.anonText),tOut=900;
+  const tTemplate=tok(templateTxt),tClinical=tok(S.anonText),tOut=1800;
   const tCacheable=tFp+tRag,tTotal=tSys+tFp+tRag+tTemplate+tClinical;
   const cacheActive=tCacheable>0;
   const costNoCache=(tTotal/1e6)*price.in;
@@ -1715,7 +1715,7 @@ Egregio Collega,
 "${diagnosi}"
 
 **Motivo del ricovero**
-[Prosa continua, passato remoto — dati di presentazione dall'input]
+[Prosa continua, passato remoto o imperfetto — MAI passato prossimo — dati di presentazione dall'input]
 
 **Non farmacoallergie note.** [oppure allergie se documentate]
 
@@ -1738,7 +1738,7 @@ ed i seguenti **accertamenti strumentali** e **valutazioni specialistiche**:
 [Per ogni accertamento: "Nome esame (DD/MM/YYYY): referto sintetico." — se in refertazione: "(referto in corso di completamento)"]
 
 **Decorso clinico**
-[Prosa clinica 150-300 parole, passato remoto, sintesi cronologica dell'input]
+[Prosa clinica 150-300 parole, passato remoto o imperfetto — MAI passato prossimo — sintesi cronologica dell'input]
 
 Alla dimissione [condizioni cliniche alla dimissione].
 
@@ -1826,7 +1826,7 @@ async function generateLetter(){
       method:'POST',headers,
       body:JSON.stringify({
         model:document.getElementById('modelSelect').value,
-        max_tokens:3500,
+        max_tokens:6000,
         temperature:parseInt(document.getElementById('tempSlider').value)/10,
         system:[{type:'text',text:document.getElementById('systemPrompt').value||DEFAULT_SYS,...(useCache?{cache_control:{type:'ephemeral'}}:{})}],
         messages:buildMessages(),
