@@ -548,9 +548,67 @@ const ANON_CONFIG = {
     { pattern: /\b[A-Za-z0-9._%+\-]+@[A-Za-z0-9.\-]+\.[A-Za-z]{2,}\b/g,
       label: '[EMAIL]', type: 'id' },
 
-    // Telephone / fax
-    { pattern: /(?:Tel\.|Fax\.?|Tel\s+)\s*\+?\d[\d\s\.\-]{7,}/gi,
+    // Telephone / fax — with explicit label prefix
+    { pattern: /(?:Tel(?:efono)?\s*\d*|Fax)\.?\s*:?\s*\+?\d[\d\s\.\-]{6,}/gi,
       label: '[TELEFONO]', type: 'id' },
+    // Standalone Italian mobile numbers (3xx format, 9-10 digits, no prefix needed)
+    { pattern: /\b3\d{2}[\s\-]?\d{3,4}[\s\-]?\d{3,4}\b/g,
+      label: '[TELEFONO]', type: 'id' },
+    // Standalone 6-digit local numbers (e.g. "605284")
+    { pattern: /(?:Telefono\s*\d*\s*:)\s*\d{5,9}\b/gi,
+      label: '[TELEFONO]', type: 'id' },
+
+    // SSN (codice SSN/tessera sanitaria): numeric string after SSN label
+    { pattern: /\bSSN\s*:?\s*\d{6,12}\b/gi,
+      label: '[SSN]', type: 'id' },
+
+    // Home/residence address — stop at end of line
+    { pattern: /Indirizzo\s+(?:domicilio|residenza)\s*:?\s*[^\n\r]+/gi,
+      label: '[INDIRIZZO_PAZIENTE]', type: 'boiler' },
+
+    // "VIA/VIALE/CORSO/PIAZZA ... NNN CITTÀ" — address lines
+    { pattern: /\b(?:VIA|VIALE|CORSO|PIAZZA|LARGO|VICOLO|STRADA)\s+[A-Z][A-Z\s]+\d+(?:\s+[A-Z][A-Z\s]+)?/g,
+      label: '[INDIRIZZO_PAZIENTE]', type: 'boiler' },
+
+    // Patient name in ALL CAPS (frontespizio format: COGNOME NOME)
+    // Only when preceded or followed by patient-context keywords
+    { pattern: /(?:Paziente|Intestatario|Nominativo)\s*:?\s*[A-Z]{2,}(?:\s+[A-Z]{2,})+/gi,
+      label: '[PAZIENTE]', type: 'name' },
+    // ALL CAPS name before "Paziente:" on same or adjacent line
+    { pattern: /[A-Z]{2,}(?:\s+[A-Z]{2,})+(?=\s*Paziente\s*:)/g,
+      label: '[PAZIENTE]', type: 'name' },
+
+    // Standalone birthdate DD/MM/YYYY (not preceded by clinical date context)
+    // Catch "Nato il: 04/12/1957" and bare dates near patient fields
+    { pattern: /(?:Nato\s+il|Data\s+di\s+nascita|D\.?N\.?)\s*:?\s*\d{1,2}[\/\-\.]\d{1,2}[\/\-\.]\d{4}/gi,
+      label: '[DATA_NASCITA]', type: 'date' },
+
+    // Nosologico label + ID
+    { pattern: /Nosologico\s*:?\s*[\w\-\/]*/gi,
+      label: '[NOSOLOGICO]', type: 'boiler' },
+
+    // RIC_AO admission ID (various lengths)
+    { pattern: /\bRIC_AO_\d+\b/g,
+      label: '[ID_RICOVERO]', type: 'id' },
+
+    // MMG/PLS: treating physician name — match up to 3 capitalised words max
+    { pattern: /(?:MMG|PLS)(?:\s*\/\s*(?:MMG|PLS))?\s*:?\s*[A-Z][A-Za-z\u00C0-\u00FF]+(?:\s+[A-Z][A-Za-z\u00C0-\u00FF]+){0,2}/g,
+      label: 'MMG/PLS: [OPERATORE]', type: 'name' },
+
+    // Diary note operator: "Firstname Lastname" immediately before role code M/I/F/R
+    // Role letter is stuck directly to clinical text: "Angelo PetrasinaMPer domani"
+    // or with space: "Erica Lorioni I Paziente dimesso"
+    // Diary operator: "Firstname Lastname" before role code M/I/F/R
+    // Handles: "PetrasinaMPer" (no space), "Petrasina MPer" (space), "Lorioni I Paziente" (space+space)
+    { pattern: /\b[A-Z][a-z\u00C0-\u00FF]+\s+[A-Z][a-z\u00C0-\u00FF]+(?=\s?[MIFR][A-Z]|\s+[MIFR]\s+[A-Z])/g,
+      label: '[OPERATORE]', type: 'name' },
+
+    // Family contact table: 1-3 words immediately before Coniuge/Figlio etc.
+    { pattern: /\b[A-Za-z\u00C0-\u00FF][a-zA-Z\u00C0-\u00FF]{1,}(?:\s+[A-Za-z\u00C0-\u00FF][a-zA-Z\u00C0-\u00FF]{1,}){0,2}(?=\s+(?:Coniuge|Figlio|Figlia|Fratello|Sorella|Genitore|Amico|Convivente|Nipote))/g,
+      label: '[CONTATTO]', type: 'name' },
+    // Catch remaining family relation rows (relation + sconosciuto + phone)
+    { pattern: /(?:Coniuge|Figlio|Figlia|Fratello|Sorella|Genitore|Convivente|Nipote)\s+Sconosciuto[^\n]*/gi,
+      label: '[RELAZIONE_FAMILIARE]', type: 'boiler' },
 
     // Certification numbers
     { pattern: /(?:Certificato\s+n\.|SGQ\s+UNI.*?Certiquality)[^\n]*/gi,
