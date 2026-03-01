@@ -570,12 +570,13 @@ const ANON_CONFIG = {
     { pattern: /\b(?:VIA|VIALE|CORSO|PIAZZA|LARGO|VICOLO|STRADA)\s+[A-Z][A-Z\s]+\d+(?:\s+[A-Z][A-Z\s]+)?/g,
       label: '[INDIRIZZO_PAZIENTE]', type: 'boiler' },
 
-    // Patient name in ALL CAPS (frontespizio format: COGNOME NOME)
-    // Only when preceded or followed by patient-context keywords
-    { pattern: /(?:Paziente|Intestatario|Nominativo)\s*:?\s*[A-Z]{2,}(?:\s+[A-Z]{2,})+/gi,
+    // Patient name in ALL CAPS (frontespizio format: COGNOME NOME before Paziente:)
+    // Run BEFORE the Paziente: keyword gets replaced — matches the full line pattern
+    // Also handles when Paziente: was already replaced to [PAZIENTE]
+    { pattern: /[A-Z]{2,}(?:\s+[A-Z]{2,})+(?=\s*(?:Paziente\s*:|\[PAZIENTE\]))/g,
       label: '[PAZIENTE]', type: 'name' },
-    // ALL CAPS name before "Paziente:" on same or adjacent line
-    { pattern: /[A-Z]{2,}(?:\s+[A-Z]{2,})+(?=\s*Paziente\s*:)/g,
+    // ALL CAPS after Paziente: label
+    { pattern: /(?:Paziente|Intestatario|Nominativo)\s*:?\s*[A-Z]{2,}(?:\s+[A-Z]{2,})+/gi,
       label: '[PAZIENTE]', type: 'name' },
 
     // Standalone birthdate DD/MM/YYYY (not preceded by clinical date context)
@@ -600,7 +601,7 @@ const ANON_CONFIG = {
     // or with space: "Erica Lorioni I Paziente dimesso"
     // Diary operator: "Firstname Lastname" before role code M/I/F/R
     // Handles: "PetrasinaMPer" (no space), "Petrasina MPer" (space), "Lorioni I Paziente" (space+space)
-    { pattern: /\b[A-Z][a-z\u00C0-\u00FF]+\s+[A-Z][a-z\u00C0-\u00FF]+(?=\s?[MIFR][A-Z]|\s+[MIFR]\s+[A-Z])/g,
+    { pattern: /\b[A-Z][a-z\u00C0-\u00FF]+\s+[A-Z][a-z\u00C0-\u00FF]+(?=\s*[MIFR][A-Z]|\s+[MIFR]\s+[A-Z])/g,
       label: '[OPERATORE]', type: 'name' },
 
     // Family contact table: 1-3 words immediately before Coniuge/Figlio etc.
