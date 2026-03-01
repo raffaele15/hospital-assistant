@@ -530,18 +530,19 @@ const ANON_CONFIG = {
     { pattern: /Episodio\s+RIC_AO_\S+\s+[A-Z]+\s+[A-Z]+\s+nato\/a\s+il\s+[\d\/]+/gi,
       label: '[INTESTAZIONE_EPISODIO]', type: 'boiler' },
 
-    // Patient name in labelled context
-    { pattern: /(?:il\s+Sig\.|Paziente|Nominativo)\s*:?\s*(?:MARCOLIN\s+MARIANNO|Marcolin\s+Marianno)/gi,
+    // Patient name — generic: any capitalised word(s) after "Paziente:" or "Nominativo:"
+    { pattern: /(?:Paziente|Nominativo)\s*:\s*[A-Z\u00C0-\u00D6\u00D8-\u00DE][a-zA-Z\u00C0-\u00F6\u00F8-\u00FF]+(?:\s+[A-Z\u00C0-\u00D6\u00D8-\u00DE][a-zA-Z\u00C0-\u00F6\u00F8-\u00FF]+)*/g,
       label: '[PAZIENTE]', type: 'name' },
-    { pattern: /(?:dimettiamo\s+in\s+data\s+odierna\s+il\s+Sig\.\s+)\S+\s+\S+,/gi,
+
+    // "dimettiamo in data odierna il Sig. Nome Cognome," — any capitalised words
+    { pattern: /dimettiamo\s+in\s+data\s+odierna\s+(?:il\s+Sig\.?|la\s+Sig\.?ra)\s+[A-Z][a-zA-Z\u00C0-\u00FF]+(?:\s+[A-Z][a-zA-Z\u00C0-\u00FF]+)?,/gi,
       label: 'dimettiamo in data odierna il Sig. [PAZIENTE],', type: 'name' },
 
-    // Standalone patient name (all case variants)
-    { pattern: /\bMARCOLIN\s+MARIANNO\b/g, label: '[PAZIENTE]', type: 'name' },
-    { pattern: /\bMarcolin\s+Marianno\b/g,  label: '[Paziente]', type: 'name' },
-    { pattern: /\bMARIANNO\s+MARCOLIN\b/g, label: '[PAZIENTE]', type: 'name' },
-    { pattern: /\bMarianno\s+Marcolin\b/g,  label: '[Paziente]', type: 'name' },
-    { pattern: /Sig\.\s+Marcolin\b/gi,      label: 'Sig. [Paziente]', type: 'name' },
+    // "il sig. Cognome" / "la sig.ra Cognome" standalone in clinical text
+    { pattern: /\bil\s+[Ss]ig\.\s+([A-Z][a-zA-Z\u00C0-\u00FF]+)/g,
+      label: 'il sig. [PAZIENTE]', type: 'name' },
+    { pattern: /\bla\s+[Ss]ig\.?ra\.?\s+([A-Z][a-zA-Z\u00C0-\u00FF]+)/g,
+      label: 'la sig.ra [PAZIENTE]', type: 'name' },
 
     // Email addresses
     { pattern: /\b[A-Za-z0-9._%+\-]+@[A-Za-z0-9.\-]+\.[A-Za-z]{2,}\b/g,
@@ -633,14 +634,29 @@ const ANON_CONFIG = {
       label: '[INDIRIZZO]', type: 'boiler' },
     { pattern: /C\.F\.\s+P\.IVA\s+\d{11}/gi, label: '[CF_PIVA_AZ]', type: 'boiler' },
 
-    // Nurse name in parentheses: "(Formentin Arianna)"
-    { pattern: /\([A-Z][a-z\u00e0-\u00f9]+\s+[A-Z][a-z\u00e0-\u00f9]+\)/g,
-      label: '([OPERATORE])', type: 'name' },
+    // Parentheses pattern removed — caused false positives on medical test names like (Stroop Test)
+
+    // Signature block: "Dott. Nome Cognome" / "Dott.ssa Nome Cognome" / "Prof. Nome Cognome"
+    { pattern: /(?:Dott\.(?:ssa)?|Prof\.(?:ssa)?)\s+[A-Z][a-zA-Z\u00C0-\u00FF]+(?:\s+[A-Z][a-zA-Z\u00C0-\u00FF]+)+/g,
+      label: '[OPERATORE]', type: 'name' },
+
+    // "firmata da Cognome Nome [il date]" in digital signature footer  
+    { pattern: /firmata?\s+da\s+[A-Z][a-zA-Z\u00C0-\u00FF]+(?:\s+[A-Z][a-zA-Z\u00C0-\u00FF]+)+/gi,
+      label: 'firmata da [OPERATORE]', type: 'name' },
+
+    // "Lettera di dimissione firmata..." full line
+    { pattern: /Lettera\s+di\s+dimissione\s+firmata?[^\n]*/gi,
+      label: '[FIRMA_DIMISSIONE]', type: 'boiler' },
+
+    // Padova hospital footer repeated line
+    { pattern: /\d{5}\s+Padova\s*-\s*Ospedale[^\n]*/gi,
+      label: '[INTESTAZIONE_AZ]', type: 'boiler' },
   ],
 
   // ── 2. DICTIONARY — loaded externally at runtime (see NAME_SOURCES below) ─
   // Fallback used only if network fetch fails
   nameDict_fallback: [
+    // Stroke Unit (AO Padova)
     'Marcolin','Marianno','MARCOLIN','MARIANNO',
     'Baracchini','Cavatorti','Favaretto','Ragone','Minicuci','Petrosino',
     'Fredianelli','Mozzetta','Pieroni','Fabris','Viaro','Rubino',
@@ -650,6 +666,21 @@ const ANON_CONFIG = {
     'Muffatto','Camporese','Corrado','Baritussio','Bauce','Brunello',
     'Caforio','Cecchetto','Famoso','Fraccaro','Giordani','Schiavon',
     'Piccione','Bettio','Santoro','Caldon','Cernaz','Palermo',
+    // Clinica Neurologica / Neurodegenerative Unit
+    'Acerbi','Campagnolo','Raccanello','Antonini','Rozzi','Boschini',
+    'Bolgan','Bolgon',
+    // Common Italian first names (broad coverage)
+    'Amedeo','Marta','Sofia','Angelo','Martina','Laura',
+    'Giovanni','Maria','Giuseppe','Anna','Antonio','Rosa','Mario','Lucia',
+    'Francesco','Teresa','Luigi','Carmela','Salvatore','Angela','Sergio',
+    'Giovanna','Roberto','Giuseppina','Pietro','Caterina','Carlo','Concetta',
+    'Stefano','Paola','Claudio','Sandra','Maurizio','Giulia','Luca','Elena',
+    'Marco','Andrea','Alessandro','Valentina','Simone','Chiara','Davide',
+    'Alessandra','Matteo','Sara','Daniele','Federica','Emilio','Carla',
+    'Enzo','Ornella','Piero','Roberta','Renato','Patrizia','Giorgio',
+    'Cristina','Massimo','Alfredo','Monica','Bruno','Rossana','Diego',
+    'Claudia','Renzo','Arianna','Lorenzo','Ilaria','Edoardo','Silvia',
+    'Federica','Tiziana','Domenico','Romano','Donato','Francesco',
   ],
 
   // ── 3. BOILERPLATE LINE PATTERNS (match entire lines) ────────────────────
