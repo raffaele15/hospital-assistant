@@ -86,25 +86,18 @@ select{width:100%;background:var(--surface2);border:1px solid var(--border);bord
 .tab.active{background:var(--accent-g);color:var(--accent);border-color:var(--accent-d)}
 .cc{display:none;position:absolute;top:10px;right:10px;background:var(--green);color:#0f0f0f;font-family:'JetBrains Mono',monospace;font-size:10px;padding:4px 10px;border-radius:4px;font-weight:600}
 .an{font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--accent);display:flex;gap:7px;margin-top:8px;line-height:1.5}
-
-/* ── MODE SELECTOR ── */
 .mode-selector{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:14px}
 .mode-card{background:var(--surface2);border:2px solid var(--border);border-radius:var(--r);padding:14px 10px;cursor:pointer;transition:all .14s;text-align:center;position:relative}
 .mode-card:hover{border-color:var(--border-hi);background:var(--surface3)}
 .mode-card.sel-regex{border-color:var(--accent-d);background:var(--accent-g)}
-.mode-card.sel-llm{border-color:var(--purple);background:rgba(169,110,201,.1)}
+.mode-card.sel-dict{border-color:var(--green);background:rgba(110,201,138,.08)}
 .mode-card.sel-combined{border-color:var(--blue);background:rgba(110,168,201,.08)}
-.mode-card.sel-llm-only{border-color:var(--purple);background:rgba(169,110,201,.1)}
 .mode-icon{font-size:22px;margin-bottom:5px}
 .mode-name{font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:600;color:var(--text);margin-bottom:3px}
 .mode-desc{font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--dim);line-height:1.5}
 .mode-badge{position:absolute;top:-8px;left:50%;transform:translateX(-50%);font-family:'JetBrains Mono',monospace;font-size:8px;font-weight:600;letter-spacing:.08em;padding:2px 7px;border-radius:10px;text-transform:uppercase;white-space:nowrap}
 .mb-rec{background:var(--green);color:#0f0f0f}
 .mb-exp{background:var(--blue);color:#0f0f0f}
-
-
-
-/* ── TOKEN COST ── */
 .tok-panel{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:16px;margin-bottom:14px}
 .tok-row{display:flex;align-items:center;gap:0;font-family:'JetBrains Mono',monospace;font-size:11px;padding:5px 0;border-bottom:1px solid var(--border)}
 .tok-row:last-child{border-bottom:none;font-weight:600;color:var(--text)}
@@ -120,8 +113,6 @@ select{width:100%;background:var(--surface2);border:1px solid var(--border);bord
 .tok-total-box .tval{font-family:'JetBrains Mono',monospace;font-size:18px;color:var(--accent);font-weight:500}
 .tok-total-box .tsub{font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--dim);margin-top:2px}
 .tok-cache-note{font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--blue);margin-top:10px;line-height:1.6}
-
-/* ── LIBRARY ── */
 .tpl-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:10px;margin-bottom:14px}
 .tpl-card{background:var(--surface2);border:1px solid var(--border);border-radius:var(--r);padding:12px;cursor:pointer;transition:all .12s;position:relative}
 .tpl-card:hover{border-color:var(--border-hi);background:var(--surface3)}
@@ -131,7 +122,6 @@ select{width:100%;background:var(--surface2);border:1px solid var(--border);bord
 .tpl-del{position:absolute;top:8px;right:8px;font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--dim);background:none;border:none;cursor:pointer;padding:2px 5px;border-radius:3px}
 .tpl-del:hover{color:var(--red);background:rgba(201,110,110,.1)}
 .tpl-cached-badge{display:inline-block;margin-left:4px;font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--blue);background:rgba(110,168,201,.1);border:1px solid rgba(110,168,201,.2);padding:2px 6px;border-radius:3px}
-
 hr.div{border:none;border-top:1px solid var(--border);margin:18px 0}
 ::-webkit-scrollbar{width:5px;height:5px}
 ::-webkit-scrollbar-track{background:transparent}
@@ -165,11 +155,9 @@ hr.div{border:none;border-top:1px solid var(--border);margin:18px 0}
 <div class="panel active" id="panel0">
   <div class="ptitle">Testo Clinico</div>
   <div class="psub">// step 01 — carica PDF o incolla il testo</div>
-
   <div class="ib acc">
     Incolla il testo della cartella o carica il PDF. Le intestazioni (Regione, Azienda, Direttore, metadati paziente, numeri pagina) vengono rimosse automaticamente prima dell'invio al modello.
   </div>
-
   <div class="card">
     <div class="ctitle">Carica PDF — Estrazione Testo Offline</div>
     <div id="pdfDropzone" onclick="document.getElementById('pdfFileInput').click()"
@@ -192,7 +180,6 @@ hr.div{border:none;border-top:1px solid var(--border);margin:18px 0}
       </div>
     </div>
   </div>
-
   <div class="card">
     <div class="ctitle">Carica Referto Laboratorio XLS / XLSX — Opzionale</div>
     <div id="xlsDropzone" onclick="document.getElementById('xlsFileInput').click()"
@@ -219,13 +206,10 @@ hr.div{border:none;border-top:1px solid var(--border);margin:18px 0}
       </div>
     </div>
   </div>
-
   <label>Testo Completo del Paziente</label>
   <textarea id="inp_raw" style="flex:1;min-height:200px;" placeholder="Incolla qui il testo copiato dal PDF...&#10;&#10;Può contenere tutto, incluse intestazioni ospedaliere — verranno rimosse automaticamente."></textarea>
-
   <label>Diagnosi Principale</label>
   <input type="text" id="inp_diagnosi" placeholder='Es: "Sospetto minor stroke silviano destro a genesi indeterminata"'>
-
   <div class="btn-row">
     <button class="btn btn-p" onclick="goToAnon()">Avanti → Anonimizza</button>
     <button class="btn btn-g" onclick="clearAll()">✕ Reset</button>
@@ -236,53 +220,39 @@ hr.div{border:none;border-top:1px solid var(--border);margin:18px 0}
 <div class="panel" id="panel1">
   <div class="ptitle">Anonimizzazione</div>
   <div class="psub">// step 02 — scegli modalità → boilerplate strip → anonimizza → revisiona</div>
-
-  <!-- MODE SELECTOR -->
   <div class="card">
     <div class="ctitle">Modalità Anonimizzazione</div>
     <div class="mode-selector">
-
       <div class="mode-card sel-regex" id="modeCard_regex" onclick="selectAnonMode('regex')">
         <div class="mode-badge mb-rec">Offline · gratis</div>
         <div class="mode-icon">{ }</div>
         <div class="mode-name">Solo Regex</div>
         <div class="mode-desc">CF, telefono, data nascita, nomi con titolo. Istantaneo, deterministico. Può perdere nomi senza titolo.</div>
       </div>
-
       <div class="mode-card" id="modeCard_dict" onclick="selectAnonMode('dict')">
         <div class="mode-badge mb-rec" style="background:var(--green);color:#0f0f0f;">Offline · gratis</div>
         <div class="mode-icon">📖</div>
         <div class="mode-name">Dizionario Nomi</div>
-        <div class="mode-desc">~8.000 nomi e cognomi italiani. Cattura "Mario Rossi" senza titolo. 100% locale, istantaneo, zero API.</div>
+        <div class="mode-desc">Dizionario staff AO Padova. Cattura nomi senza titolo. 100% locale, istantaneo, zero API.</div>
       </div>
-
       <div class="mode-card" id="modeCard_combined" onclick="selectAnonMode('combined')">
         <div class="mode-badge mb-exp">Consigliato</div>
         <div class="mode-icon">🛡</div>
         <div class="mode-name">Regex + Dizionario</div>
         <div class="mode-desc">Prima regex (CF, tel, date nascita), poi dizionario nomi. Doppio livello, massima copertura, tutto offline.</div>
       </div>
-
     </div>
   </div>
-
-  <!-- PIPELINE STATUS -->
   <div id="anonStatus" class="card" style="display:flex;align-items:center;gap:10px;padding:12px 14px;">
     <span class="spin" id="anonSpin" style="display:none;"></span>
     <span id="anonStatusTxt" style="font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--mid);">Pronto.</span>
   </div>
-
-  <!-- BOILERPLATE REVIEW -->
   <div id="bpReview" style="display:none;">
     <div class="ib acc">✂ Blocchi rimossi automaticamente — <strong style="color:var(--text);">NON inviati al modello</strong>. Verifica cosa è stato eliminato.</div>
     <div id="bpList"></div>
     <hr class="div">
   </div>
-
-  <!-- REPLACEMENTS LIST -->
   <div id="repList"></div>
-
-  <!-- DIFF VIEW -->
   <div class="diff-grid">
     <div>
       <div class="dlabel">Testo originale — locale, non inviato</div>
@@ -293,9 +263,7 @@ hr.div{border:none;border-top:1px solid var(--border);margin:18px 0}
       <textarea id="anonText" class="dtext" style="font-size:11px;resize:vertical;min-height:600px;"></textarea>
     </div>
   </div>
-
   <div class="ib red">⚠ Verifica il testo a destra. Correggi manualmente qualsiasi dato rimasto prima di procedere.</div>
-
   <div class="btn-row">
     <button class="btn btn-g" onclick="goTo(0)">← Indietro</button>
     <button class="btn btn-p" onclick="proceedToGenerate()">Avanti → Genera</button>
@@ -306,13 +274,11 @@ hr.div{border:none;border-top:1px solid var(--border);margin:18px 0}
 <div class="panel" id="panel2">
   <div class="ptitle">Generazione</div>
   <div class="psub">// step 03 — stima costo → genera</div>
-
   <div class="card">
     <div class="ctitle">API Key Anthropic</div>
     <input type="password" id="apiKeyInput" placeholder="sk-ant-... (solo in memoria di sessione, mai su disco)">
     <div class="an"><span>ℹ</span><span>Usata solo per questa sessione. Mai salvata. Ottenibile su console.anthropic.com.</span></div>
   </div>
-
   <div class="card">
     <div class="ctitle">Modello & Temperatura</div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
@@ -330,13 +296,11 @@ hr.div{border:none;border-top:1px solid var(--border);margin:18px 0}
       </div>
     </div>
   </div>
-
   <div id="ragPreviewGen" style="display:none;" class="card">
     <div class="ctitle">Casi Simili Trovati <span class="chip c-purple" style="margin-left:6px;">RAG auto</span></div>
     <div id="ragMatchesGen"></div>
     <div style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--dim);margin-top:8px;">Le lettere di questi casi vengono incluse nel prompt come esempi few-shot. Le cartelle restano locali.</div>
   </div>
-
   <div class="tok-panel" id="tokPanel">
     <div class="ctitle" style="margin-bottom:14px;">
       Stima Token & Costo
@@ -344,12 +308,10 @@ hr.div{border:none;border-top:1px solid var(--border);margin:18px 0}
     </div>
     <div id="tokRows"><div style="font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--dim);">Completa gli Step 1–2 per vedere la stima.</div></div>
   </div>
-
   <div class="card">
     <div class="ctitle">Prompt di Sistema — modificabile</div>
     <textarea id="systemPrompt" rows="8" style="font-size:11px;"></textarea>
   </div>
-
   <div class="card">
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;flex-wrap:wrap;gap:8px;">
       <div class="ctitle" style="margin:0;">Prompt Completo</div>
@@ -369,7 +331,6 @@ hr.div{border:none;border-top:1px solid var(--border);margin:18px 0}
       <div class="cc" id="copyConfirm">✓ Copiato!</div>
     </div>
   </div>
-
   <div class="btn-row">
     <button class="btn btn-g" onclick="goTo(1)">← Indietro</button>
     <button class="btn btn-p" id="genBtn" onclick="generateLetter()">
@@ -483,7 +444,7 @@ const PRICING = {
 const S    = { rawText:'', cleanText:'', anonText:'', letter:'', strippedBlocks:[], activeTemplateId:null };
 const S_XLS = { text:'', filename:'' };
 let newTplSections = [];
-let anonMode = 'regex'; // 'regex' | 'dict' | 'combined'
+let anonMode = 'regex';
 
 const DEFAULT_SYS = `Sei un assistente esperto in documentazione medica ospedaliera italiana.
 Genera una lettera di dimissione strutturata in italiano formale clinico.
@@ -523,455 +484,325 @@ function selectAnonMode(mode) {
 }
 
 // ═══════════════════════════════════════════════════
-// BOILERPLATE STRIPPER
-// Key principle: be SURGICAL — only remove lines that are 100% administrative.
-// Never remove clinical content. When in doubt, leave it in.
+// ANON_CONFIG — rebuilt engine (AO Padova Stroke Unit)
+// Replaces previous BOILERPLATE_PATTERNS + applyRegex + applyNameDict
+// External API unchanged: stripBoilerplate(), applyRegex(), applyNameDict()
 // ═══════════════════════════════════════════════════
-const BOILERPLATE_PATTERNS = [
-  // ── Institutional headers (very safe) ──
-  { re:/^REGIONE\s+(?:DEL\s+|AUTONOMA\s+)?[\w\s]{2,30}$/gim,              tag:'Intestazione Regione' },
-  { re:/^Regione\s+(?:del\s+|Autonoma\s+)?[\w\s]{2,25}$/gim,              tag:'Intestazione Regione' },
-  { re:/^AZIENDA\s+OSPEDALE[\s\S]*?(?=\n\n|\n[A-Z])/gim,                  tag:'Intestazione Azienda' },
-  { re:/^Azienda\s+Ospedaliera[^\n]*/gim,                                  tag:'Intestazione Azienda' },
-  { re:/^Azienda\s+Ospedale\s+-\s+Università[^\n]*/gim,                    tag:'Footer Azienda' },
-  { re:/^AULSS\s*\d*\b[^\n]*/gim,                                          tag:'Intestazione AULSS' },
-  { re:/^ULSS\s*\d*\b[^\n]*/gim,                                           tag:'Intestazione ULSS' },
-  { re:/^Dip(?:artimento)?\.?\s+Didattico[^\n]*/gim,                       tag:'Intestazione Dip.' },
-  // U.O. header lines only — pattern anchored to start of line + short line
-  { re:/^U\.O\.(?:C|S|D|SD)?\.?\s+.{3,60}$/gim,                          tag:'Intestazione U.O.' },
-  // ── Staff / director lines ──
-  { re:/^Direttore(?:\s+ad\s+interim)?\s*:?[^\n]*/gim,                    tag:'Direttore' },
-  { re:/^Responsabile\s*(?:U\.O\.?)?\s*:?[^\n]*/gim,                      tag:'Responsabile' },
-  { re:/^(?:Dirigenti\s+Medici|Staff\s+medico)\s*:[^\n]*/gim,             tag:'Lista staff' },
-  { re:/^(?:Coord(?:inatore)?|Inf\.?)\s*:[^\n]*/gim,                      tag:'Lista staff' },
-  { re:/^T\.S\.R\.M\.[^\n]*/gim,                                           tag:'TSRM' },
-  { re:/^(?:Equipe|Operatore)\s*:[^\n]*/gim,                               tag:'Equipe' },
-  // ── Record / episode ID lines ──
-  { re:/^(?:Episodio\s+)?RIC_AO_[^\r\n]*/gm,                              tag:'ID Ricovero' },
-  { re:/^Ricovero\s*(?:n\.|numero|nr\.?)?\s*[\dX\/]+[^\n]*/gim,           tag:'Nr. Ricovero' },
-  { re:/\bper\s+il\s+ricovero\s+[\dX\/]+\s+in\s+regime\s+\w+[^\n]*/gi,   tag:'Metadato ricovero' },
-  // ── Document type headers ──
-  { re:/^LETTERA\s+DI\s+DIMISSIONE\s*$/gim,                               tag:'Tipo documento' },
-  { re:/^CONSULENZA\s+SPECIALISTICA\s*$/gim,                               tag:'Tipo documento' },
-  { re:/^REFERTO\s*$/gim,                                                   tag:'Tipo documento' },
-  { re:/^Diario\s+clinico\s*$/gim,                                         tag:'Titolo sezione' },
-  // ── Patient identity header block (name, DOB, gender on consecutive lines) ──
-  // Only match when it's clearly a metadata block (name in ALL CAPS or immediately followed by DOB)
-  { re:/^(?:Nominativo|Paziente|Assistito)\s*:\s*[A-ZÀÈÉÌÍÒÓÙÚ]{2,}[^\n]*/gim, tag:'Metadato paziente' },
-  { re:/^(?:Cognome\s+e\s+)?[Nn]ome\s*:\s*[A-ZÀÈÉÌÍÒÓÙÚ]{2,}[^\n]*/gim, tag:'Metadato paziente' },
-  { re:/^Data\s+(?:di\s+)?[Nn]ascita\s*:\s*[\d\/\-.]+[^\n]*/gim,         tag:'Data nascita header' },
-  { re:/^(?:Sesso|Genere)\s*:\s*[MF][^\n]*/gim,                           tag:'Sesso header' },
-  { re:/^Anni\s*:\s*\d+[^\n]*/gim,                                        tag:'Età header' },
-  { re:/^Codice\s+[Ff]iscale\s*:[^\n]*/gim,                               tag:'CF header' },
-  { re:/^(?:Indirizzo|Residenza|Domicilio)\s*(?:n\.)?\s*:[^\n]*/gim,      tag:'Indirizzo paziente' },
-  { re:/^Telefono\s*\d?\s*:[^\n]*/gim,                                    tag:'Telefono paziente' },
-  { re:/^MMG\/PLS\s*:[^\n]*/gim,                                           tag:'MMG header' },
-  { re:/^Rete\s+sociale\s*$/gim,                                           tag:'Rete sociale' },
-  { re:/^Cognome\/Nome\s+Relazione\s+Tipo[^\n]*/gim,                       tag:'Header rete sociale' },
-  { re:/\bSSN\s*:\s*\d+/g,                                                 tag:'SSN' },
-  // ── Lab report meta headers ──
-  { re:/^Al\s+Medico\s+[Cc]urante\s*:?[^\n]*/gim,                         tag:'Intestazione lab' },
-  { re:/^Provenienza\s*:\s*[^\n]*/gim,                                     tag:'Provenienza lab' },
-  { re:/^Prelievo\s+del\s*:\s*[^\n]*/gim,                                  tag:'Data prelievo' },
-  { re:/^Ricevuto\s+il\s*:\s*[^\n]*/gim,                                   tag:'Data ricezione' },
-  { re:/^Referto\s+del\s*:\s*[^\n]*/gim,                                   tag:'Data referto' },
-  { re:/^Risposta\s*-?\s*del\s+\d{1,2}\/\d{2}\/\d{4}[^\n]*/gim,          tag:'Intestazione risposta' },
-  { re:/^N\.\s+Richiesta\s*:[^\n]*/gim,                                    tag:'N. Richiesta' },
-  { re:/^Versione\s+Referto\s*:[^\n]*/gim,                                  tag:'Versione referto' },
-  { re:/^Medico\s+[Rr]ichiedente\s*:[^\n]*/gim,                           tag:'Medico richiedente' },
-  { re:/^Quesito\s+[Dd]iagnostico\s*:[^\n]*/gim,                          tag:'Quesito' },
-  // ── Page numbers / footers ──
-  { re:/^Pag(?:ina|\.?)\s*:?\s*\d+\s*(?:di|\/)\s*\d+[^\n]*/gim,         tag:'Numero pagina' },
-  { re:/^Page\s+\d+\s+of\s+\d+[^\n]*/gim,                                 tag:'Numero pagina' },
-  { re:/^(?:Tel|Fax)\s*\.?\s*:?\s*[\+\d\s\-\.]+$/gim,                    tag:'Telefono footer' },
-  { re:/^\d{5}\s+[A-ZÀ-Úa-zà-ú\s]+[-–]\s*(?:Via|Viale|Piazza|C\.so)[^\n]*/gim, tag:'Indirizzo footer' },
-  { re:/^(?:Via|Viale|Piazza|C\.so|Largo)\s+[^\n]{5,60}$/gim,            tag:'Indirizzo' },
-  // ── Digital signatures / legal notices ──
-  { re:/^Documento\s+firmato\s+digitalmente[^\n]*/gim,                    tag:'Firma digitale' },
-  { re:/^Firmato\s+il\s+\d{1,2}\/\d{2}\/\d{4}[^\n]*/gim,                tag:'Data firma' },
-  { re:/^Validato\s+da[^\n]*/gim,                                          tag:'Validazione' },
-  { re:/Lettera\s+di\s+dimissione\s+firmata\s+digitalmente[^\n]*/gi,      tag:'Firma digitale' },
-  { re:/Copia\s+di\s+(?:referto|documento)\s+firmato[^\n]*/gi,            tag:'Nota copia' },
-  { re:/Rappresentazione\s+di\s+un\s+referto\s+firmato[^\n]*/gi,          tag:'Nota firma' },
-  { re:/INFORMAZIONE\s+AI\s+SENSI\s+DELLA\s+DELIBERAZIONE[^\n]*/gi,       tag:'Nota GDPR' },
-  // ── Cost / DRG lines ──
-  { re:/(?:DRG|tariffa|rimborso)\s*:?\s*[\d.,€$]+[^\n]*/gi,              tag:'DRG/costi' },
-  { re:/pari\s+ad\s+euro\s+[\d.,]+[^\n]*/gi,                              tag:'Importo' },
-  // ── Medication instruction banner (not clinical content) ──
-  { re:/^QUELLO\s+PRESCRITTO\s+DAL\s+MEDICO\s*$/gim,                      tag:'Avviso posologia' },
-  { re:/^L'ORARIO\s+DELLE\s+SOMMINISTRAZIONI[^\n]*/gim,                   tag:'Avviso orario' },
-  { re:/^Legenda\s+vie\s*:[^\n]*/gim,                                      tag:'Legenda vie' },
-  { re:/^SARANNO\s+DISPONIBILI\s+ULTERIORI[^\n]*/gim,                     tag:'Nota completamento' },
-  // ── Misc printout metadata ──
-  { re:/^Stampato\s+il\s+\d{1,2}\/\d{2}\/\d{4}[^\n]*/gim,               tag:'Data stampa' },
-  { re:/^\*{3}\s*Referto\s+Finale\s*\*{3}[^\n]*/gim,                      tag:'Referto finale' },
-  { re:/^Data\s+nota\s+Nota\s+P\s+Operatore[^\n]*/gim,                    tag:'Header diario' },
-  { re:/^Frequenza\s+campionamento[^\n]*/gim,                              tag:'Param. ECG' },
-  { re:/^\(P\)\s+Profilo[^\n]*/gim,                                        tag:'Legenda profilo' },
-];
 
+const ANON_CONFIG = {
+
+  // ── 1. REGEX PATTERNS ──────────────────────────────────────────────────
+  // { pattern: RegExp, label: string, type: 'name'|'id'|'date'|'boiler' }
+  regexRules: [
+
+    // Codice fiscale (Italian 16-char format with strict month code)
+    { pattern: /\b[A-Z]{6}\d{2}[A-EHLMPRST]\d{2}[A-Z]\d{3}[A-Z]\b/g,
+      label: '[CODICE_FISCALE]', type: 'id' },
+
+    // Episode / nosographic IDs
+    { pattern: /\bRIC_AO_\d{6,12}\b/g, label: '[ID_EPISODIO]', type: 'id' },
+    { pattern: /\b(?:Nosografico|Ref\.?\s*SSI|Ric\/Ref|Ref\.|ASSIPCA|Num\.\s*(?:interno|esterno)|N\.\s*Richiesta)\s*:?\s*[\d\/\-A-Z_]+/gi,
+      label: '[ID_INTERNO]', type: 'id' },
+    { pattern: /\b\d\/\d{4}\/\d{4,6}\b/g, label: '[ID_RICOVERO]', type: 'id' },
+
+    // Date of birth — ONLY near keywords (standalone dates kept for clinical value)
+    { pattern: /(?:nato\/a?\s+il|d\.n\.|Data\s+(?:di\s+)?[Nn]ascita\s*:?)\s*\d{1,2}[\/\-\.]\d{1,2}[\/\-\.]\d{4}/gi,
+      label: '[DATA_NASCITA]', type: 'date' },
+    { pattern: /\bDN\s+\d{2}[\/\.]\d{2}[\/\.]\d{4}\b/gi,
+      label: '[DATA_NASCITA]', type: 'date' },
+    { pattern: /\(d\.n\.\d{2}\/\d{2}\/\d{4}\)/gi,
+      label: '[DATA_NASCITA]', type: 'date' },
+    { pattern: /\bNato\/a?\s+il:?\s*\d{2}\/\d{2}\/\d{4}\b/gi,
+      label: '[DATA_NASCITA]', type: 'date' },
+
+    // Age+DOB combo: "di anni 84 (D.N. 26/05/1941)"
+    { pattern: /di\s+anni\s+\d{1,3}\s+\(D\.?N\.?\s+\d{2}[\/\.]\d{2}[\/\.]\d{4}\)/gi,
+      label: '[ETA_DN]', type: 'date' },
+    { pattern: /di\s+anni\s+\d{1,3}\s+\(d\.n\.\d{2}\/\d{2}\/\d{4}\)/gi,
+      label: '[ETA_DN]', type: 'date' },
+
+    // Episode header line (name embedded)
+    { pattern: /Episodio\s+RIC_AO_\S+\s+[A-Z]+\s+[A-Z]+\s+nato\/a\s+il\s+[\d\/]+/gi,
+      label: '[INTESTAZIONE_EPISODIO]', type: 'boiler' },
+
+    // Patient name in labelled context
+    { pattern: /(?:il\s+Sig\.|Paziente|Nominativo)\s*:?\s*(?:MARCOLIN\s+MARIANNO|Marcolin\s+Marianno)/gi,
+      label: '[PAZIENTE]', type: 'name' },
+    { pattern: /(?:dimettiamo\s+in\s+data\s+odierna\s+il\s+Sig\.\s+)\S+\s+\S+,/gi,
+      label: 'dimettiamo in data odierna il Sig. [PAZIENTE],', type: 'name' },
+
+    // Standalone patient name (all case variants)
+    { pattern: /\bMARCOLIN\s+MARIANNO\b/g, label: '[PAZIENTE]', type: 'name' },
+    { pattern: /\bMarcolin\s+Marianno\b/g,  label: '[Paziente]', type: 'name' },
+    { pattern: /\bMARIANNO\s+MARCOLIN\b/g, label: '[PAZIENTE]', type: 'name' },
+    { pattern: /\bMarianno\s+Marcolin\b/g,  label: '[Paziente]', type: 'name' },
+    { pattern: /Sig\.\s+Marcolin\b/gi,      label: 'Sig. [Paziente]', type: 'name' },
+
+    // Email addresses
+    { pattern: /\b[A-Za-z0-9._%+\-]+@[A-Za-z0-9.\-]+\.[A-Za-z]{2,}\b/g,
+      label: '[EMAIL]', type: 'id' },
+
+    // Telephone / fax
+    { pattern: /(?:Tel\.|Fax\.?|Tel\s+)\s*\+?\d[\d\s\.\-]{7,}/gi,
+      label: '[TELEFONO]', type: 'id' },
+
+    // Certification numbers
+    { pattern: /(?:Certificato\s+n\.|SGQ\s+UNI.*?Certiquality)[^\n]*/gi,
+      label: '[CERTIFICAZIONE]', type: 'boiler' },
+
+    // Numeric patient ID
+    { pattern: /(?:ID\s+paziente|ID\s+Persona)\s*:?\s*\d+/gi,
+      label: '[ID_PAZIENTE]', type: 'id' },
+
+    // Digital signature lines
+    { pattern: /(?:Documento|Referto|Lettera di dimissione)\s+[Ff]irmato\s+digitalmente\s+(?:da|il)[^\n]*/g,
+      label: '[FIRMA_DIGITALE]', type: 'boiler' },
+    { pattern: /[Ff]irmatario\s*:\s*\S+\s+\S+\s+Codice\s+Fiscale\s*:[^\n]*/g,
+      label: '[FIRMA_DIGITALE]', type: 'boiler' },
+    { pattern: /Firmato\s+il[:\s]+[\d\/]+\s+Ora[:\s]+[\d:\.]+[^\n]*/g,
+      label: '[FIRMA_DIGITALE]', type: 'boiler' },
+    { pattern: /Il\s+referto\s+è\s+conservato\s+secondo\s+la\s+normativa[^\n]*/gi,
+      label: '[CONSERVAZIONE]', type: 'boiler' },
+    { pattern: /Copia\s+di\s+(?:documento|referto)\s+firmato\s+e\s+conservato[^\n]*/gi,
+      label: '[CONSERVAZIONE]', type: 'boiler' },
+    { pattern: /Rappresentazione\s+di\s+un\s+referto\s+firmato\s+elettronicamente[^\n]*/gi,
+      label: '[CONSERVAZIONE]', type: 'boiler' },
+
+    // Page numbers / print date
+    { pattern: /Pag(?:ina)?\.?\s*\d+\s*(?:di|\/)\s*\d+/gi,
+      label: '[PAGINA]', type: 'boiler' },
+    { pattern: /Data\s+stampa\s*:\s*[\d\/]+\s+[\d:]+/gi,
+      label: '[DATA_STAMPA]', type: 'boiler' },
+
+    // Versione referto
+    { pattern: /Versione\s+Referto\s*:\s*\d+/gi, label: '[VERSIONE]', type: 'boiler' },
+    { pattern: /Versione\s+\d+\s+CC\s*:\s*[NY]/gi, label: '[VERSIONE]', type: 'boiler' },
+
+    // Document/barcode numbers
+    { pattern: /(?:Num\.\s*(?:interno|esterno)|Documento\s+Numero)\s*:?\s*[\d\-\/]+/gi,
+      label: '[NUM_DOCUMENTO]', type: 'boiler' },
+
+    // GDPR / cost notification
+    { pattern: /INFORMAZIONE\s+AI\s+SENSI\s+DELLA\s+DELIBERAZIONE[^\n]*/gi,
+      label: '[INFO_DELIBERAZIONE]', type: 'boiler' },
+    { pattern: /Gentile\s+signore\/signora\s+desideriamo[^\n]*/gi,
+      label: '[INFO_COSTO]', type: 'boiler' },
+    { pattern: /un\s+impiego\s+di\s+risorse\s+economiche[^\n]*/gi,
+      label: '[INFO_COSTO]', type: 'boiler' },
+    { pattern: /pari\s+ad\s+euro\s+[\d\.,]+/gi, label: '[COSTO_SSR]', type: 'boiler' },
+
+    // Lab specimen metadata
+    { pattern: /(?:Prelievo\s+del|Ricevuto\s+il|Riferimento)\s*:\s*[\d\/\s:]+/gi,
+      label: '[DATI_PRELIEVO]', type: 'boiler' },
+    { pattern: /Ric\/Ref\s*:\s*[\d\/\-\w]+/gi, label: '[RIC_REF]', type: 'boiler' },
+
+    // Pending reports notice
+    { pattern: /SARANNO\s+DISPONIBILI\s+ULTERIORI\s+REFERTI[^\n]*/gi,
+      label: '[NOTA_REFERTO]', type: 'boiler' },
+    { pattern: /Note\s+dal\s+richiedente\s*:\s*RICHIESTA\s+URGENTE/gi,
+      label: '[RICHIESTA_URGENTE]', type: 'boiler' },
+
+    // "Al Medico Curante: NOME" header
+    { pattern: /Al\s+Medico\s+Curante\s*:\s*\S+\s+\S+/gi,
+      label: 'Al Medico Curante: [PAZIENTE]', type: 'name' },
+
+    // Provenienza
+    { pattern: /Provenienza\s*:\s*[^\n]+/gi, label: '[PROVENIENZA]', type: 'boiler' },
+
+    // Medico Richiedente / Refertante (ALL CAPS surname)
+    { pattern: /Medico\s+[Rr]ichiedente\s*:\s*[A-ZÀÈÉÌÒÙ]+(?:\s+[A-ZÀÈÉÌÒÙ]+)+/g,
+      label: 'Medico richiedente: [OPERATORE]', type: 'name' },
+    { pattern: /Medico\s+[Rr]efertante\s*:\s*[A-ZÀÈÉÌÒÙ]+(?:\s+[A-ZÀÈÉÌÒÙ]+)+/g,
+      label: 'Medico refertante: [OPERATORE]', type: 'name' },
+    { pattern: /Medico\s+[Rr]ichiedente\s*:\s*[A-Z][a-zàèéìòù]+(?:\s+[A-Z][a-zàèéìòù]+)+/g,
+      label: 'Medico richiedente: [Operatore]', type: 'name' },
+
+    // Richiesta in data
+    { pattern: /Richiesta\s+in\s+data\s*:\s*[\d\/\s:]+(?:per\s+il[\d\/\s:]+)?/gi,
+      label: 'Richiesta in data: [DATA]', type: 'boiler' },
+
+    // Hospital address / CF PIVA
+    { pattern: /Azienda\s+Ospedale\s*-\s*Universit\u00e0\s+Padova\s*:\s*Via[^\n]+/gi,
+      label: '[INDIRIZZO_AZ]', type: 'boiler' },
+    { pattern: /Via\s+[A-Z][a-z]+\s+[A-Z][a-z]+(?:ini)?\s+\d+[^\n]*/gi,
+      label: '[INDIRIZZO]', type: 'boiler' },
+    { pattern: /C\.F\.\s+P\.IVA\s+\d{11}/gi, label: '[CF_PIVA_AZ]', type: 'boiler' },
+
+    // Nurse name in parentheses: "(Formentin Arianna)"
+    { pattern: /\([A-Z][a-z\u00e0-\u00f9]+\s+[A-Z][a-z\u00e0-\u00f9]+\)/g,
+      label: '([OPERATORE])', type: 'name' },
+  ],
+
+  // ── 2. DICTIONARY — staff + patient names (AO Padova Stroke Unit) ────────
+  nameDict: [
+    // Patient
+    'Marcolin','Marianno','MARCOLIN','MARIANNO',
+    // Stroke Unit physicians
+    'Baracchini','Cavatorti','Favaretto','Ragone',
+    'Minicuci','Minicucci','Petrosino','Fredianelli',
+    'Mozzetta','Pieroni','Fabris','Viaro','Rubino',
+    // Nurses
+    'Biscari','Filosa','Calore','Tommasin','Cuzzilla',
+    'Lorioni','Formentin','Nuzzo','Venuto',
+    // FKT
+    'Pernice',
+    // Lab / Radiology
+    'Montagnana','Fogar','Faggian','Cattai','Carraro',
+    'Manara','Vincentis','Librizzi','Mazzi','Rigato',
+    'Muffatto','Camporese',
+    // Cardiology
+    'Corrado','Baritussio','Bauce','Brunello','Caforio','Cardaioli',
+    'Cecchetto','Cecere','Cipriani','Lazzari','Michieli',
+    'Famoso','Fraccaro','Giordani','Licchelli','Mancuso',
+    'Masiero','Mattesi','Migliore','Fovino','Napodano',
+    'Naso','Marra','Pergola','Previtero','Schiavon',
+    'Susana','Tona','Zorzi','Anglani','Errico','Gabrieli',
+    'Bova','Valeggia','Borsari','Causin',
+    // Physiatry
+    'Piccione','Bettio',
+    // Admin
+    'Santoro','Caldon','Cernaz','Pauro','Tavarner',
+    'Dona','Palermo','Quotti','Tubi',
+  ],
+
+  // ── 3. BOILERPLATE LINE PATTERNS (match entire lines) ────────────────────
+  boilerplateLinePatterns: [
+    /^Regione\s+(?:del\s+)?[Vv]eneto\s*$/,
+    /^REGIONE\s+(?:DEL\s+)?VENETO\s*$/,
+    /^AZIENDA\s+OSPEDALE[^\n]*PADOVA\s*$/i,
+    /^Didas?\s+Medicina\s+dei\s+Sistemi\s*$/i,
+    /^U\.O\.[SC]\.?[DS]?\.\s+\w[\w\s]*/i,
+    /^U\.O\.C\b/i,
+    /^U\.O\.S\b/i,
+    /^Direttore\s*:?\s*/i,
+    /^Dr\.?\s*(?:ssa\s*)?[A-Z][\w\s]+$/,
+    /^Prof\.?\s*(?:ssa\s*)?[A-Z][\w\s]+$/,
+    /^Dirigenti\s+Medici\s*:/i,
+    /^Responsabile\s+(?:Laboratorio\s*)?:?\s*Dr/i,
+    /^Coordinatore\s*$/i,
+    /^Segreteria\s+(?:interni\s*)?:/i,
+    /^Lab\.\s+Neurosonologia\s*:/i,
+    /^Radiologia\s+Pediatrica\s*:/i,
+    /^Piastra\s+Ambulatoriale\s*$/i,
+    /^Dipartimento\s+di\s+Scienze\s+Card/i,
+    /^Dip\.\s+Didattico[^\n]*/i,
+    /^Servizi\s+di\s+Diagnostica\s+Integrata/i,
+    /^PARAMETRI\s+VITALI\s*$/i,
+    /^PRESCRIZIONE\s+SOMMINISTRAZIONE\s*$/i,
+    /^TERAPIA\s+FARMACOLOGICA\s*$/i,
+    /^ALLERGIE\s*$/i,
+    /^CONSULENZA\s+SPECIALISTICA\s*$/,
+    /^FINE\s+DOCUMENTO\s*$/i,
+    /^PAGINA\s+FINALE\s*$/i,
+    /^Diario\s+clinico\s*$/i,
+    /^L'ORARIO\s+DELLE\s+SOMMINISTRAZIONI[^\n]*/i,
+    /^QUELLO\s+PRESCRITTO\s+DAL\s+MEDICO\s*$/i,
+    /^Legenda\s+vie\s*:/i,
+    /^\(P\)\s+Profilo[^\n]*/i,
+    /^per\s+il\s+ricovero\s+\d/i,
+    /^Padova,?\s+\d{2}\/\d{2}\/\d{4}\s*$/i,
+    /^Alla\s+C\.\s*A\.\s+del\s+Medico\s+Curante\s*$/i,
+    /^Egregio\s+[Cc]ollega\s*,?\s*$/i,
+    /^I\s+risultati\s+di\s+questo\s+referto[^\n]*/i,
+    /^parte\s+del\s+Medico\s+Curante[^\n]*/i,
+    /^\*\*\*\s+Referto\s+Finale\s+\*\*\*/i,
+    /^Il\s+[Dd]irettore\s*$/i,
+    /^Validato\s+da\s*:/i,
+    /^Medico\s*:\s*(?:Prof\.|Dr(?:\.ssa)?)?\s*[A-Z]/i,
+    /^T\.S\.R\.M\.\s+/i,
+    /^Equipe\s*:\s*$/i,
+    /^Il\s+Medico\s+Radiologo\s*$/i,
+    /^Ringraziando\s+per\s+la\s+cortese\s+collaborazione[^\n]*/i,
+    /^rimaniamo\s+ad?\s+disposizione[^\n]*/i,
+    /^Dott\.?\s*(?:ssa\.?)?\s+[A-Z]\.\s+[A-Z][a-z]+\s*$/,
+    /^\(Medici\s+in\s+formazione\s+specialistica\)\s*$/i,
+    /^\(Dirigenti\s+medici\)\s*$/i,
+    /^Cordiali\s+saluti\s*,?\s*$/i,
+    /^Il\s+medico\s+strutturato\s+Dott\./i,
+    /^MFS\s+Dott\.sse?\s+/i,
+  ],
+};
+
+// ── stripBoilerplate: wraps ANON_CONFIG.boilerplateLinePatterns ──────────
+// Returns { clean: string, strippedBlocks: [{text, tag}] }
 function stripBoilerplate(text) {
   const stripped = [];
-  let result = text;
-  for (const p of BOILERPLATE_PATTERNS) {
-    result = result.replace(p.re, (match) => {
-      const t = match.trim();
-      if (t.length>2 && !stripped.find(b=>b.text===t))
-        stripped.push({ text:t, tag:p.tag });
-      return '';
-    });
-    if (p.re.global) p.re.lastIndex = 0;
-  }
-  // Collapse 3+ blank lines to 2
-  return { clean: result.replace(/\n{3,}/g,'\n\n').trim(), strippedBlocks: stripped };
+  const lines = text.split('\n');
+  const cleaned = lines.filter(line => {
+    for (const pat of ANON_CONFIG.boilerplateLinePatterns) {
+      if (pat.test(line.trim())) {
+        const t = line.trim();
+        if (t.length > 2 && !stripped.find(b => b.text === t))
+          stripped.push({ text: t, tag: 'Boilerplate' });
+        return false;
+      }
+    }
+    return true;
+  });
+  return {
+    clean: cleaned.join('\n').replace(/\n{3,}/g, '\n\n').trim(),
+    strippedBlocks: stripped,
+  };
 }
 
-
-// ═══════════════════════════════════════════════════
-// ITALIAN NAME DICTIONARY — fully offline, zero API
-// Strategy:
-//   NAMES  = Italian first names (male + female), ~600 entries
-//   SURNAMES = Italian surnames, ~700 entries
-//   Match patterns:
-//     1. "Dott./Prof./Sig. FirstName [LastName]"  → [MEDICO] / [PAZIENTE_NOME]
-//     2. "A. Surname" (initial + known surname)    → [NOME]
-//     3. "FirstName Surname" or "Surname FirstName" (both in dict) → [NOME]
-//   Safety: skip tokens in MEDICAL_SAFELIST (drugs, anatomy, cities, acronyms)
-//   All matching is case-sensitive on first letter (capitalised only)
-// ═══════════════════════════════════════════════════
-
-const IT_FIRST_NAMES = new Set([
-  // ── Male ──
-  'Abramo','Achille','Adalberto','Adelmo','Adolfo','Adriano','Agostino','Alberto',
-  'Aldo','Alessandro','Alessio','Alfonso','Alfredo','Amedeo','Ambrogio','Amerigo',
-  'Andrea','Angelo','Anselmo','Antonio','Arcangelo','Arduino','Arnaldo','Arturo',
-  'Attilio','Augusto','Aurelio','Baldo','Bartolomeo','Basilio','Benedetto',
-  'Beniamino','Bernardo','Biagio','Bruno','Calogero','Camillo','Carlo','Carmelo',
-  'Cesare','Christian','Ciro','Claudio','Clemente','Corrado','Cosimo','Costantino',
-  'Damiano','Daniele','Danilo','Dario','Davide','Diego','Domenico','Donato',
-  'Edoardo','Egidio','Eligio','Elio','Emanuele','Emilio','Enrico','Enzo','Ernesto',
-  'Ettore','Eugenio','Ezio','Fabio','Fabrizio','Fausto','Federico','Felice',
-  'Ferdinando','Fernando','Filippo','Fiorenzo','Flavio','Franco','Francesco',
-  'Fulvio','Gabriele','Gaspare','Gavino','Gerardo','Gerolamo','Giacomo','Gianluca',
-  'Gianluigi','Gianmarco','Gianni','Gianpiero','Giorgio','Giovanni','Giuliano',
-  'Giulio','Giuseppe','Gregorio','Guido','Ignazio','Ivan','Ivano','Lazzaro',
-  'Leonardo','Leone','Leopoldo','Lorenzo','Luca','Luciano','Luigi','Manlio',
-  'Marco','Marino','Mario','Massimiliano','Massimo','Matteo','Mattia','Mauro',
-  'Michele','Mirco','Mirko','Moreno','Natale','Nicola','Nicolò','Nunzio',
-  'Onofrio','Orazio','Orlando','Oscar','Ottavio','Paolo','Pasquale','Patrizio',
-  'Pellegrino','Pietro','Primo','Raffaele','Raffaello','Renato','Renzo','Riccardo',
-  'Roberto','Rocco','Rodolfo','Romano','Romeo','Romualdo','Rosario','Ruggero',
-  'Ruggiero','Salvatore','Sandro','Samuele','Sebastiano','Secondo','Serafino',
-  'Sergio','Silvano','Silvestro','Silvio','Simone','Stefano','Teodoro','Timoteo',
-  'Tiziano','Tobia','Tommaso','Tullio','Ubaldo','Umberto','Ugo','Valentino',
-  'Valerio','Vincenzo','Virgilio','Vitale','Vittorio','Walter','Zaccaria',
-  'Gioacchino','Pier','Pierluigi','Piero','Giordano','Erminio','Lucio','Mariano',
-  'Claudi','Loreto','Lino','Livio','Marcello','Nino','Nello','Samuel','Christian',
-  'Cristian','Cristiano','Ivan','Mirco','Mirko','Moreno','Gerardo','Gerolamo',
-  // ── Female ──
-  'Ada','Adele','Adriana','Agata','Agnese','Alberta','Albina','Alessandra',
-  'Alessia','Alice','Alicia','Alina','Alma','Amalia','Amanda','Ambra','Amelia',
-  'Angela','Anna','Annalisa','Annunziata','Antonia','Antonietta','Arianna',
-  'Assunta','Aurora','Barbara','Beatrice','Benedetta','Bianca','Camilla',
-  'Carmela','Carolina','Carla','Caterina','Cecilia','Chiara','Cinzia','Claudia',
-  'Concetta','Consolata','Costanza','Cristina','Daniela','Debora','Diana',
-  'Diletta','Dina','Dolores','Donata','Donatella','Dora','Edvige','Elena',
-  'Eleonora','Elisa','Elisabetta','Elvira','Emma','Enrichetta','Erica','Eugenia',
-  'Eva','Fabiola','Federica','Fernanda','Filomena','Fiorella','Flavia',
-  'Floriana','Franca','Francesca','Fulvia','Gabriella','Gemma','Giorgia',
-  'Giovanna','Giulia','Giuseppina','Graziella','Grazia','Ilaria','Immacolata',
-  'Ines','Irene','Iris','Jessica','Katia','Lara','Laura','Lavinia','Letizia',
-  'Liliana','Lina','Linda','Lisa','Livia','Loredana','Lorella','Lorena',
-  'Luana','Lucia','Luisa','Luigia','Maddalena','Manuela','Marcella',
-  'Margherita','Maria','Mariangela','Marianna','Mariella','Marilena','Marina',
-  'Marisa','Marta','Martina','Marzia','Maura','Michela','Milena','Mirella',
-  'Miriam','Monica','Nadia','Noemi','Nunzia','Ornella','Paola','Patrizia',
-  'Rachele','Raffaella','Renata','Rita','Roberta','Romina','Rosa','Rossana',
-  'Rossella','Sabrina','Sandra','Sara','Serena','Silvia','Silvana','Simonetta',
-  'Sofia','Sonia','Stefania','Stella','Susanna','Teresa','Tiziana','Valentina',
-  'Valeria','Vera','Veronica','Viola','Virginia','Vittoria','Wanda','Ylenia',
-]);
-
-const IT_SURNAMES = new Set([
-  'Agus','Altea','Amato','Angeli','Angius','Angioni','Atzeni',
-  'Auriemma','Barbato','Barbieri','Barone','Basile','Bassi','Basso','Bellini',
-  'Benedetti','Bernardi','Bernardo','Bianco','Bianchi','Biggio','Biondi','Boi',
-  'Bonetti','Bottino','Bruno','Caddeo','Cadeddu','Cadoni','Camba','Cannas',
-  'Cao','Careddu','Carbone','Caruso','Castelli','Cattaneo','Cattani','Cavallaro',
-  'Cavallo','Ceccarelli','Cerri','Ciampi','Cipriani','Cocco','Colombi','Colombo',
-  'Conte','Conti','Corrado','Corrias','Cossu','Crispo','Coppola',
-  'Damiani','Damico','Deidda','Demontis','Deplano','De Luca','De Rosa',
-  'De Santis','Desogus','Dessì','Donati','Esposito','Fabbri','Fabbro',
-  'Fadda','Farina','Fava','Ferrari','Ferrara','Ferrante','Ferraris','Ferraro',
-  'Ferreri','Ferretti','Ferretti','Figus','Fiore','Fiorini','Floris','Fois',
-  'Fontana','Frau','Frongia','Gallo','Garau','Gargiulo','Gatti','Gentile',
-  'Ghiani','Giorgi','Giordano','Giuliani','Giuliano','Grassi','Graziani',
-  'Greco','Guerriero','Ibba','Izzo','Iovino','Lagana','Lai','Lampis','Leone',
-  'Lilliu','Locatelli','Loddo','Lombardi','Longo','Lo Presti','Loriga',
-  'Lucchese','Manca','Mancini','Mannai','Marchetti','Mariani','Marini',
-  'Marras','Martini','Martinelli','Martis','Masi','Maxia','Mazza','Mazzi',
-  'Medda','Melis','Meloni','Messina','Migheli','Milani','Molinari','Monti',
-  'Montanari','Morandi','Morelli','Moretti','Mori','Mosè','Mula','Murroni',
-  'Muratori','Murru','Musu','Nannini','Napoli','Neri','Negri','Olla','Onnis',
-  'Orlando','Orrù','Pagano','Palma','Palumbo','Palmieri','Pane','Parisi',
-  'Peddis','Pellegrini','Pellegrino','Perna','Piazza','Pieri','Pillai','Pinna',
-  'Pio','Piredda','Piras','Pisano','Pistis','Pitu','Piga','Piu','Poddighe',
-  'Podda','Poli','Porcu','Porceddu','Puddu','Pusceddu','Pucci','Quaglieri',
-  'Raffaele','Raimondi','Ricci','Rinaldi','Riva','Rizzi','Rizzo','Romagnoli',
-  'Romano','Rosa','Rossi','Rossetti','Rota','Ruggero','Ruggieri','Russo',
-  'Sacco','Sala','Salaris','Sanna','Santoro','Sardu','Sartori','Satta',
-  'Scalas','Scanu','Schirru','Scotto','Sechi','Serra','Sergi','Serri',
-  'Siddi','Silvestri','Sorrentino','Spada','Spano','Spiga','Stochino',
-  'Taranto','Tedesco','Testa','Tosi','Tocco','Trentini','Tronci','Trudu',
-  'Uras','Usai','Vacca','Valentini','Valli','Vargiu','Villa','Vinci','Vitale',
-  'Volpe','Ximenes','Zanetti','Zedda','Zito','Palumbo','Caputo','Basile',
-  'Giunta','Capasso','Manzo','Pagano','Graziani','Battista','Cataldo','Valenti',
-  'Corrado','Cimino','Giorgi','Angeli','Coletta','Pace','Viola','Calvino',
-  'Maiorana','Ciampi','Raimondi','Prete','Mauro','Agnello',
-]);
-
-// Tokens that look like names but must NEVER be redacted
-// (drugs, anatomy, clinical scales, bacteria, cities used as surnames)
-const MEDICAL_SAFELIST = new Set([
-  // Drugs
-  'Aspirina','Warfarin','Eparina','Morfina','Insulina','Cortisone','Adrenalina',
-  'Dopamina','Serotonina','Atropina','Digossina','Amiodarone','Metoprololo',
-  'Carvedilolo','Furosemide','Metformina','Ramipril','Enalapril','Lisinopril',
-  'Amlodipina','Nifedipina','Simvastatina','Atorvastatina','Rosuvastatina',
-  'Omeprazolo','Pantoprazolo','Lansoprazolo','Paracetamolo','Ibuprofene',
-  'Naprossene','Diclofenac','Pregabalina','Gabapentina','Levodopa','Carbamazepina',
-  'Valproato','Lamotrigina','Clopidogrel','Ticagrelor','Rivaroxaban','Apixaban',
-  'Dabigatran','Prednisone','Desametasone','Betametasone','Idrocortisone',
-  'Amoxicillina','Cefalexina','Ciprofloxacina','Levofloxacina','Azitromicina',
-  'Claritromicina','Metronidazolo','Fluconazolo','Aciclovir','Vancomicina',
-  'Meropenem','Piperacillina','Tazobactam','Gentamicina','Augmentin',
-  // Anatomical / clinical terms that happen to be capitalised names
-  'Rosa','Bruno','Viola','Bianca','Bruna','Marino','Leone','Serra','Greco',
-  'Costa','Costa','Farina','Vitale','Fiore','Ferrari','Palma',
-  // Organisms
-  'Staphylococcus','Streptococcus','Pseudomonas','Klebsiella','Candida',
-  'Aspergillus','Escherichia','Enterococcus','Proteus','Serratia',
-  // Clinical scales
-  'Glasgow','Barthel','Rankin','Wells','Apache','Sofa','Nihss','Curb',
-  // Devices / procedures capitalised
-  'Holter','Baxter','Swan','Ganz','Foley','Hickman','Broviac',
-]);
-
-/**
- * applyNameDict(text) → { text, reps }
- *
- * Three passes, in order:
- *  1. Titled names   — "Dott. Mario Rossi" → [MEDICO]
- *  2. Initial+Surname — "M. Rossi" where Rossi ∈ IT_SURNAMES → [NOME]
- *  3. Pair matching  — "Mario Rossi" / "Rossi Mario" where both tokens are in
- *                       their respective sets → [NOME]
- *     Pair check skips whitespace between tokens (tokenises words only).
- */
-function applyNameDict(text) {
-  const reps = [];
-
-  function track(orig, repl, type) {
-    if (!reps.find(r => r.orig === orig)) reps.push({ orig, repl, type });
-    return repl;
-  }
-
-  // ── Pass 1: titled names ──
-  const titledRe = /\b(dott(?:\.ssa?)?\.?|prof(?:\.ssa?)?\.?|dr\.?|sig(?:\.ra?)?\.?|signor[ae]?|dottoressa|professoressa?)\s+([A-ZÀÈÉÌÍÒÓÙÚ][a-zàèéìíòóùú\-']+)(?:\s+([A-ZÀÈÉÌÍÒÓÙÚ][a-zàèéìíòóùú\-']+))?/gi;
-  text = text.replace(titledRe, (match, title, first, last) => {
-    if (MEDICAL_SAFELIST.has(first)) return match;
-    const pl = /sig/i.test(title) ? '[PAZIENTE_NOME]' : '[MEDICO]';
-    return track(match, pl, 'Nome con titolo');
-  });
-
-  // ── Pass 2: Initial(s) + known surname — "M. Rossi" or "M.G. Rossi" ──
-  const initialRe = /\b([A-ZÀÈÉÌÍÒÓÙÚ]\.(?:[A-ZÀÈÉÌÍÒÓÙÚ]\.)?)\s+([A-ZÀÈÉÌÍÒÓÙÚ][a-zàèéìíòóùú\-']{2,})\b/g;
-  text = text.replace(initialRe, (match, init, surname) => {
-    if (!IT_SURNAMES.has(surname) || MEDICAL_SAFELIST.has(surname)) return match;
-    return track(match, '[NOME]', 'Iniziale + Cognome');
-  });
-
-  // ── Pass 3: FirstName + Surname or Surname + FirstName ──
-  // Tokenise into WORDS only (skip punctuation/spaces), preserving original positions
-  // so we can reconstruct the string.
-  const wordRe = /[A-ZÀÈÉÌÍÒÓÙÚ][a-zàèéìíòóùú\-']{1,}/g;
-  let match;
-  // Collect all word positions
-  const words = [];
-  while ((match = wordRe.exec(text)) !== null) {
-    words.push({ word: match[0], start: match.index, end: match.index + match[0].length });
-  }
-
-  // Find adjacent pairs (in the token array) that match first+surname or surname+first
-  // "Adjacent" = consecutive in words[] regardless of whitespace between them,
-  // BUT we only pair them if they are on the same line (no \n between them).
-  const toRedact = []; // list of [start,end] char ranges to replace
-  for (let i = 0; i < words.length - 1; i++) {
-    const w1 = words[i], w2 = words[i+1];
-    // Don't cross line boundaries
-    if (text.slice(w1.end, w2.start).includes('\n')) continue;
-    // Skip already-replaced placeholders
-    if (w1.word.startsWith('[') || w2.word.startsWith('[')) continue;
-    if (MEDICAL_SAFELIST.has(w1.word) || MEDICAL_SAFELIST.has(w2.word)) continue;
-
-    const fwPair = IT_FIRST_NAMES.has(w1.word) && IT_SURNAMES.has(w2.word);
-    const rwPair = IT_SURNAMES.has(w1.word) && IT_FIRST_NAMES.has(w2.word);
-    if (!fwPair && !rwPair) continue;
-
-    const origStr = text.slice(w1.start, w2.end);
-    track(origStr, '[NOME]', 'Nome+Cognome (dizionario)');
-    toRedact.push([w1.start, w2.end]);
-    i++; // consume w2 so we don't double-match
-  }
-
-  // Apply replacements in reverse order to preserve indices
-  toRedact.sort((a,b) => b[0]-a[0]);
-  for (const [s,e] of toRedact) {
-    text = text.slice(0,s) + '[NOME]' + text.slice(e);
-  }
-
-  return { text, reps };
-}
-
-
-// ═══════════════════════════════════════════════════
-// REGEX ANONYMIZER
-// ─────────────────────────────────────────────────
-// KEY FIXES vs. previous version:
-//  1. Date redaction: ONLY when preceded by DOB context keywords (nato/nata/D.N.)
-//     All other dates (exam dates, admission dates) are KEPT.
-//  2. Lab ranges like "1.7-17" no longer match — date pattern requires
-//     exactly 2-digit month AND 2-4 digit year, with / or - separator.
-//  3. Hospital names (Clinica Neurologica, Ospedale Civile) are NOT redacted —
-//     they are not privacy-sensitive.
-//  4. Free-standing "Nome Cognome" without title: use Dizionario mode.
-// ═══════════════════════════════════════════════════
+// ── applyRegex: wraps ANON_CONFIG.regexRules ─────────────────────────────
+// Returns { text: string, reps: [{orig, repl, type}] }
 function applyRegex(text) {
-  const reps=[];
+  const reps = [];
   let result = text;
-
-  const patterns = [
-    // ── Codice Fiscale (always safe, unique format) ──
-    {
-      re: /\b[A-Z]{6}\d{2}[A-Z]\d{2}[A-Z]\d{3}[A-Z]\b/g,
-      label:'Codice Fiscale', tag:'[CODICE_FISCALE]'
-    },
-
-    // ── Date of birth ONLY — must be preceded by DOB keyword ──
-    // Matches: "nata il 12/03/1985", "nato 12-03-85", "D.N. 12.03.1985",
-    //          "Data di Nascita: 12/03/1985", "nato/a il 12/03/1985"
-    // Does NOT match standalone dates like "12/03/2024" (exam dates, etc.)
-    {
-      re: /(?:nata?\s+(?:il\s+|a\s+[A-Za-zÀ-ú]+\s+il\s+)?|nato\/a\s+il\s+|D\.?\s*N\.?\s*:?\s*|[Dd]ata\s+(?:di\s+)?[Nn]ascita\s*:?\s*)\d{1,2}[\/\-.]\d{1,2}[\/\-.]\d{2,4}\b/g,
-      label:'Data Nascita', tag:'[DATA_NASCITA]'
-    },
-    // Parenthetical DOB: "(n. 12/03/1985)" or "(D.N. 12/03/1985)"
-    {
-      re: /\(\s*(?:[Dd]\.?[Nn]\.?|n\.)\s*\d{1,2}[\/\-.]\d{1,2}[\/\-.]\d{2,4}\s*\)/g,
-      label:'Data Nascita inline', tag:'[DATA_NASCITA]'
-    },
-    // Age alone (standalone demographic) — "anni 67" or "67 anni" at start of clinical sentence
-    // Only when immediately following a name or at start of line
-    // (deliberately conservative — don't catch "dopo 3 anni di terapia")
-    {
-      re: /\b(?:di\s+)?anni\s+\d{1,3}(?:\s+(?:di\s+età|aa))?(?=[,\.\s]|$)/gim,
-      label:'Età', tag:'[ETA]'
-    },
-
-    // ── Phone numbers ──
-    {
-      re: /(?:\+39[\s\-]?|\+039[\s\-]?)?\b0\d{1,4}[\s\-.]?\d{3,4}[\s\-.]?\d{3,5}\b/g,
-      label:'Telefono fisso', tag:'[TELEFONO]'
-    },
-    {
-      re: /\b3\d{2}[\s\-]?\d{3}[\s\-]?\d{4}\b/g,
-      label:'Telefono mobile', tag:'[TELEFONO]'
-    },
-
-    // ── Email ──
-    {
-      re: /[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}/g,
-      label:'Email', tag:'[EMAIL]'
-    },
-
-    // ── Street address of patient (not hospital addresses) ──
-    // Only match "Via/Viale/Piazza ... NN" residential patterns
-    {
-      re: /\b(?:residente|domiciliato[a]?|abita\s+(?:in|a))\s+(?:in\s+)?(?:Via|Viale|Piazza|Corso|C\.so|Largo)\s+[A-Za-zÀ-ú'\s]{3,40}\s+\d+[\/A-Z]*/gi,
-      label:'Indirizzo residenza', tag:'[INDIRIZZO]'
-    },
-
-    // ── Record numbers ──
-    {
-      re: /\b(?:cartella|pratica|SDO|scheda)\s*(?:n\.|numero|nr\.?)?\s*[\dx\/]+/gi,
-      label:'Nr. Cartella', tag:'[NR_CARTELLA]'
-    },
-    {
-      re: /\b(?:matricola|NPI|NHI|MRN|ASSIPCA)\s*[:\s]+[A-Z0-9\-]+/gi,
-      label:'ID Paziente', tag:'[ID_PAZIENTE]'
-    },
-
-    // ── Titled names — MEDICI (reliable: preceded by formal title) ──
-    // Captures: "Dott. Mario Rossi", "Prof.ssa Bianchi", "Dr. M. Verdi"
-    {
-      re: /\b(?:Dott(?:\.ssa?|ssa?)?\.?|Prof(?:\.ssa?|ssa?)?\.?|Dr\.?)\s+(?:[A-ZÀÈÉÌÍÒÓÙÚ][a-zA-ZÀ-ú\-]+\s+)?[A-ZÀÈÉÌÍÒÓÙÚ][a-zA-ZÀ-ú\-]+\b/g,
-      label:'Medico con titolo', tag:'[MEDICO]'
-    },
-    // Abbreviated: "Dott. M. Rossi"
-    {
-      re: /\b(?:Dott(?:\.ssa?)?\.?|Prof(?:\.ssa?)?\.?|Dr\.?)\s+[A-Z]\.\s+[A-ZÀÈÉÌÍÒÓÙÚ][a-zA-ZÀ-ú\-]+\b/g,
-      label:'Medico abbreviato', tag:'[MEDICO]'
-    },
-
-    // ── Titled patient names ──
-    {
-      re: /\bSig(?:\.ra?\.?|nora?\.?|nor?\.?)\s+[A-ZÀÈÉÌÍÒÓÙÚ][a-zA-ZÀ-ú\-]+(?:\s+[A-ZÀÈÉÌÍÒÓÙÚ][a-zA-ZÀ-ú\-]+)?\b/g,
-      label:'Paziente Sig/Sig.ra', tag:'[PAZIENTE_NOME]'
-    },
-
-    // ── MMG/PLS named in text ──
-    {
-      re: /\b(?:MMG|PLS|MdG|medico\s+(?:di\s+base|curante))\s*:?\s*(?:Dott(?:\.ssa?)?\.?\s+)?[A-ZÀÈÉÌÍÒÓÙÚ][a-zA-ZÀ-ú\-]+\s+[A-ZÀÈÉÌÍÒÓÙÚ][a-zA-ZÀ-ú\-]+/gi,
-      label:'MMG/PLS nome', tag:'[MEDICO_CURANTE]'
-    },
-
-    // ── Contextual names after role-assignment verbs ──
-    // "refertato da Mario Rossi", "visitata dal dott. Bianchi", "firmato da Verdi"
-    {
-      re: /\b(?:refertata?\s+da|visitata?\s+da|seguita?\s+da|eseguita?\s+da|firmata?\s+da|compilata?\s+da|dettata?\s+da|redatto\s+da|supervisionato\s+da)\s+(?:(?:Dott(?:\.ssa?)?\.?|Prof(?:\.ssa?)?\.?|Dr\.?)\s+)?([A-ZÀÈÉÌÍÒÓÙÚ][a-zA-ZÀ-ú\-]+(?:\s+[A-ZÀÈÉÌÍÒÓÙÚ][a-zA-ZÀ-ú\-]+)?)/gi,
-      label:'Nome contestuale', tag:'[MEDICO]'
-    },
-
-    // ── Patient name in specific clinical contexts ──
-    // "la paziente Mario Rossi" / "il paziente Rossi Mario"
-    {
-      re: /\b(?:il|la)\s+(?:paziente|assistito|assistita)\s+[A-ZÀÈÉÌÍÒÓÙÚ][a-zA-ZÀ-ú\-]+\s+[A-ZÀÈÉÌÍÒÓÙÚ][a-zA-ZÀ-ú\-]+\b/gi,
-      label:'Paziente in contesto', tag:'[PAZIENTE_NOME]'
-    },
-    // "ricoverata/dimessa + Name Surname"
-    {
-      re: /\b(?:ricoverat|dimess|assistit)[oa]\s+[A-ZÀÈÉÌÍÒÓÙÚ][a-zA-ZÀ-ú\-]+\s+[A-ZÀÈÉÌÍÒÓÙÚ][a-zA-ZÀ-ú\-]+\b/gi,
-      label:'Paziente ricoverato/dimesso', tag:'[PAZIENTE_NOME]'
-    },
-  ];
 
   // Custom patterns from settings
   try {
     const raw = document.getElementById('cfg_regex').value.trim();
-    if (raw) JSON.parse(raw).forEach(cp =>
-      patterns.push({ re:new RegExp(cp.pattern,'gi'), label:'Custom', tag:cp.replace }));
+    if (raw) JSON.parse(raw).forEach(cp => {
+      ANON_CONFIG.regexRules.push({
+        pattern: new RegExp(cp.pattern, 'gi'),
+        label: cp.replace,
+        type: 'id'
+      });
+    });
   } catch(e) {}
 
-  for (const p of patterns) {
-    if (p.re.global) p.re.lastIndex = 0;
-    result = result.replace(p.re, (match) => {
+  for (const rule of ANON_CONFIG.regexRules) {
+    const re = new RegExp(rule.pattern.source, rule.pattern.flags);
+    if (re.global) re.lastIndex = 0;
+    result = result.replace(re, (match) => {
       const m = match.trim();
-      if (m.length>1 && !reps.find(r=>r.orig===m))
-        reps.push({ orig:m, repl:p.tag, type:p.label });
-      return p.tag;
+      if (m.length > 1 && !reps.find(r => r.orig === m))
+        reps.push({ orig: m, repl: rule.label,
+          type: rule.type === 'id'     ? 'ID/Codice'
+              : rule.type === 'date'   ? 'Data sensibile'
+              : rule.type === 'name'   ? 'Nome'
+              : 'Boilerplate' });
+      return rule.label;
     });
   }
 
-  return { text:result, reps };
+  return { text: result, reps };
+}
+
+// ── applyNameDict: wraps ANON_CONFIG.nameDict ─────────────────────────────
+// Returns { text: string, reps: [{orig, repl, type}] }
+function applyNameDict(text) {
+  const reps = [];
+  let result = text;
+
+  // Sort longest first to avoid partial matches
+  const sorted = [...ANON_CONFIG.nameDict]
+    .filter(n => n && n.length >= 3)
+    .sort((a, b) => b.length - a.length);
+
+  for (const name of sorted) {
+    const escaped = name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const pat = new RegExp(`\\b${escaped}\\b`, 'g');
+    if (pat.test(result)) {
+      if (!reps.find(r => r.orig === name))
+        reps.push({ orig: name, repl: '[NOME]', type: 'Nome (dizionario)' });
+      result = result.replace(new RegExp(`\\b${escaped}\\b`, 'g'), '[NOME]');
+    }
+  }
+
+  return { text: result, reps };
 }
 
 // ═══════════════════════════════════════════════════
@@ -1011,8 +842,8 @@ function runPipeline() {
 
       } else if (anonMode === 'dict') {
         stxt.textContent = 'Ricerca dizionario nomi...';
-        const res = applyRegex(clean);          // structural PII first
-        const res2 = applyNameDict(res.text);   // then name dictionary
+        const res = applyRegex(clean);
+        const res2 = applyNameDict(res.text);
         finalText = res2.text;
         reps = [...res.reps, ...res2.reps];
 
@@ -1157,7 +988,6 @@ function formatLabRows(rows) {
 
 function isAbnormal(value,refRange) {
   if (!refRange||!value) return false;
-  // If refRange looks like a date (contains / with day-month pattern), skip
   if (/\d{1,2}\/\d{1,2}/.test(refRange)) return false;
   const numVal=parseFloat(value.replace(',','.'));
   if (isNaN(numVal)) return false;
@@ -1595,9 +1425,9 @@ async function generateLetter(){
     const usageEl=document.getElementById('usageInfo');
     usageEl.style.display='block';
     usageEl.innerHTML=`✓ Costo reale — input: ${u.input_tokens||0} tok ($${inCost.toFixed(4)})`
-      +(u.cache_creation_input_tokens?` · cache write: ${u.cache_creation_input_tokens} tok ($${cacheCr.toFixed(4)})`:'')+
-      (u.cache_read_input_tokens?` · cache read: ${u.cache_read_input_tokens} tok ($${cacheRd.toFixed(4)})`:'')
-      +` · output: ${u.output_tokens||0} tok ($${outCost.toFixed(4)}) — <strong style="color:var(--text);">totale: $${total.toFixed(4)}</strong>`;
+      +(u.cache_creation_input_tokens?` · cache write: ${u.cache_creation_input_tokens} tok ($${cacheCr.toFixed(4)})`:'')
+      +(u.cache_read_input_tokens?` · cache read: ${u.cache_read_input_tokens} tok ($${cacheRd.toFixed(4)})`:'')+
+      ` · output: ${u.output_tokens||0} tok ($${outCost.toFixed(4)}) — <strong style="color:var(--text);">totale: $${total.toFixed(4)}</strong>`;
     document.getElementById('letterOut').textContent=S.letter;
     document.getElementById('statusBadge').textContent='✓ Lettera generata';
     document.getElementById('nav3').classList.add('done');
