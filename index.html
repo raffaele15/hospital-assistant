@@ -33,9 +33,9 @@ aside{background:var(--surface);border-right:1px solid var(--border);padding:14p
 .sn{width:17px;height:17px;border-radius:50%;background:var(--surface3);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:9px;flex-shrink:0;transition:all .12s}
 .ni.active .sn{background:var(--accent-d);border-color:var(--accent);color:var(--accent)}
 main{overflow:hidden;background:var(--bg);display:flex;flex-direction:column}
-.panel{display:none;padding:28px 32px;width:100%;flex:1;overflow-y:auto}
-.panel.active{display:flex;flex-direction:column;overflow:hidden;padding:20px 28px}
-#panel0.active{display:flex;flex-direction:column;height:100%}
+.panel{display:none;padding:28px 32px;width:100%;flex:1}
+.panel.active{display:block;overflow-y:auto}
+#panel1.active{display:block;overflow-y:auto;padding:20px 28px 120px 28px}
 .ptitle{font-size:24px;font-weight:300;margin-bottom:3px;letter-spacing:-.01em}
 .psub{font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--dim);margin-bottom:22px;letter-spacing:.06em}
 label{display:block;font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--dim);letter-spacing:.1em;text-transform:uppercase;margin-bottom:5px;margin-top:16px}
@@ -66,12 +66,12 @@ select{width:100%;background:var(--surface2);border:1px solid var(--border);bord
 .c-purple{background:rgba(169,110,201,.12);color:var(--purple);border:1px solid rgba(169,110,201,.25)}
 .spin{display:inline-block;width:13px;height:13px;border:2px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:sp .7s linear infinite}
 @keyframes sp{to{transform:rotate(360deg)}}
-.diff-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;flex:1;min-height:0;margin-bottom:0}
-.diff-grid>div{display:flex;flex-direction:column;min-height:0}
-.diff-col{display:flex;flex-direction:column;flex:1;min-height:0}
-.diff-scroll{flex:1;overflow-y:auto;min-height:0}
-.dlabel{font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--dim);letter-spacing:.12em;text-transform:uppercase;margin-bottom:6px;padding:2px 6px;background:var(--surface2);border-radius:3px;display:inline-block}
-.dtext{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:12px 13px;font-family:'JetBrains Mono',monospace;font-size:11px;line-height:1.8;white-space:pre-wrap;min-height:100%}
+.diff-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:16px}
+.diff-grid>div{display:flex;flex-direction:column}
+.diff-col{display:flex;flex-direction:column}
+.diff-scroll{overflow-y:auto}
+.dlabel{font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--dim);letter-spacing:.12em;text-transform:uppercase;margin-bottom:6px;padding:2px 6px;background:var(--surface2);border-radius:3px;display:inline-block;flex-shrink:0}
+.dtext{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:12px 13px;font-family:'JetBrains Mono',monospace;font-size:11px;line-height:1.8;white-space:pre-wrap;min-height:200px;width:100%;box-sizing:border-box}
 .collapsible-section{margin-bottom:11px}
 .collapsible-toggle{display:flex;align-items:center;gap:8px;width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:var(--r);padding:8px 12px;cursor:pointer;font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--mid);text-align:left;transition:border-color .14s}
 .collapsible-toggle:hover{border-color:var(--border-hi);color:var(--text)}
@@ -229,6 +229,7 @@ hr.div{border:none;border-top:1px solid var(--border);margin:18px 0}
     <span class="spin" id="anonSpin" style="display:none;"></span>
     <span id="anonStatusTxt" style="font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--mid);">Pronto.</span>
   </div>
+  <div id="dictStatus" style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--dim);padding:4px 2px;">⏳ Caricamento dizionario nomi in corso...</div>
   <div class="collapsible-section" id="bpSection" style="display:none;">
     <button class="collapsible-toggle" onclick="toggleSection('bpSection')">
       <i class="ct-icon">▶</i>
@@ -254,13 +255,13 @@ hr.div{border:none;border-top:1px solid var(--border);margin:18px 0}
     <div class="diff-col">
       <div class="dlabel">Testo originale — locale, non inviato</div>
       <div class="diff-scroll">
-        <div class="dtext" id="origText" style="min-height:100%;">—</div>
+        <div class="dtext" id="origText">—</div>
       </div>
     </div>
     <div class="diff-col">
       <div class="dlabel">Testo anonimizzato ✏ modificabile</div>
       <div class="diff-scroll" id="anonScroll">
-        <textarea id="anonText" class="dtext" style="font-size:11px;resize:none;width:100%;height:100%;min-height:300px;"></textarea>
+        <textarea id="anonText" class="dtext" style="font-size:11px;resize:none;height:100%;"></textarea>
       </div>
     </div>
   </div>
@@ -375,6 +376,16 @@ hr.div{border:none;border-top:1px solid var(--border);margin:18px 0}
   {"pattern": "cartella\\s*n\\.?\\s*\\d+", "replace": "[CARTELLA]"}
 ]'></textarea>
   </div>
+  <div class="card">
+    <div class="ctitle">Sorgenti Dizionario Nomi</div>
+    <div class="ib" style="margin-bottom:10px;">URL raw GitHub o altro CDN per i file cognomi/nomi. Devono essere accessibili senza autenticazione. Lascia vuoto per usare le sorgenti pubbliche di default.</div>
+    <label>URL Cognomi (testo, uno per riga)</label>
+    <input type="text" id="cfg_surnames_url" placeholder="https://raw.githubusercontent.com/...">
+    <label>URL Nomi propri (CSV, prima colonna = nome)</label>
+    <input type="text" id="cfg_firstnames_url" placeholder="https://raw.githubusercontent.com/...">
+    <button class="btn btn-g" style="margin-top:12px;" onclick="reloadNameDictionary()">↺ Ricarica dizionario</button>
+    <div id="dictStatusSettings" style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--dim);margin-top:8px;"></div>
+  </div>
   <div class="btn-row">
     <button class="btn btn-p" onclick="saveBaseSettings()">✓ Salva</button>
   </div>
@@ -467,6 +478,7 @@ function goTo(i) {
   document.querySelectorAll('.ni').forEach(n => n.classList.remove('active'));
   document.getElementById('panel'+i).classList.add('active');
   document.getElementById('nav'+i).classList.add('active');
+  if (i === 1) requestAnimationFrame(updateDiffHeight);
   if (i===2) updateTokenPanel();
   if (i===5) renderLibrary();
 }
@@ -626,66 +638,18 @@ const ANON_CONFIG = {
       label: '([OPERATORE])', type: 'name' },
   ],
 
-  // ── 2. DICTIONARY — staff + patient names (AO Padova Stroke Unit) ────────
-  nameDict: [
-    // Patient
+  // ── 2. DICTIONARY — loaded externally at runtime (see NAME_SOURCES below) ─
+  // Fallback used only if network fetch fails
+  nameDict_fallback: [
     'Marcolin','Marianno','MARCOLIN','MARIANNO',
-    // Stroke Unit physicians
-    'Baracchini','Claudio',
-    'Cavatorti','Stefano',
-    'Favaretto','Silvia',
-    'Ragone','Rossana',
-    'Minicuci','Minicucci',
-    'Petrosino','Angela',
-    'Fredianelli','Giorgio',
-    'Mozzetta','Pieroni',
-    'Fabris','Edoardo','Giulia',
-    'Bruno',
-    'Viaro','Federica',
-    'Rubino','Clara',
-    // Nurses
-    'Biscari','Alessandra',
-    'Filosa','Ornella',
-    'Calore','Chiara',
-    'Tommasin','Alessandro',
-    'Cuzzilla','Susanna',
-    'Lorioni','Erica',
-    'Formentin','Arianna',
-    'Nuzzo','Claudia',
-    'Venuto','Roberta',
-    // FKT
-    'Pernice','Salvatore',
-    // Lab / Radiology
-    'Montagnana','Martina',
-    'Fogar','Paola',
-    'Faggian','Diego',
-    'Cattai','Margherita',
-    'Carraro',
-    'Manara','Renzo',
-    'Vincentis',
-    'Librizzi','Giovanni',
-    'Mazzi','Lorenzo',
-    'Rigato','Ilaria',
-    'Muffatto','Massimiliano',
-    'Camporese','Giovanna',
-    // Cardiology
-    'Corrado','Domenico',
-    'Baritussio',
-    'Bauce','Brunello','Caforio','Cardaioli',
-    'Cecchetto','Cecere','Cipriani','Lazzari','Michieli',
-    'Famoso','Fraccaro','Giordani','Licchelli','Mancuso',
-    'Masiero','Mattesi','Migliore','Fovino','Napodano',
-    'Naso','Marra','Pergola','Previtero','Schiavon',
-    'Susana','Tona','Zorzi','Anglani','Errico','Gabrieli',
-    'Bova','Valeggia','Borsari','Causin',
-    'Tiziana','Donato','Romano',
-    // Physiatry
-    'Piccione','Francesco','Bettio',
-    // Microbiology
-    'Tos','Angelo',
-    // Admin
-    'Santoro','Caldon','Cernaz','Pauro','Rosa',
-    'Tavarner','Dona','Palermo','Quotti','Tubi',
+    'Baracchini','Cavatorti','Favaretto','Ragone','Minicuci','Petrosino',
+    'Fredianelli','Mozzetta','Pieroni','Fabris','Viaro','Rubino',
+    'Biscari','Filosa','Calore','Tommasin','Cuzzilla','Lorioni',
+    'Formentin','Nuzzo','Venuto','Pernice','Montagnana','Fogar',
+    'Faggian','Cattai','Carraro','Manara','Librizzi','Mazzi','Rigato',
+    'Muffatto','Camporese','Corrado','Baritussio','Bauce','Brunello',
+    'Caforio','Cecchetto','Famoso','Fraccaro','Giordani','Schiavon',
+    'Piccione','Bettio','Santoro','Caldon','Cernaz','Palermo',
   ],
 
   // ── 3. BOILERPLATE LINE PATTERNS (match entire lines) ────────────────────
@@ -805,29 +769,331 @@ function applyRegex(text) {
   return { text: result, reps };
 }
 
-// ── applyNameDict: wraps ANON_CONFIG.nameDict ─────────────────────────────
-// Returns { text: string, reps: [{orig, repl, type}] }
+
+// ═══════════════════════════════════════════════════════════════════════════
+// EXTERNAL NAME DICTIONARY + FUZZY ENGINE
+// ═══════════════════════════════════════════════════════════════════════════
+
+// Source URLs — raw GitHub CSVs (no CORS issues)
+const NAME_SOURCES = {
+  firstNames: 'https://raw.githubusercontent.com/mrblasco/genderNamesITA/master/gender_firstnames_ITA.csv',
+  surnames:   'https://raw.githubusercontent.com/PaoloSarti/lista_cognomi_italiani/main/cognomi.txt',
+};
+
+// Runtime name stores (populated by loadNameDictionary)
+const NAMES_DB = {
+  firstNames: [],   // lowercase
+  surnames:   [],   // lowercase
+  loaded: false,
+  loading: false,
+  error: null,
+};
+
+// ── Force reload dictionary (called from settings) ───────────────────────
+async function reloadNameDictionary() {
+  NAMES_DB.loaded = false;
+  NAMES_DB.loading = false;
+  NAMES_DB.firstNames = [];
+  NAMES_DB.surnames = [];
+  bkSurnames   = new BKTree();
+  bkFirstNames = new BKTree();
+  const el = document.getElementById('dictStatusSettings');
+  if (el) el.textContent = '⏳ Ricaricamento...';
+  await loadNameDictionary();
+  const statusEl = document.getElementById('dictStatus');
+  if (el && statusEl) el.textContent = statusEl.textContent;
+}
+
+// ── Levenshtein distance (fast iterative) ────────────────────────────────
+function levenshtein(a, b) {
+  const m = a.length, n = b.length;
+  if (Math.abs(m - n) > 2) return 99; // fast reject
+  if (m === 0) return n;
+  if (n === 0) return m;
+  let prev = Array.from({length: n + 1}, (_, i) => i);
+  for (let i = 1; i <= m; i++) {
+    const curr = [i];
+    for (let j = 1; j <= n; j++) {
+      const cost = a[i-1] === b[j-1] ? 0 : 1;
+      curr[j] = Math.min(curr[j-1]+1, prev[j]+1, prev[j-1]+cost);
+    }
+    prev = curr;
+  }
+  return prev[n];
+}
+
+// ── BK-Tree for fast fuzzy lookup ────────────────────────────────────────
+class BKTree {
+  constructor() { this.root = null; }
+
+  add(word) {
+    if (!this.root) { this.root = {word, children: {}}; return; }
+    let node = this.root;
+    while (true) {
+      const d = levenshtein(word, node.word);
+      if (d === 0) return;
+      if (node.children[d]) { node = node.children[d]; }
+      else { node.children[d] = {word, children: {}}; return; }
+    }
+  }
+
+  // Returns all words within maxDist of query
+  search(query, maxDist) {
+    if (!this.root) return [];
+    const results = [];
+    const stack = [this.root];
+    while (stack.length) {
+      const node = stack.pop();
+      const d = levenshtein(query, node.word);
+      if (d <= maxDist) results.push({word: node.word, dist: d});
+      for (let k = d - maxDist; k <= d + maxDist; k++) {
+        if (k > 0 && node.children[k]) stack.push(node.children[k]);
+      }
+    }
+    return results;
+  }
+}
+
+// BK-trees built once after load
+let bkSurnames   = new BKTree();
+let bkFirstNames = new BKTree();
+
+// ── Load + parse name sources ─────────────────────────────────────────────
+async function loadNameDictionary() {
+  if (NAMES_DB.loaded || NAMES_DB.loading) return;
+  NAMES_DB.loading = true;
+
+  const statusEl = document.getElementById('dictStatus');
+  if (statusEl) statusEl.textContent = '⏳ Caricamento dizionario nomi...';
+
+  // Use custom URLs from settings if provided
+  const customSurnamesUrl   = document.getElementById('cfg_surnames_url')?.value.trim();
+  const customFirstNamesUrl = document.getElementById('cfg_firstnames_url')?.value.trim();
+  const surnamesUrl   = customSurnamesUrl   || NAME_SOURCES.surnames;
+  const firstNamesUrl = customFirstNamesUrl || NAME_SOURCES.firstNames;
+
+  try {
+    // Fetch surnames (one per line, plain text)
+    const [surnameResp, firstNameResp] = await Promise.all([
+      fetch(surnamesUrl),
+      fetch(firstNamesUrl),
+    ]);
+
+    // Parse surnames
+    if (surnameResp.ok) {
+      const text = await surnameResp.text();
+      const names = text.split('\n')
+        .map(l => l.trim().toLowerCase())
+        .filter(l => l.length >= 3 && l.length <= 30 && /^[a-zàèéìòùäöü'\- ]+$/.test(l));
+      NAMES_DB.surnames = names;
+      names.forEach(n => bkSurnames.add(n));
+    }
+
+    // Parse firstnames CSV (columns: name, male_freq, female_freq or similar)
+    if (firstNameResp.ok) {
+      const text = await firstNameResp.text();
+      const lines = text.split('\n').slice(1); // skip header
+      const names = lines
+        .map(l => l.split(',')[0].replace(/['"]/g,'').trim().toLowerCase())
+        .filter(n => n.length >= 3 && n.length <= 20 && /^[a-zàèéìòùäöü'\- ]+$/.test(n));
+      NAMES_DB.firstNames = names;
+      names.forEach(n => bkFirstNames.add(n));
+    }
+
+    NAMES_DB.loaded = true;
+    NAMES_DB.error = null;
+    const total = NAMES_DB.surnames.length + NAMES_DB.firstNames.length;
+    const msg = `✓ Dizionario: ${NAMES_DB.surnames.length.toLocaleString()} cognomi · ${NAMES_DB.firstNames.length.toLocaleString()} nomi`;
+    if (statusEl) statusEl.textContent = msg;
+    const settingsEl = document.getElementById('dictStatusSettings');
+    if (settingsEl) settingsEl.textContent = msg;
+    console.log(`[NameDict] Loaded ${total} names`);
+
+  } catch(e) {
+    NAMES_DB.error = e.message;
+    // Fall back to inline dict
+    const fb = ANON_CONFIG.nameDict_fallback;
+    fb.forEach(n => { bkSurnames.add(n.toLowerCase()); bkFirstNames.add(n.toLowerCase()); });
+    NAMES_DB.surnames = fb.map(n => n.toLowerCase());
+    NAMES_DB.loaded = true;
+    const errMsg = `⚠ Rete non disponibile — dizionario locale (${fb.length} nomi)`;
+    if (statusEl) statusEl.textContent = errMsg;
+    const settingsEl = document.getElementById('dictStatusSettings');
+    if (settingsEl) settingsEl.textContent = errMsg;
+    console.warn('[NameDict] Fetch failed, using fallback:', e.message);
+  }
+  NAMES_DB.loading = false;
+}
+
+// ── Fuzzy match a single token against a BK-tree ─────────────────────────
+function isFuzzyName(token, bkTree, maxDist) {
+  if (token.length < 3) return false;
+  const q = token.toLowerCase();
+  return bkTree.search(q, maxDist).length > 0;
+}
+
+// ── Fuzzy pair detection threshold by word length ─────────────────────────
+function fuzzyThreshold(word) {
+  // length ≤ 5 → max 1 edit; longer → max 2 edits
+  return word.length <= 5 ? 1 : 2;
+}
+
+// ── Main name anonymisation function ─────────────────────────────────────
+// Pass 1: exact full-name pairs (Cognome Nome, Nome Cognome, N. Cognome)
+// Pass 2: fuzzy full-name pairs (only capitalised word pairs)
+// Pass 3: exact individual names from loaded dict
 function applyNameDict(text) {
+  if (!NAMES_DB.loaded) {
+    // Dict not ready — skip silently (pipeline will warn)
+    return { text, reps: [] };
+  }
+
   const reps = [];
   let result = text;
 
-  // Sort longest first to avoid partial matches
-  const sorted = [...ANON_CONFIG.nameDict]
-    .filter(n => n && n.length >= 3)
-    .sort((a, b) => b.length - a.length);
+  const addRep = (orig, type) => {
+    if (!reps.find(r => r.orig === orig))
+      reps.push({ orig, repl: '[NOME]', type });
+  };
 
-  for (const name of sorted) {
+  // ── PASS 1: exact pairs ──────────────────────────────────────────────────
+  // Patterns: "Cognome Nome", "Nome Cognome", "X. Cognome", "Dott. X Cognome"
+  // We use word-token scanning for flexibility
+  const exactSurnameSet = new Set(NAMES_DB.surnames);
+  const exactFirstSet   = new Set(NAMES_DB.firstNames);
+
+  // Also add fallback dict to exact sets
+  ANON_CONFIG.nameDict_fallback.forEach(n => {
+    exactSurnameSet.add(n.toLowerCase());
+    exactFirstSet.add(n.toLowerCase());
+  });
+
+  // Tokenise: preserve positions so we can reconstruct the string
+  // Token = {text, start, end, isCapWord}
+  function tokenise(str) {
+    const tokens = [];
+    const re = /\S+/g;
+    let m;
+    while ((m = re.exec(str)) !== null) {
+      const t = m[0];
+      const isCapWord = /^[A-ZÀÈÉÌÒÙ][a-zàèéìòùA-ZÀÈÉÌÒÙ'-]+$/.test(t) ||
+                        /^[A-ZÀÈÉÌÒÙ]{2,}$/.test(t);
+      tokens.push({ text: t, start: m.index, end: m.index + t.length, isCapWord });
+    }
+    return tokens;
+  }
+
+  // Replace spans in result string, tracking offset drift
+  function applyReplacements(str, spans) {
+    // spans: [{start, end, orig}] sorted by start
+    spans.sort((a, b) => a.start - b.start);
+    let out = '', prev = 0;
+    for (const s of spans) {
+      out += str.slice(prev, s.start) + '[NOME]';
+      addRep(s.orig, 'Nome+Cognome (coppia esatta)');
+      prev = s.end;
+    }
+    out += str.slice(prev);
+    return out;
+  }
+
+  const pass1Spans = [];
+  const tokens = tokenise(result);
+
+  for (let i = 0; i < tokens.length - 1; i++) {
+    const t1 = tokens[i], t2 = tokens[i+1];
+    if (!t1.isCapWord || !t2.isCapWord) continue;
+
+    const w1 = t1.text.replace(/[.,;:!?]$/,'').toLowerCase();
+    const w2 = t2.text.replace(/[.,;:!?]$/,'').toLowerCase();
+
+    const w1isSurname   = exactSurnameSet.has(w1);
+    const w1isFirstName = exactFirstSet.has(w1);
+    const w2isSurname   = exactSurnameSet.has(w2);
+    const w2isFirstName = exactFirstSet.has(w2);
+
+    const isPair = (w1isSurname && w2isFirstName) ||
+                   (w1isFirstName && w2isSurname) ||
+                   (w1isSurname && w2isSurname);  // e.g. De Rossi
+
+    if (isPair) {
+      pass1Spans.push({ start: t1.start, end: t2.end, orig: t1.text + ' ' + t2.text });
+      i++; // skip t2
+      continue;
+    }
+
+    // "N. Cognome" pattern (initial + dot + surname)
+    if (/^[A-Z]\.$/.test(t1.text) && w2isSurname) {
+      pass1Spans.push({ start: t1.start, end: t2.end, orig: t1.text + ' ' + t2.text });
+      i++;
+    }
+  }
+
+  result = applyReplacements(result, pass1Spans);
+
+  // ── PASS 2: fuzzy pairs ──────────────────────────────────────────────────
+  // Re-tokenise (result has changed)
+  const tokens2 = tokenise(result);
+  const pass2Spans = [];
+
+  for (let i = 0; i < tokens2.length - 1; i++) {
+    const t1 = tokens2[i], t2 = tokens2[i+1];
+    if (!t1.isCapWord || !t2.isCapWord) continue;
+    // Skip already-redacted tokens
+    if (t1.text === '[NOME]' || t2.text === '[NOME]') continue;
+
+    const w1 = t1.text.replace(/[.,;:!?]$/,'').toLowerCase();
+    const w2 = t2.text.replace(/[.,;:!?]$/,'').toLowerCase();
+
+    // Skip short/common words that generate false positives
+    if (w1.length < 4 || w2.length < 4) continue;
+
+    const th1 = fuzzyThreshold(w1), th2 = fuzzyThreshold(w2);
+
+    const w1fuzSurname   = isFuzzyName(w1, bkSurnames, th1);
+    const w1fuzFirstName = isFuzzyName(w1, bkFirstNames, th1);
+    const w2fuzSurname   = isFuzzyName(w2, bkSurnames, th2);
+    const w2fuzFirstName = isFuzzyName(w2, bkFirstNames, th2);
+
+    const isFuzzyPair = (w1fuzSurname && w2fuzFirstName) ||
+                        (w1fuzFirstName && w2fuzSurname);
+
+    if (isFuzzyPair) {
+      pass2Spans.push({ start: t1.start, end: t2.end, orig: t1.text + ' ' + t2.text });
+      i++;
+    }
+  }
+
+  // Apply pass2 spans (need to re-sort and rebuild)
+  pass2Spans.sort((a, b) => a.start - b.start);
+  let out2 = '', prev2 = 0;
+  for (const s of pass2Spans) {
+    out2 += result.slice(prev2, s.start) + '[NOME]';
+    addRep(s.orig, 'Nome+Cognome (coppia fuzzy ~2 lettere)');
+    prev2 = s.end;
+  }
+  result = out2 + result.slice(prev2);
+
+  // ── PASS 3: exact individual names ──────────────────────────────────────
+  // Only surnames (more distinctive; first names alone cause too many false positives)
+  // Use a combined set of loaded surnames + fallback
+  const allSurnames = [...exactSurnameSet];
+  // Sort by length desc to avoid partial shadowing
+  allSurnames.sort((a, b) => b.length - a.length);
+
+  for (const name of allSurnames) {
+    if (name.length < 4) continue; // skip very short surnames
     const escaped = name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-    const pat = new RegExp(`\\b${escaped}\\b`, 'g');
-    if (pat.test(result)) {
-      if (!reps.find(r => r.orig === name))
-        reps.push({ orig: name, repl: '[NOME]', type: 'Nome (dizionario)' });
-      result = result.replace(new RegExp(`\\b${escaped}\\b`, 'g'), '[NOME]');
+    // Case-insensitive word boundary match
+    const re = new RegExp(`(?<![\\w\\u00C0-\\u024F])${escaped}(?![\\w\\u00C0-\\u024F])`, 'gi');
+    if (re.test(result)) {
+      result = result.replace(re, (m) => { addRep(m, 'Cognome (esatto)'); return '[NOME]'; });
     }
   }
 
   return { text: result, reps };
 }
+
 
 // ═══════════════════════════════════════════════════
 // PIPELINE
@@ -861,10 +1127,18 @@ function runPipeline() {
 
       stxt.textContent = 'Stage 1 — Regex strutturale...';
       const res = applyRegex(clean);
-      stxt.textContent = 'Stage 2 — Dizionario nomi...';
-      const res2 = applyNameDict(res.text);
-      finalText = res2.text;
-      reps = [...res.reps, ...res2.reps];
+
+      stxt.textContent = 'Stage 2 — Caricamento dizionario...';
+      if (!NAMES_DB.loaded) await loadNameDictionary();
+      if (!NAMES_DB.loaded) {
+        stxt.textContent = '⚠ Dizionario non disponibile — solo regex';
+        finalText = res.text; reps = res.reps;
+      } else {
+        stxt.textContent = 'Stage 2 — Ricerca nomi (esatta + fuzzy)...';
+        const res2 = applyNameDict(res.text);
+        finalText = res2.text;
+        reps = [...res.reps, ...res2.reps];
+      }
 
       renderAnonResult(finalText, reps);
 
@@ -929,22 +1203,24 @@ function renderAnonResult(anonText, reps) {
   document.getElementById('origText').innerHTML = hi;
 
   // Sync scroll between columns (bind once)
-  const origScroll = document.getElementById('origText').parentElement;
-  const anonScroll = document.getElementById('anonScroll');
-  if (!origScroll._syncBound) {
-    origScroll._syncBound = true;
+  const origScrollEl = document.getElementById('origText').parentElement;
+  const anonScrollEl = document.getElementById('anonScroll');
+  if (!origScrollEl._syncBound) {
+    origScrollEl._syncBound = true;
     let syncing = false;
-    origScroll.addEventListener('scroll', () => {
+    origScrollEl.addEventListener('scroll', () => {
       if (syncing) return; syncing = true;
-      anonScroll.scrollTop = origScroll.scrollTop;
+      anonScrollEl.scrollTop = origScrollEl.scrollTop;
       syncing = false;
     });
-    anonScroll.addEventListener('scroll', () => {
+    anonScrollEl.addEventListener('scroll', () => {
       if (syncing) return; syncing = true;
-      origScroll.scrollTop = anonScroll.scrollTop;
+      origScrollEl.scrollTop = anonScrollEl.scrollTop;
       syncing = false;
     });
   }
+  // Trigger scroll-driven resize now that content is populated
+  updateDiffHeight();
 }
 
 // ═══════════════════════════════════════════════════
@@ -1534,6 +1810,8 @@ function saveBaseSettings(){
     dott:document.getElementById('cfg_dott').value,
     prof:document.getElementById('cfg_prof').value,
     regex:document.getElementById('cfg_regex').value,
+    surnamesUrl:document.getElementById('cfg_surnames_url').value,
+    firstNamesUrl:document.getElementById('cfg_firstnames_url').value,
   }));alert('Impostazioni salvate.');
 }
 function loadBaseSettings(){
@@ -1544,6 +1822,8 @@ function loadBaseSettings(){
     if(c.dott)document.getElementById('cfg_dott').value=c.dott;
     if(c.prof)document.getElementById('cfg_prof').value=c.prof;
     if(c.regex)document.getElementById('cfg_regex').value=c.regex;
+    if(c.surnamesUrl)document.getElementById('cfg_surnames_url').value=c.surnamesUrl;
+    if(c.firstNamesUrl)document.getElementById('cfg_firstnames_url').value=c.firstNamesUrl;
   }catch(e){}
 }
 
@@ -1557,6 +1837,42 @@ function clearAll(){
   S.rawText=S.cleanText=S.anonText=S.letter='';S.strippedBlocks=[];
 }
 
+// ── SCROLL-DRIVEN DIFF RESIZE ──────────────────────────────────────────────
+// As the user scrolls panel1, the diff-grid grows from its natural height
+// up to full viewport height. Once full height, scrolling is trapped inside.
+function updateDiffHeight() {
+  const panel = document.getElementById('panel1');
+  if (!panel.classList.contains('active')) return;
+  const grid = panel.querySelector('.diff-grid');
+  if (!grid) return;
+
+  const HEADER_H = 52; // px — app header height
+  const VIEWPORT_H = window.innerHeight;
+  const MAX_H = VIEWPORT_H - HEADER_H;
+
+  // How far the panel has been scrolled
+  const scrolled = panel.scrollTop;
+
+  // Distance from top of grid to top of panel content (the "above" content height)
+  // Measure it dynamically: grid's offsetTop within the panel
+  const aboveH = grid.offsetTop;
+
+  // Initially the grid can be as tall as remaining viewport space
+  // As we scroll, the available viewport for the grid grows (above content scrolls away)
+  // naturalH = how tall the grid would be if it filled from its current visible top to viewport bottom
+  // When scrolled >= aboveH, the grid top hits the panel top → full MAX_H available
+
+  const scrolledIntoAbove = Math.min(scrolled, aboveH);
+  const targetH = Math.min(MAX_H, (VIEWPORT_H - HEADER_H - aboveH) + scrolledIntoAbove);
+  const clampedH = Math.max(300, targetH); // never smaller than 300px
+
+  grid.style.height = clampedH + 'px';
+
+  // Sync the two scroll containers to the same height
+  const cols = grid.querySelectorAll('.diff-scroll');
+  cols.forEach(c => { c.style.height = (clampedH - 28) + 'px'; }); // 28 = dlabel height approx
+}
+
 // ── INIT ──
 document.getElementById('tempSlider').addEventListener('input',function(){
   document.getElementById('tempLabel').textContent=(this.value/10).toFixed(1);
@@ -1565,6 +1881,12 @@ document.getElementById('systemPrompt').addEventListener('input',()=>{updateToke
 loadBaseSettings();
 document.getElementById('systemPrompt').value=DEFAULT_SYS;
 renderLibrary();
+// Pre-load name dictionary in background so it's ready when needed
+loadNameDictionary();
+
+// Bind scroll listener to panel1 for diff resize
+document.getElementById('panel1').addEventListener('scroll', updateDiffHeight);
+window.addEventListener('resize', updateDiffHeight);
 </script>
 </body>
 </html>
