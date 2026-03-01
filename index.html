@@ -67,8 +67,17 @@ select{width:100%;background:var(--surface2);border:1px solid var(--border);bord
 @keyframes sp{to{transform:rotate(360deg)}}
 .diff-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:13px}
 .diff-grid>div{display:flex;flex-direction:column}
+.diff-col{display:flex;flex-direction:column;flex:1}
+.diff-scroll{flex:1;overflow-y:auto;height:560px}
 .dlabel{font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--dim);letter-spacing:.12em;text-transform:uppercase;margin-bottom:6px;padding:2px 6px;background:var(--surface2);border-radius:3px;display:inline-block}
-.dtext{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:12px 13px;font-family:'JetBrains Mono',monospace;font-size:11px;line-height:1.8;white-space:pre-wrap;overflow-y:auto;min-height:600px}
+.dtext{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:12px 13px;font-family:'JetBrains Mono',monospace;font-size:11px;line-height:1.8;white-space:pre-wrap;overflow-y:auto;height:100%;box-sizing:border-box}
+.collapsible-section{margin-bottom:11px}
+.collapsible-toggle{display:flex;align-items:center;gap:8px;width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:var(--r);padding:8px 12px;cursor:pointer;font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--mid);text-align:left;transition:border-color .14s}
+.collapsible-toggle:hover{border-color:var(--border-hi);color:var(--text)}
+.collapsible-toggle .ct-icon{flex-shrink:0;transition:transform .2s;font-style:normal}
+.collapsible-toggle .ct-label{flex:1}
+.collapsible-toggle .ct-count{color:var(--accent);font-weight:600}
+.collapsible-body{display:none;padding-top:8px}
 .redacted{background:rgba(201,110,110,.18);color:var(--red);border-radius:2px;padding:0 2px}
 .bpblock{background:var(--surface2);border:1px solid var(--border);border-left:3px solid var(--accent-d);border-radius:0 var(--r) var(--r) 0;padding:10px 12px;margin-bottom:8px;font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--dim);white-space:pre-wrap;line-height:1.6}
 .bpblock .bptag{color:var(--accent);font-size:9px;text-transform:uppercase;letter-spacing:.1em;margin-bottom:4px;display:block}
@@ -86,16 +95,7 @@ select{width:100%;background:var(--surface2);border:1px solid var(--border);bord
 .tab.active{background:var(--accent-g);color:var(--accent);border-color:var(--accent-d)}
 .cc{display:none;position:absolute;top:10px;right:10px;background:var(--green);color:#0f0f0f;font-family:'JetBrains Mono',monospace;font-size:10px;padding:4px 10px;border-radius:4px;font-weight:600}
 .an{font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--accent);display:flex;gap:7px;margin-top:8px;line-height:1.5}
-.mode-selector{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:14px}
-.mode-card{background:var(--surface2);border:2px solid var(--border);border-radius:var(--r);padding:14px 10px;cursor:pointer;transition:all .14s;text-align:center;position:relative}
-.mode-card:hover{border-color:var(--border-hi);background:var(--surface3)}
-.mode-card.sel-regex{border-color:var(--accent-d);background:var(--accent-g)}
-.mode-card.sel-dict{border-color:var(--green);background:rgba(110,201,138,.08)}
-.mode-card.sel-combined{border-color:var(--blue);background:rgba(110,168,201,.08)}
-.mode-icon{font-size:22px;margin-bottom:5px}
-.mode-name{font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:600;color:var(--text);margin-bottom:3px}
-.mode-desc{font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--dim);line-height:1.5}
-.mode-badge{position:absolute;top:-8px;left:50%;transform:translateX(-50%);font-family:'JetBrains Mono',monospace;font-size:8px;font-weight:600;letter-spacing:.08em;padding:2px 7px;border-radius:10px;text-transform:uppercase;white-space:nowrap}
+
 .mb-rec{background:var(--green);color:#0f0f0f}
 .mb-exp{background:var(--blue);color:#0f0f0f}
 .tok-panel{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:16px;margin-bottom:14px}
@@ -126,7 +126,7 @@ hr.div{border:none;border-top:1px solid var(--border);margin:18px 0}
 ::-webkit-scrollbar{width:5px;height:5px}
 ::-webkit-scrollbar-track{background:transparent}
 ::-webkit-scrollbar-thumb{background:var(--border-hi);border-radius:3px}
-@media(max-width:640px){.app{grid-template-columns:1fr}aside{display:none}.diff-grid{grid-template-columns:1fr}.mode-selector{grid-template-columns:1fr}}
+@media(max-width:640px){.app{grid-template-columns:1fr}aside{display:none}.diff-grid{grid-template-columns:1fr}}
 </style>
 </head>
 <body>
@@ -222,45 +222,45 @@ hr.div{border:none;border-top:1px solid var(--border);margin:18px 0}
   <div class="psub">// step 02 — scegli modalità → boilerplate strip → anonimizza → revisiona</div>
   <div class="card">
     <div class="ctitle">Modalità Anonimizzazione</div>
-    <div class="mode-selector">
-      <div class="mode-card sel-regex" id="modeCard_regex" onclick="selectAnonMode('regex')">
-        <div class="mode-badge mb-rec">Offline · gratis</div>
-        <div class="mode-icon">{ }</div>
-        <div class="mode-name">Solo Regex</div>
-        <div class="mode-desc">CF, telefono, data nascita, nomi con titolo. Istantaneo, deterministico. Può perdere nomi senza titolo.</div>
-      </div>
-      <div class="mode-card" id="modeCard_dict" onclick="selectAnonMode('dict')">
-        <div class="mode-badge mb-rec" style="background:var(--green);color:#0f0f0f;">Offline · gratis</div>
-        <div class="mode-icon">📖</div>
-        <div class="mode-name">Dizionario Nomi</div>
-        <div class="mode-desc">Dizionario staff AO Padova. Cattura nomi senza titolo. 100% locale, istantaneo, zero API.</div>
-      </div>
-      <div class="mode-card" id="modeCard_combined" onclick="selectAnonMode('combined')">
-        <div class="mode-badge mb-exp">Consigliato</div>
-        <div class="mode-icon">🛡</div>
-        <div class="mode-name">Regex + Dizionario</div>
-        <div class="mode-desc">Prima regex (CF, tel, date nascita), poi dizionario nomi. Doppio livello, massima copertura, tutto offline.</div>
-      </div>
-    </div>
+
   </div>
   <div id="anonStatus" class="card" style="display:flex;align-items:center;gap:10px;padding:12px 14px;">
     <span class="spin" id="anonSpin" style="display:none;"></span>
     <span id="anonStatusTxt" style="font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--mid);">Pronto.</span>
   </div>
-  <div id="bpReview" style="display:none;">
-    <div class="ib acc">✂ Blocchi rimossi automaticamente — <strong style="color:var(--text);">NON inviati al modello</strong>. Verifica cosa è stato eliminato.</div>
-    <div id="bpList"></div>
-    <hr class="div">
-  </div>
-  <div id="repList"></div>
-  <div class="diff-grid">
-    <div>
-      <div class="dlabel">Testo originale — locale, non inviato</div>
-      <div class="dtext" id="origText" style="min-height:600px;overflow-y:auto;">—</div>
+  <div class="collapsible-section" id="bpSection" style="display:none;">
+    <button class="collapsible-toggle" onclick="toggleSection('bpSection')">
+      <i class="ct-icon">▶</i>
+      <span class="ct-label">✂ Blocchi rimossi — <strong style="color:var(--text);">NON inviati al modello</strong></span>
+      <span class="ct-count" id="bpCount"></span>
+    </button>
+    <div class="collapsible-body" id="bpBody">
+      <div class="ib acc" style="margin-bottom:8px;">Verifica cosa è stato eliminato prima di procedere.</div>
+      <div id="bpList"></div>
     </div>
-    <div>
+  </div>
+  <div class="collapsible-section" id="repSection" style="display:none;">
+    <button class="collapsible-toggle" onclick="toggleSection('repSection')">
+      <i class="ct-icon">▶</i>
+      <span class="ct-label">🛡 Anonimizzazioni applicate</span>
+      <span class="ct-count" id="repCount"></span>
+    </button>
+    <div class="collapsible-body" id="repBody">
+      <div id="repList"></div>
+    </div>
+  </div>
+  <div class="diff-grid">
+    <div class="diff-col">
+      <div class="dlabel">Testo originale — locale, non inviato</div>
+      <div class="diff-scroll">
+        <div class="dtext" id="origText" style="min-height:100%;">—</div>
+      </div>
+    </div>
+    <div class="diff-col">
       <div class="dlabel">Testo anonimizzato ✏ modificabile</div>
-      <textarea id="anonText" class="dtext" style="font-size:11px;resize:vertical;min-height:600px;"></textarea>
+      <div class="diff-scroll" id="anonScroll">
+        <textarea id="anonText" class="dtext" style="font-size:11px;resize:none;width:100%;"></textarea>
+      </div>
     </div>
   </div>
   <div class="ib red">⚠ Verifica il testo a destra. Correggi manualmente qualsiasi dato rimasto prima di procedere.</div>
@@ -444,7 +444,6 @@ const PRICING = {
 const S    = { rawText:'', cleanText:'', anonText:'', letter:'', strippedBlocks:[], activeTemplateId:null };
 const S_XLS = { text:'', filename:'' };
 let newTplSections = [];
-let anonMode = 'regex';
 
 const DEFAULT_SYS = `Sei un assistente esperto in documentazione medica ospedaliera italiana.
 Genera una lettera di dimissione strutturata in italiano formale clinico.
@@ -474,14 +473,7 @@ function goTo(i) {
 // ═══════════════════════════════════════════════════
 // MODE SELECTOR
 // ═══════════════════════════════════════════════════
-function selectAnonMode(mode) {
-  anonMode = mode;
-  ['regex','dict','combined'].forEach(m => {
-    const el = document.getElementById('modeCard_'+m);
-    if (!el) return;
-    el.className = 'mode-card' + (m===mode ? ' sel-'+m : '');
-  });
-}
+
 
 // ═══════════════════════════════════════════════════
 // ANON_CONFIG — rebuilt engine (AO Padova Stroke Unit)
@@ -835,32 +827,17 @@ function runPipeline() {
       let finalText = clean;
       let reps = [];
 
-      if (anonMode === 'regex') {
-        stxt.textContent = 'Anonimizzazione regex...';
-        const res = applyRegex(clean);
-        finalText = res.text; reps = res.reps;
+      stxt.textContent = 'Stage 1 — Regex strutturale...';
+      const res = applyRegex(clean);
+      stxt.textContent = 'Stage 2 — Dizionario nomi...';
+      const res2 = applyNameDict(res.text);
+      finalText = res2.text;
+      reps = [...res.reps, ...res2.reps];
 
-      } else if (anonMode === 'dict') {
-        stxt.textContent = 'Ricerca dizionario nomi...';
-        const res = applyRegex(clean);
-        const res2 = applyNameDict(res.text);
-        finalText = res2.text;
-        reps = [...res.reps, ...res2.reps];
-
-      } else if (anonMode === 'combined') {
-        stxt.textContent = 'Stage 1 — Regex strutturale...';
-        const res = applyRegex(clean);
-        stxt.textContent = 'Stage 2 — Dizionario nomi...';
-        const res2 = applyNameDict(res.text);
-        finalText = res2.text;
-        reps = [...res.reps, ...res2.reps];
-      }
-
-      renderAnonResult(finalText, reps, anonMode);
+      renderAnonResult(finalText, reps);
 
       const saved = S.rawText.length - clean.length;
-      const modeLabel = anonMode==='regex' ? '{ } Regex' : anonMode==='dict' ? '📖 Dizionario' : '🛡 Regex+Dizionario';
-      stxt.textContent = `✓ ${strippedBlocks.length} blocchi rimossi (−${saved} char) · ${modeLabel} · verifica manualmente`;
+      stxt.textContent = `✓ ${strippedBlocks.length} blocchi rimossi (−${saved} char) · 🛡 Regex+Dizionario · verifica manualmente`;
       scard.style.borderColor = 'var(--green)';
 
     } catch(err) {
@@ -873,28 +850,39 @@ function runPipeline() {
   }, 60);
 }
 
+function toggleSection(id) {
+  const sec = document.getElementById(id);
+  const body = sec.querySelector('.collapsible-body');
+  const icon = sec.querySelector('.ct-icon');
+  const open = body.style.display === 'block';
+  body.style.display = open ? 'none' : 'block';
+  icon.textContent = open ? '▶' : '▼';
+}
+
 function renderBoilerplateReview(blocks) {
-  const wrap = document.getElementById('bpReview');
+  const sec = document.getElementById('bpSection');
   const list = document.getElementById('bpList');
-  if (!blocks.length) { wrap.style.display='none'; return; }
-  wrap.style.display='block';
+  const count = document.getElementById('bpCount');
+  if (!blocks.length) { sec.style.display='none'; return; }
+  sec.style.display = 'block';
+  count.textContent = blocks.length + ' blocchi';
   list.innerHTML = blocks.map(b=>
     `<div class="bpblock"><span class="bptag">✂ ${esc(b.tag)}</span>${esc(b.text)}</div>`
   ).join('');
 }
 
-function renderAnonResult(anonText, reps, mode) {
+function renderAnonResult(anonText, reps) {
   document.getElementById('anonText').value = anonText;
+  const sec = document.getElementById('repSection');
   const listEl = document.getElementById('repList');
+  const count = document.getElementById('repCount');
 
   if (!reps.length) {
-    listEl.innerHTML = '<div class="ib green" style="margin-bottom:11px;">✓ Nessun identificatore regex rilevato. Verifica manualmente.</div>';
+    sec.style.display = 'none';
   } else {
-    const modeChip = mode==='combined'
-      ? `<span class="chip c-w" style="margin-left:6px;">{ } Regex</span><span class="chip c-ok" style="margin-left:4px;">📖 Dizionario</span>`
-      : mode==='dict'
-      ? `<span class="chip c-ok" style="margin-left:6px;">📖 Dizionario</span>`
-      : `<span class="chip c-w" style="margin-left:6px;">{ } Regex Offline</span>`;
+    sec.style.display = 'block';
+    count.textContent = reps.length + ' sostituzioni';
+    const modeChip = `<span class="chip c-w" style="margin-left:6px;">{ } Regex</span><span class="chip c-ok" style="margin-left:4px;">📖 Dizionario</span>`;
     let h = `<div class="rl"><div class="rtitle">${reps.length} sostituzion${reps.length===1?'e':'i'} ${modeChip}</div>`;
     for (const r of reps)
       h+=`<div class="rrow"><span class="rorig">${esc(r.orig)}</span><span class="rarr">→</span><span class="rnew">${esc(r.repl)}</span><span class="rtype">${r.type}</span></div>`;
@@ -907,6 +895,30 @@ function renderAnonResult(anonText, reps, mode) {
   for (const r of reps)
     hi = hi.replace(new RegExp(escR(esc(r.orig)),'g'), `<span class="redacted">${esc(r.orig)}</span>`);
   document.getElementById('origText').innerHTML = hi;
+
+  // Sync scroll between columns and match textarea height
+  const origScroll = document.getElementById('origText').parentElement;
+  const anonScroll = document.getElementById('anonScroll');
+  const ta = document.getElementById('anonText');
+  // Let browser render, then match textarea height to content div
+  requestAnimationFrame(() => {
+    const h = Math.max(origScroll.querySelector('#origText').scrollHeight, 560);
+    ta.style.height = h + 'px';
+  });
+  if (!origScroll._syncBound) {
+    origScroll._syncBound = true;
+    let syncing = false;
+    origScroll.addEventListener('scroll', () => {
+      if (syncing) return; syncing = true;
+      anonScroll.scrollTop = origScroll.scrollTop;
+      syncing = false;
+    });
+    anonScroll.addEventListener('scroll', () => {
+      if (syncing) return; syncing = true;
+      origScroll.scrollTop = anonScroll.scrollTop;
+      syncing = false;
+    });
+  }
 }
 
 // ═══════════════════════════════════════════════════
@@ -1507,10 +1519,8 @@ function loadBaseSettings(){
     if(c.prof)document.getElementById('cfg_prof').value=c.prof;
     if(c.regex)document.getElementById('cfg_regex').value=c.regex;
   }catch(e){}
-}
 
 // ═══════════════════════════════════════════════════
-// UTILS
 // ═══════════════════════════════════════════════════
 function esc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
 function escR(s){return s.replace(/[.*+?^${}()|[\]\\]/g,'\\$&');}
