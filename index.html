@@ -314,6 +314,58 @@ hr.div{border:none;border-top:1px solid var(--border);margin:18px 0}
     <div class="ctitle">Prompt di Sistema — modificabile</div>
     <textarea id="systemPrompt" rows="8" style="font-size:11px;"></textarea>
   </div>
+  <div class="card" id="optimizerCard">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;flex-wrap:wrap;gap:8px;">
+      <div class="ctitle" style="margin:0;">Ottimizzatore Prompt <span class="chip c-purple" style="margin-left:6px;">AI</span></div>
+      <button class="btn btn-g" style="font-size:10px;padding:5px 11px;" onclick="toggleOptimizer()">▾ Espandi</button>
+    </div>
+    <div id="optimizerBody" style="display:none;">
+      <div class="ib purple" style="margin-bottom:12px;">
+        Analizza la cartella corrente + il prompt attuale e suggerisce: (1) un prompt di sistema migliorato, (2) sezioni mancanti, (3) un addendum specifico per questo caso. Opzionale: confronta con un caso simile in libreria.
+      </div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px;">
+        <label style="display:flex;align-items:center;gap:5px;margin:0;text-transform:none;font-size:11px;cursor:pointer;">
+          <input type="checkbox" id="optUseSimilar" checked style="width:auto;accent-color:var(--purple);">
+          <span style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--mid);">Confronta con caso simile (RAG)</span>
+        </label>
+        <label style="display:flex;align-items:center;gap:5px;margin:0;text-transform:none;font-size:11px;cursor:pointer;">
+          <input type="checkbox" id="optApplyAddendum" checked style="width:auto;accent-color:var(--purple);">
+          <span style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--mid);">Genera addendum user-prompt</span>
+        </label>
+      </div>
+      <button class="btn btn-g" style="border-color:var(--purple);color:var(--purple);" id="optBtn" onclick="runPromptOptimizer()">
+        <span id="optSpin" class="spin" style="display:none;border-top-color:var(--purple);"></span>
+        ✦ Analizza &amp; Ottimizza
+      </button>
+      <div id="optErr" class="ib red" style="display:none;margin-top:10px;"></div>
+      <div id="optResults" style="display:none;margin-top:14px;">
+        <div style="display:flex;gap:8px;margin-bottom:10px;flex-wrap:wrap;">
+          <button class="btn btn-g" style="font-size:10px;padding:4px 10px;" onclick="showOptTab('missing')" id="optTab_missing">⚠ Sezioni Mancanti</button>
+          <button class="btn btn-g" style="font-size:10px;padding:4px 10px;" onclick="showOptTab('improved')" id="optTab_improved">✦ Prompt Migliorato</button>
+          <button class="btn btn-g" style="font-size:10px;padding:4px 10px;" onclick="showOptTab('addendum')" id="optTab_addendum">＋ Addendum</button>
+        </div>
+        <div id="optPane_missing" style="display:none;">
+          <div class="ctitle" style="margin-bottom:8px;">Sezioni / Istruzioni Mancanti</div>
+          <div id="optMissingText" class="dtext" style="min-height:80px;white-space:pre-wrap;font-size:11px;"></div>
+        </div>
+        <div id="optPane_improved" style="display:none;">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
+            <div class="ctitle" style="margin:0;">Prompt di Sistema Suggerito</div>
+            <button class="btn btn-p" style="font-size:10px;padding:4px 11px;" onclick="applyImprovedPrompt()">✓ Applica</button>
+          </div>
+          <textarea id="optImprovedText" rows="10" style="font-size:11px;" readonly></textarea>
+        </div>
+        <div id="optPane_addendum" style="display:none;">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
+            <div class="ctitle" style="margin:0;">Addendum User-Prompt (caso specifico)</div>
+            <button class="btn btn-p" style="font-size:10px;padding:4px 11px;" onclick="applyAddendum()">✓ Aggiungi al Prompt</button>
+          </div>
+          <textarea id="optAddendumText" rows="6" style="font-size:11px;" readonly></textarea>
+          <div style="font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--dim);margin-top:6px;">Verrà accodato al prompt utente al momento della generazione, senza modificare il sistema.</div>
+        </div>
+      </div>
+    </div>
+  </div>
   <div class="card">
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;flex-wrap:wrap;gap:8px;">
       <div class="ctitle" style="margin:0;">Prompt Completo</div>
@@ -386,6 +438,22 @@ hr.div{border:none;border-top:1px solid var(--border);margin:18px 0}
     <button class="btn btn-g" style="margin-top:12px;" onclick="reloadNameDictionary()">↺ Ricarica dizionario</button>
     <div id="dictStatusSettings" style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--dim);margin-top:8px;"></div>
   </div>
+  <div class="card">
+    <div class="ctitle">Archiviazione Casi — GitHub</div>
+    <div class="ib" style="margin-bottom:10px;">Salva la libreria casi come file JSON in un repository GitHub privato. Richiede un Personal Access Token con scope <code>repo</code>. <a href="https://github.com/settings/tokens/new" target="_blank" style="color:var(--accent);">Crea token →</a></div>
+    <label>Personal Access Token (PAT)</label>
+    <input type="password" id="cfg_gh_token" placeholder="ghp_xxxxxxxxxxxxxxxxxxxx">
+    <label>Repository (owner/repo)</label>
+    <input type="text" id="cfg_gh_repo" placeholder="Es: mariorossi/lettera-ai-cases">
+    <label>Percorso file JSON nel repo</label>
+    <input type="text" id="cfg_gh_path" placeholder="cases.json" value="cases.json">
+    <div style="display:flex;gap:8px;margin-top:12px;flex-wrap:wrap;">
+      <button class="btn btn-g" style="font-size:10px;padding:6px 13px;" onclick="testGitHubConnection()">⚡ Testa Connessione</button>
+      <button class="btn btn-g" style="font-size:10px;padding:6px 13px;" onclick="syncLibraryToGitHub()">↑ Push Libreria</button>
+      <button class="btn btn-g" style="font-size:10px;padding:6px 13px;" onclick="pullLibraryFromGitHub()">↓ Pull Libreria</button>
+    </div>
+    <div id="ghStatus" style="font-family:'JetBrains Mono',monospace;font-size:10px;margin-top:8px;color:var(--dim);"></div>
+  </div>
   <div class="btn-row">
     <button class="btn btn-p" onclick="saveBaseSettings()">✓ Salva</button>
   </div>
@@ -420,7 +488,10 @@ hr.div{border:none;border-top:1px solid var(--border);margin:18px 0}
     <div class="ctitle">Aggiungi Caso</div>
     <label>Nome / Etichetta Caso</label>
     <input type="text" id="newTplName" placeholder='Es: "Neurologia — Stroke ischemico"'>
-    <label>Cartella Clinica Anonimizzata <span style="color:var(--dim);font-size:9px;text-transform:none;letter-spacing:0;">(solo locale per RAG)</span></label>
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:5px;margin-top:16px;">
+      <label style="margin:0;">Cartella Clinica Anonimizzata <span style="color:var(--dim);font-size:9px;text-transform:none;letter-spacing:0;">(solo locale per RAG)</span></label>
+      <button class="btn btn-g" style="font-size:9px;padding:3px 9px;" onclick="autoFillCaseFolder()">⟳ Da sessione</button>
+    </div>
     <textarea id="newCaseFolder" rows="8" placeholder="Incolla la cartella anonimizzata..."></textarea>
     <label>Lettera di Dimissione Corrispondente <span style="color:var(--dim);font-size:9px;text-transform:none;letter-spacing:0;">(inviata come few-shot)</span></label>
     <textarea id="newCaseLetter" rows="8" placeholder="Incolla la lettera già generata e revisionata..."></textarea>
@@ -2003,6 +2074,9 @@ function saveBaseSettings(){
     regex:document.getElementById('cfg_regex').value,
     surnamesUrl:document.getElementById('cfg_surnames_url').value,
     firstNamesUrl:document.getElementById('cfg_firstnames_url').value,
+    ghToken:document.getElementById('cfg_gh_token').value,
+    ghRepo:document.getElementById('cfg_gh_repo').value,
+    ghPath:document.getElementById('cfg_gh_path').value,
   }));alert('Impostazioni salvate.');
 }
 function loadBaseSettings(){
@@ -2015,6 +2089,9 @@ function loadBaseSettings(){
     if(c.regex)document.getElementById('cfg_regex').value=c.regex;
     if(c.surnamesUrl)document.getElementById('cfg_surnames_url').value=c.surnamesUrl;
     if(c.firstNamesUrl)document.getElementById('cfg_firstnames_url').value=c.firstNamesUrl;
+    if(c.ghToken)document.getElementById('cfg_gh_token').value=c.ghToken;
+    if(c.ghRepo)document.getElementById('cfg_gh_repo').value=c.ghRepo;
+    if(c.ghPath)document.getElementById('cfg_gh_path').value=c.ghPath||'cases.json';
   }catch(e){}
 }
 
@@ -2078,6 +2155,189 @@ loadNameDictionary();
 // Bind scroll listener to panel1 for diff resize
 document.getElementById('panel1').addEventListener('scroll', updateDiffHeight);
 window.addEventListener('resize', updateDiffHeight);
+
+// ═══════════════════════════════════════════════════
+// GITHUB LIBRARY SYNC
+// ═══════════════════════════════════════════════════
+function getGitHubCfg(){
+  const c=JSON.parse(localStorage.getItem('letteraai_cfg')||'{}');
+  return {token:c.ghToken||'', repo:c.ghRepo||'', path:c.ghPath||'cases.json'};
+}
+function ghStatus(msg,color='var(--dim)'){
+  const el=document.getElementById('ghStatus');
+  if(el){el.style.color=color;el.textContent=msg;}
+}
+async function ghApiGet(cfg){
+  const url=`https://api.github.com/repos/${cfg.repo}/contents/${cfg.path}`;
+  const r=await fetch(url,{headers:{Authorization:`token ${cfg.token}`,'Accept':'application/vnd.github.v3+json'}});
+  if(r.status===404)return null;
+  if(!r.ok)throw new Error(`GitHub GET ${r.status}: ${await r.text()}`);
+  return r.json();
+}
+async function ghApiPut(cfg,content,sha){
+  const url=`https://api.github.com/repos/${cfg.repo}/contents/${cfg.path}`;
+  const body={message:`Lettera.AI — aggiorna libreria casi ${new Date().toISOString()}`,content:btoa(unescape(encodeURIComponent(content)))};
+  if(sha)body.sha=sha;
+  const r=await fetch(url,{method:'PUT',headers:{Authorization:`token ${cfg.token}`,'Content-Type':'application/json','Accept':'application/vnd.github.v3+json'},body:JSON.stringify(body)});
+  if(!r.ok)throw new Error(`GitHub PUT ${r.status}: ${await r.text()}`);
+  return r.json();
+}
+async function testGitHubConnection(){
+  const cfg=getGitHubCfg();
+  if(!cfg.token||!cfg.repo){ghStatus('✗ Configura token e repo prima.','var(--red)');return;}
+  ghStatus('⟳ Test in corso...','var(--dim)');
+  try{
+    const r=await fetch(`https://api.github.com/repos/${cfg.repo}`,{headers:{Authorization:`token ${cfg.token}`}});
+    if(!r.ok)throw new Error(`HTTP ${r.status}`);
+    const d=await r.json();
+    ghStatus(`✓ Connesso a ${d.full_name} (${d.private?'privato':'pubblico'})${d.private?'':' — ⚠ repo pubblico!'}`,d.private?'var(--green)':'var(--accent)');
+  }catch(e){ghStatus('✗ '+e.message,'var(--red)');}
+}
+async function syncLibraryToGitHub(){
+  const cfg=getGitHubCfg();
+  if(!cfg.token||!cfg.repo){ghStatus('✗ Configura token e repo prima.','var(--red)');return;}
+  ghStatus('⟳ Upload in corso...','var(--dim)');
+  try{
+    const existing=await ghApiGet(cfg);
+    const sha=existing?.sha;
+    const lib=loadLibrary();
+    await ghApiPut(cfg,JSON.stringify(lib,null,2),sha);
+    ghStatus(`✓ ${lib.length} casi caricati su ${cfg.repo}/${cfg.path}`,'var(--green)');
+  }catch(e){ghStatus('✗ '+e.message,'var(--red)');}
+}
+async function pullLibraryFromGitHub(){
+  const cfg=getGitHubCfg();
+  if(!cfg.token||!cfg.repo){ghStatus('✗ Configura token e repo prima.','var(--red)');return;}
+  ghStatus('⟳ Download in corso...','var(--dim)');
+  try{
+    const file=await ghApiGet(cfg);
+    if(!file){ghStatus('✗ File non trovato. Fai prima un push.','var(--red)');return;}
+    const decoded=decodeURIComponent(escape(atob(file.content.replace(/\n/g,''))));
+    const lib=JSON.parse(decoded);
+    if(!Array.isArray(lib))throw new Error('Formato non valido');
+    saveLibrary(lib);renderLibrary();
+    ghStatus(`✓ ${lib.length} casi scaricati da ${cfg.repo}/${cfg.path}`,'var(--green)');
+  }catch(e){ghStatus('✗ '+e.message,'var(--red)');}
+}
+
+// ═══════════════════════════════════════════════════
+// AUTO-FILL CASE FOLDER FROM CURRENT SESSION
+// ═══════════════════════════════════════════════════
+function autoFillCaseFolder(){
+  if(!S.anonText){alert('Nessun testo anonimizzato in sessione. Completa prima lo Step 2.');return;}
+  document.getElementById('newCaseFolder').value=S.anonText;
+}
+
+// ═══════════════════════════════════════════════════
+// PROMPT OPTIMIZER
+// ═══════════════════════════════════════════════════
+let S_optAddendum='';
+
+function toggleOptimizer(){
+  const body=document.getElementById('optimizerBody');
+  const btn=document.querySelector('#optimizerCard .btn-g');
+  const visible=body.style.display!=='none';
+  body.style.display=visible?'none':'block';
+  btn.textContent=visible?'▾ Espandi':'▴ Chiudi';
+}
+function showOptTab(tab){
+  ['missing','improved','addendum'].forEach(t=>{
+    document.getElementById('optPane_'+t).style.display=t===tab?'block':'none';
+    const btn=document.getElementById('optTab_'+t);
+    if(btn){btn.style.borderColor=t===tab?'var(--purple)':'';btn.style.color=t===tab?'var(--purple)':'';}
+  });
+}
+function applyImprovedPrompt(){
+  const val=document.getElementById('optImprovedText').value;
+  if(!val)return;
+  if(!confirm('Sostituire il prompt di sistema corrente con quello suggerito?'))return;
+  document.getElementById('systemPrompt').value=val;
+  updateTokenPanel();
+}
+function applyAddendum(){
+  const val=document.getElementById('optAddendumText').value;
+  if(!val)return;
+  S_optAddendum=val;
+  alert('Addendum salvato. Verrà incluso nella prossima generazione.');
+}
+async function runPromptOptimizer(){
+  const key=document.getElementById('apiKeyInput').value.trim();
+  if(!key){document.getElementById('optErr').style.display='block';document.getElementById('optErr').textContent='✗ Inserisci la API key nella sezione sopra.';return;}
+  if(!S.anonText){document.getElementById('optErr').style.display='block';document.getElementById('optErr').textContent='✗ Nessun testo anonimizzato. Completa prima lo Step 1-2.';return;}
+  const btn=document.getElementById('optBtn'),spin=document.getElementById('optSpin');
+  btn.disabled=true;spin.style.display='inline-block';
+  document.getElementById('optErr').style.display='none';
+  document.getElementById('optResults').style.display='none';
+  const currentPrompt=document.getElementById('systemPrompt').value||DEFAULT_SYS;
+  const useSimilar=document.getElementById('optUseSimilar')?.checked;
+  const wantAddendum=document.getElementById('optApplyAddendum')?.checked;
+  let similarContext='';
+  if(useSimilar&&S.anonText){
+    const matches=findSimilarCases(S.anonText).slice(0,1);
+    if(matches.length>0){
+      const t=matches[0];
+      similarContext=`\n\n---\nCASO SIMILE IN LIBRERIA (${t.name}):\n${t.letter?t.letter.slice(0,1200):'(lettera non disponibile)'}\n---`;
+    }
+  }
+  const metaPrompt=`Sei un esperto di prompt engineering per documentazione medica italiana.
+Ti viene fornito:
+1. Il PROMPT DI SISTEMA attuale usato per generare lettere di dimissione
+2. Una CARTELLA CLINICA ANONIMIZZATA di esempio
+${similarContext?'3. Una LETTERA DI ESEMPIO da un caso simile in libreria':''}
+
+Il tuo compito è analizzare e ottimizzare il prompt.
+
+Rispondi SOLO con un oggetto JSON valido con questa struttura esatta:
+{
+  "missing_sections": "Elenco puntato delle sezioni o istruzioni mancanti nel prompt attuale, basandoti sulla cartella clinica fornita. Sii specifico su cosa manca.",
+  "improved_system_prompt": "Il prompt di sistema completo e migliorato, in italiano, incorporando le istruzioni mancanti. Mantieni le regole esistenti e aggiungi quelle necessarie.",
+  "user_addendum": "${wantAddendum?'Breve addendum specifico per questo caso (2-5 righe) da aggiungere al prompt utente, con istruzioni su come gestire elementi clinici peculiari di questa cartella.':'(non richiesto)'}"
+}
+
+Non aggiungere testo fuori dal JSON.`;
+  const userMsg=`PROMPT DI SISTEMA ATTUALE:\n\`\`\`\n${currentPrompt}\n\`\`\`\n\nCARTELLA CLINICA ANONIMIZZATA:\n\`\`\`\n${S.anonText.slice(0,4000)}\n\`\`\`${similarContext}`;
+  try{
+    const resp=await fetch('https://api.anthropic.com/v1/messages',{
+      method:'POST',
+      headers:{'Content-Type':'application/json','x-api-key':key,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
+      body:JSON.stringify({model:'claude-haiku-4-5-20251001',max_tokens:2000,temperature:0,system:metaPrompt,messages:[{role:'user',content:userMsg}]}),
+    });
+    if(!resp.ok){const e=await resp.json();throw new Error(e.error?.message||`HTTP ${resp.status}`);}
+    const data=await resp.json();
+    const raw=data.content[0].text.trim();
+    const cleaned=raw.replace(/^```json\s*/,'').replace(/^```\s*/,'').replace(/\s*```$/,'');
+    const parsed=JSON.parse(cleaned);
+    document.getElementById('optMissingText').textContent=parsed.missing_sections||'(nessuna sezione mancante identificata)';
+    document.getElementById('optImprovedText').value=parsed.improved_system_prompt||currentPrompt;
+    document.getElementById('optAddendumText').value=parsed.user_addendum&&parsed.user_addendum!=='(non richiesto)'?parsed.user_addendum:'';
+    document.getElementById('optResults').style.display='block';
+    showOptTab('missing');
+  }catch(e){
+    document.getElementById('optErr').style.display='block';
+    document.getElementById('optErr').textContent='✗ '+e.message;
+  }finally{btn.disabled=false;spin.style.display='none';}
+}
+
+// ═══════════════════════════════════════════════════
+// PATCH: include S_optAddendum in buildMessages
+// ═══════════════════════════════════════════════════
+// Wrap original buildMessages to inject addendum when set
+const _origBuildMessages=buildMessages;
+function buildMessages(){
+  const msgs=_origBuildMessages();
+  if(S_optAddendum&&msgs.length>0){
+    const last=msgs[msgs.length-1];
+    if(last.role==='user'){
+      if(typeof last.content==='string') last.content+=`\n\n[ISTRUZIONI AGGIUNTIVE PER QUESTO CASO]\n${S_optAddendum}`;
+      else if(Array.isArray(last.content)){
+        const textBlock=last.content.find(b=>b.type==='text');
+        if(textBlock) textBlock.text+=`\n\n[ISTRUZIONI AGGIUNTIVE PER QUESTO CASO]\n${S_optAddendum}`;
+      }
+    }
+  }
+  return msgs;
+}
+
 </script>
 </body>
 </html>
