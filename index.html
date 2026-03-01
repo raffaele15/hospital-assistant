@@ -535,7 +535,35 @@ REGOLE ASSOLUTE:
 - Usa il passato remoto per eventi durante il ricovero.
 - Mantieni il registro formale della medicina clinica italiana.
 - Segui esattamente la struttura del template fornito.
-- Restituisci SOLO la lettera, senza preamboli o commenti.`;
+- Restituisci SOLO la lettera, senza preamboli o commenti.
+
+ACCERTAMENTI STRUMENTALI:
+- Per ogni accertamento riporta la data tra parentesi nel formato (DD/MM/YYYY). Esempio: "ECG (22/02/2026): Fibrillazione atriale..."
+- Per esami ancora in corso di refertazione al momento della dimissione scrivi esattamente: "(referto in corso di completamento)"
+- Non omettere mai la data di un accertamento se presente nell'input.
+
+ESAME OBIETTIVO NEUROLOGICO (EON):
+- Trascrivi la formula neurologica verbatim dall'input senza riformulare. Non sintetizzare, non accorciare.
+- Includi sempre NIHSS e mRS se presenti.
+- Formula standard: "paziente vigile, orientato, collaborante. Esegue ordini semplici. Eloquio... nervi cranici... Mingazzini I e II... NIHSS:X. mRS X."
+
+TERAPIA DOMICILIARE:
+- Formato: lista inline separata da virgole con nome commerciale + dosaggio. Esempio: "Bisoprololo 2,5 mg, Ramipril 5 mg, ..."
+- Includi allergie immediatamente dopo la terapia domiciliare se presenti.
+
+TERAPIA ALLA DIMISSIONE — TABELLA MARKDOWN:
+Usa obbligatoriamente una tabella a 4 colonne:
+| Farmaco | Posologia | Orari | Note |
+|---------|-----------|-------|------|
+- Colonna "Farmaco": nome commerciale + formulazione (es. "Apixaban 2,5 mg cpr")
+- Colonna "Posologia": numero di unità e via (es. "1 cp os")
+- Colonna "Orari": orari di somministrazione (es. "8.00 - 20.00")
+- Colonna "Note": una tra — "terapia domiciliare" / "nuova terapia" / "dose modificata" / "fino al GG/MM poi stop" / "sospeso"
+- Ordina per orario di somministrazione mattutino.
+
+SWITCH TERAPEUTICI:
+- Se un farmaco è stato sostituito durante il ricovero, mantieni nel decorso la motivazione clinica esplicita (es. "in considerazione dell'eziologia cardioembolica...").
+- Nella tabella riporta solo la terapia attiva alla dimissione.`;
 
 // ═══════════════════════════════════════════════════
 // NAVIGATION
@@ -581,8 +609,8 @@ const ANON_CONFIG = {
       label: '[INTESTAZIONE_EPISODIO]', type: 'boiler' },
     { pattern: /(?:^|\r?\n)\s*(?:Paziente|Intestatario|Nominativo)\s*:\s*(?!(?:Nato|Data|Sesso|Cod|RIC|vigile|orientato|deceduto)\b)[A-Z][a-z\u00C0-\u00FF]+(?:\s+(?!(?:Nato|Data|Sesso|Cod|RIC)\b)[A-Z][a-z\u00C0-\u00FF]+)?/gm,
       label: '[PAZIENTE]', type: 'name' },
-    { pattern: /dimettiamo\s+in\s+data\s+odierna\s+(?:il\s+Sig\.?|la\s+Sig\.?ra)\s+[A-Z][a-zA-Z\u00C0-\u00FF]+(?:\s+[A-Z][a-zA-Z\u00C0-\u00FF]+)?,/gi,
-      label: 'dimettiamo in data odierna il Sig. [PAZIENTE],', type: 'name' },
+    { pattern: /(?<=dimettiamo\s+in\s+data\s+odierna\s+(?:il\s+Sig\.?ra?\.?\s+|la\s+Sig\.?ra\.?\s+))[A-Z][a-zA-Z\u00C0-\u00FF]+(?:\s+[A-Z][a-zA-Z\u00C0-\u00FF]+)?(?=\s*,)/gi,
+      label: '[PAZIENTE]', type: 'name' },
     { pattern: /\bil\s+(?:[Ss]ig\.(?:ra)?|[Pp]aziente)\s+([A-Z][a-zA-Z\u00C0-\u00FF]+(?:\s+[A-Z][a-zA-Z\u00C0-\u00FF]+)?)/g,
       label: 'il sig. [PAZIENTE]', type: 'name' },
     { pattern: /\bla\s+[Ss]ig\.?ra\.?\s+([A-Z][a-zA-Z\u00C0-\u00FF]+)/g,
@@ -699,8 +727,8 @@ const ANON_CONFIG = {
       label: '[PAZIENTE]', type: 'name' },
     { pattern: /\b\d{2}[\/\.]\d{2}[\/\.]\d{4}(?=\s+(?:Maschio|Femmina|M\b|F\b))/g,
       label: '[DATA_NASCITA]', type: 'date' },
-    // ALL CAPS full name on own line
-    { pattern: /^[A-Z]{2,}(?:\s+[A-Z]{2,})+$/gm,
+    // ALL CAPS full name on own line — excludes clinical locations and exam section labels
+    { pattern: /^(?!(?:STROKE\s+UNIT|PRONTO\s+SOCCORSO|CLINICA\s+NEUROLOGICA|CLINICA\s+NEUROLOG|UNITA\s+STROKE|STROKE\s+UNIT\s+[-–]|ESAME\s+NEUROLOGICO|ESAME\s+OBIETTIVO|ESAME\s+OBBIETTIVO|ANAMNESI\s+PATOLOGICA|ANAMNESI\s+FISIOLOGICA|DECORSO\s+CLINICO|TERAPIA\s+DOMICILIARE|TERAPIA\s+ALLA|MOTIVO\s+DEL\s+RICOVERO|ACCERTAMENTI\s+STRUMENTALI|VALUTAZIONI\s+SPECIALISTICHE|ESAMI\s+DI\s+LABORATORIO|FOLLOW[\s\-]UP))[A-Z]{2,}(?:\s+[A-Z]{2,})+$/gm,
       label: '[OPERATORE]', type: 'name' },
     // ── PATCHED: ALL CAPS single word — expanded exclusion list ───────────
     { pattern: /^(?!(?:STROKE|URGENTE|ORDINARIO|AMBULATORIALE|DIAGNOSI|REPARTO|COGNOME|NOME|SESSO|DATA|INTERVENTO|PRIMO|SECONDO|ANESTESISTA|INFERMIERE|TECNICO|CHIRURGO|OPERATORE|GLUCOSIO|UREA|CREATININA|SODIO|POTASSIO|CLORO|CALCIO|FOSFATO|ALBUMINA|BILIRUBINA|TOTALE|CONIUGATA|INORGANICO|INORGANICA|URICO|ACIDO|PROTROMBINA|TROMBINA|FIBRINOGENO|FERRITINA|TRANSFERRINA|COLESTEROLO|TRIGLICERIDI|EMOGLOBINA|EMATOCRITO|PIASTRINE|LEUCOCITI|ERITROCITI|BASOFILI|EOSINOFILI|NEUTROFILI|LINFOCITI|MONOCITI|TROPONINA|PROCALCITONINA|SIDEREMIA|PROTEINURIA|MICROALBUMINURIA|CISTATINA|COSTITUENTE|RISULTATO|RIFERIMENTO|PRECEDENTE|INTERVALLO|METODO|CAMPIONE|COMMENTO|OBIETTIVO|NORMALIZZATO|BIOCHIMICI|BIOCHIMICHE|EMATOLOGICI|EMATOLOGICHE|COAGULAZIONE|SIEROLOGIA|IMMUNOLOGIA|ELETTROLITI|COSTITUENTI|URINE|LIQUOR|REATTIVA|CREATINCHINASI|DEIDROGENASI|LATTATO|LIPASI|AMILASI|FOSFATASI|TRANSAMINASI|GLICEMIA|INSULINA|CORTISOLO|PARATORMONE|COMPLEMENTO|ANTICORPI|ANTIGENE|SIEREMIA|VITAMINA|FOLATI|OMOCISTEINA|OSMOLALITA|CLEARANCE|BICARBONATO|MAGNESIO|ZINCO)$)[A-Z]{5,}$/gm,
@@ -731,7 +759,8 @@ const ANON_CONFIG = {
       label: '[PAGINA]', type: 'boiler' },
     { pattern: /FINE\s+DOCUMENTO\s*[-–]\s*PAGINA\s+FINALE/gi,
       label: '[FINE_DOCUMENTO]', type: 'boiler' },
-    { pattern: /\b[A-Z][a-z\u00C0-\u00FF]+\s+[A-Z][a-z\u00C0-\u00FF]+(?=\s+\(\d{2}\/\d{2}\/\d{4})/g,
+    // Cap pair before date — exclude clinical locations and exam labels
+    { pattern: /\b(?!(?:Stroke\s+Unit|Pronto\s+Soccorso|Clinica\s+Neurologica|Esame\s+Neurologico|Esame\s+Obiettivo|Esame\s+Obbiettivo|Anamnesi\s+Patologica|Anamnesi\s+Fisiologica|Decorso\s+Clinico|Reparto\s+Neurologia|Unita\s+Stroke|Pronto\s+Soc)\b)[A-Z][a-z\u00C0-\u00FF]+\s+[A-Z][a-z\u00C0-\u00FF]+(?=\s+\(\d{2}\/\d{2}\/\d{4})/g,
       label: '[OPERATORE]', type: 'name' },
     { pattern: /\[NOME\]\s*\(\d{2}\/\d{2}\/\d{4}\s+[\d:]+\)/g,
       label: '[OPERATORE_FARMACO]', type: 'boiler' },
@@ -811,10 +840,10 @@ const ANON_CONFIG = {
     /^\(P\)\s+Profilo[^\n]*/i,
     /^per\s+il\s+ricovero\s+\d/i,
     /^Padova,?\s+\d{2}\/\d{2}\/\d{4}\s*$/i,
-    /^Alla\s+C\.\s*A\.\s+del\s+Medico\s+Curante\s*$/i,
+    /^Alla\s+(?:cortese\s+attenzione|[Cc]ortese\s+[Aa]ttenzione)\s+del\s+Medico\s+Curante\s*$/i,
     /^Egregio\s+[Cc]ollega\s*,?\s*$/i,
     /^I\s+risultati\s+di\s+questo\s+referto[^\n]*/i,
-    /^parte\s+del\s+Medico\s+Curante[^\n]*/i,
+    /^parte\s+del\s+(?:Medico\s+)?[Rr]eportage[^\n]*/i,
     /^\*\*\*\s+Referto\s+Finale\s+\*\*\*/i,
     /^Il\s+[Dd]irettore\s*$/i,
     /^Validato\s+da\s*:/i,
@@ -1092,7 +1121,7 @@ function applyNameDict(text) {
   // Pass 2: fuzzy pairs
   const tokens2=tokenise(result);
   const pass2Spans=[];
-  // ── PATCHED: expanded SKIP set with biochemistry terms ──────────────────
+  // ── PATCHED: expanded SKIP set with biochemistry terms and clinical labels ──────────────
   const SKIP2=new Set([
     'nascita','cognome','nome','sesso','reparto','diagnosi','anamnesi',
     'terapia','esame','referto','paziente','medico','infermiere',
@@ -1120,6 +1149,22 @@ function applyNameDict(text) {
     'gravidanza','emolizzato','sovrastima','reattiva',
     // Units
     'mmol','umol','nmol','litro','litri',
+    // Clinical locations and exam section labels — NEW
+    'neurologica','neurologico','neurologici','neurologia',
+    'obiettivo','obbiettivo','generale','ingresso',
+    'soccorso','pronto','clinica','unita','unit',
+    'fisiatrica','fisiatrico','fisiatria',
+    'cardiologica','cardiologia','radiologia',
+    'nefrologia','pneumologia','ortopedia',
+    'geriatria','medicina','chirurgia','riabilitazione',
+    'decorso','clinico','farmacologica','motivo',
+    'patologica','remota','fisiologica','familiare',
+    'accertamenti','strumentali','laboratorio','specialistiche',
+    'valutazioni','neurologica','obiettivi',
+    // Letter structure words — must never be redacted
+    'curante','attenzione','cortese','collega','egregio',
+    'dimettiamo','odierna','assistita','assistito',
+    'ricoverata','ricoverato','degenza',
   ]);
   for(let i=0;i<tokens2.length-1;i++){
     const t1=tokens2[i],t2=tokens2[i+1];
@@ -1170,6 +1215,20 @@ function applyNameDict(text) {
     'terapeutico','normalizzato','alterata','digiuno',
     'gravidanza','emolizzato','sovrastima','reattiva',
     'mmol','umol','nmol','litro','litri',
+    // Clinical locations, exam labels, section headers — NEW
+    'neurologica','neurologico','neurologici','neurologia',
+    'obiettivo','obbiettivo','generale','ingresso',
+    'soccorso','pronto','clinica','fisiatrica','fisiatrico','fisiatria',
+    'cardiologica','cardiologia','radiologia','nefrologia',
+    'pneumologia','ortopedia','geriatria','medicina','chirurgia',
+    'riabilitazione','decorso','clinico','farmacologica','motivo',
+    'patologica','remota','fisiologica','familiare',
+    'accertamenti','strumentali','laboratorio','specialistiche',
+    'valutazioni','obiettivi','unita',
+    // Letter structure words — must never be redacted
+    'curante','attenzione','cortese','collega','egregio',
+    'dimettiamo','odierna','assistita','assistito',
+    'ricoverata','ricoverato','degenza',
   ]);
   for(const name of allSurnames){
     if(name.length<4)continue;
@@ -1676,7 +1735,7 @@ Durante la degenza sono stati eseguiti i seguenti **esami di laboratorio:**
 [Lista — mantieni valori numerici esatti dall'input]
 
 ed i seguenti **accertamenti strumentali** e **valutazioni specialistiche**:
-[Lista — mantieni date e referti esatti dall'input]
+[Per ogni accertamento: "Nome esame (DD/MM/YYYY): referto sintetico." — se in refertazione: "(referto in corso di completamento)"]
 
 **Decorso clinico**
 [Prosa clinica 150-300 parole, passato remoto, sintesi cronologica dell'input]
@@ -1684,7 +1743,10 @@ ed i seguenti **accertamenti strumentali** e **valutazioni specialistiche**:
 Alla dimissione [condizioni cliniche alla dimissione].
 
 **Terapia alla dimissione:**
-[Trascrivi ultima terapia dall'input — farmaco, dose, frequenza]
+
+| Farmaco | Posologia | Orari | Note |
+|---------|-----------|-------|------|
+[Una riga per farmaco — nome+formulazione | n cp/os | 8.00-20.00 | terapia domiciliare / nuova terapia / dose modificata / fino al GG/MM poi stop]
 
 [Follow-up e accertamenti pendenti dall'input]
 
