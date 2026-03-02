@@ -493,11 +493,33 @@ hr.div{border:none;border-top:1px solid var(--border);margin:18px 0}
     <textarea id="newCaseFolder" rows="8" placeholder="Incolla la cartella anonimizzata..."></textarea>
     <label>Lettera di Dimissione Corrispondente <span style="color:var(--dim);font-size:9px;text-transform:none;letter-spacing:0;">(inviata come few-shot)</span></label>
     <textarea id="newCaseLetter" rows="8" placeholder="Incolla la lettera già generata e revisionata..."></textarea>
-    <div class="btn-row" style="margin-top:12px;">
-      <button class="btn btn-g" onclick="autoExtractTemplate()">
-        <span class="spin" id="tplExtSpin" style="display:none;"></span>
-        ✦ Auto-estrai fingerprint
-      </button>
+
+    <!-- ── Fingerprint section ───────────────────────────────────────── -->
+    <div style="margin-top:18px;padding-top:14px;border-top:1px solid var(--border);">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;flex-wrap:wrap;gap:8px;">
+        <div style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--accent);text-transform:uppercase;letter-spacing:.1em;">Fingerprint Stilistico</div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;">
+          <button class="btn btn-g" style="font-size:9px;padding:4px 10px;" onclick="copyFingerprintPrompt()" title="Copia il prompt da incollare in un'AI esterna">⎘ Copia prompt per AI esterna</button>
+          <button class="btn btn-g" onclick="autoExtractTemplate()" style="font-size:9px;padding:4px 10px;">
+            <span class="spin" id="tplExtSpin" style="display:none;"></span>
+            ✦ Auto-estrai (API)
+          </button>
+        </div>
+      </div>
+      <div class="ib" style="margin-bottom:10px;font-size:10px;line-height:1.6;">
+        <strong>Metodo 1 — Auto (API):</strong> clicca "Auto-estrai" per estrarre automaticamente il fingerprint dalla lettera usando l'API.<br>
+        <strong>Metodo 2 — Manuale:</strong> clicca "Copia prompt per AI esterna", incollalo in Claude/ChatGPT insieme alla cartella e alla lettera, poi incolla il JSON risultante nel campo qui sotto e clicca "Importa JSON".
+      </div>
+      <!-- Manual fingerprint textarea -->
+      <label style="margin-bottom:4px;">Fingerprint JSON <span style="color:var(--dim);font-size:9px;text-transform:none;letter-spacing:0;">(da AI esterna — incolla il JSON e importa)</span></label>
+      <div style="display:flex;gap:8px;align-items:flex-start;">
+        <textarea id="manualFingerprintJson" rows="5" style="font-size:11px;font-family:'JetBrains Mono',monospace;" placeholder='{"apertura":"...","decorso":"...","terapia":"...","chiusura":"..."}' oninput="showManualFpImportBtn()"></textarea>
+        <button class="btn btn-p" id="manualFpImportBtn" style="display:none;font-size:10px;padding:6px 12px;white-space:nowrap;margin-top:0;" onclick="importManualFingerprint()">↑ Importa</button>
+      </div>
+      <div id="manualFpStatus" style="margin-top:6px;font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--dim);display:none;"></div>
+    </div>
+
+    <div class="btn-row" style="margin-top:14px;">
       <button class="btn btn-p" onclick="saveNewTemplate()">✓ Salva Caso</button>
     </div>
     <div id="tplExtStatus" style="margin-top:8px;font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--dim);display:none;"></div>
@@ -2234,6 +2256,66 @@ function autoFillCaseFolder(){
   document.getElementById('newCaseFolder').value=S.anonText;
 }
 
+// ── MANUAL FINGERPRINT ──────────────────────────────────────────────
+const FINGERPRINT_PROMPT = `Analizza questa cartella clinica anonimizzata e la relativa lettera di dimissione. Estrai SOLO lo stile redazionale della lettera (non i dati clinici).
+
+Restituisci ESCLUSIVAMENTE un oggetto JSON valido, senza testo prima o dopo, senza backtick, in questo formato esatto:
+{"apertura":"<stile dell'apertura e presentazione del caso>","decorso":"<stile narrativo usato per descrivere il decorso clinico>","terapia":"<stile con cui viene presentata la terapia alla dimissione>","chiusura":"<stile della chiusura, saluti, follow-up>"}
+
+Regole:
+- Descrivi SOLO il registro linguistico, la struttura delle frasi, i tempi verbali, le formule fisse
+- NON includere dati clinici specifici (diagnosi, farmaci, nomi, date)
+- Ogni campo max 2-3 frasi
+- Solo JSON, nient'altro
+
+===== CARTELLA CLINICA =====
+[INCOLLA QUI LA CARTELLA CLINICA ANONIMIZZATA]
+
+===== LETTERA DI DIMISSIONE =====
+[INCOLLA QUI LA LETTERA DI DIMISSIONE]`;
+
+function copyFingerprintPrompt(){
+  const folder = document.getElementById('newCaseFolder').value.trim();
+  const letter = document.getElementById('newCaseLetter').value.trim();
+  let prompt = FINGERPRINT_PROMPT;
+  if(folder) prompt = prompt.replace('[INCOLLA QUI LA CARTELLA CLINICA ANONIMIZZATA]', folder);
+  if(letter) prompt = prompt.replace('[INCOLLA QUI LA LETTERA DI DIMISSIONE]', letter);
+  navigator.clipboard.writeText(prompt).then(()=>{
+    const btn = event.target;
+    const orig = btn.textContent;
+    btn.textContent = '✓ Copiato!';
+    btn.style.color = 'var(--green)';
+    setTimeout(()=>{btn.textContent=orig;btn.style.color='';}, 2000);
+  });
+}
+function showManualFpImportBtn(){
+  const val = document.getElementById('manualFingerprintJson').value.trim();
+  const btn = document.getElementById('manualFpImportBtn');
+  btn.style.display = val ? 'inline-block' : 'none';
+}
+function importManualFingerprint(){
+  const raw = document.getElementById('manualFingerprintJson').value.trim();
+  const status = document.getElementById('manualFpStatus');
+  status.style.display = 'block';
+  try{
+    const parsed = JSON.parse(raw.replace(/```json|```/g,'').trim());
+    const map = {apertura:'Apertura', decorso:'Decorso tipo', terapia:'Terapia tipo', chiusura:'Chiusura'};
+    newTplSections = [];
+    for(const [k,label] of Object.entries(map))
+      if(parsed[k]) newTplSections.push({id:'ntpl_'+Date.now()+'_'+k, label, text:parsed[k]});
+    if(!newTplSections.length) throw new Error('Nessun campo valido trovato (apertura/decorso/terapia/chiusura)');
+    renderNewTplSections();
+    const fp = buildFingerprintFromSections(newTplSections);
+    status.style.color = 'var(--green)';
+    status.textContent = `✓ Fingerprint importato · ${newTplSections.length} sezioni · ~${tok(fp)} token`;
+    document.getElementById('manualFingerprintJson').value = '';
+    document.getElementById('manualFpImportBtn').style.display = 'none';
+  } catch(e){
+    status.style.color = 'var(--red)';
+    status.textContent = '✗ JSON non valido: ' + e.message;
+  }
+}
+
 // ═══════════════════════════════════════════════════
 // PROMPT OPTIMIZER
 // ═══════════════════════════════════════════════════
@@ -2337,6 +2419,34 @@ renderLibrary();
 loadNameDictionary();
 document.getElementById('panel1').addEventListener('scroll',updateDiffHeight);
 window.addEventListener('resize',updateDiffHeight);
+
+// ── Silent auto-pull from GitHub on startup ──────────────────────────
+(async function autoPullOnStartup(){
+  const cfg=getGitHubCfg();
+  if(!cfg.token||!cfg.repo)return; // not configured, skip silently
+  try{
+    const file=await ghApiGet(cfg);
+    if(!file)return; // no remote file yet
+    const decoded=decodeURIComponent(escape(atob(file.content.replace(/\n/g,''))));
+    const remote=JSON.parse(decoded);
+    if(!Array.isArray(remote))return;
+    // Merge: keep any local cases not yet on GitHub (by id), then overwrite with remote
+    const local=loadLibrary();
+    const remoteIds=new Set(remote.map(c=>c.id));
+    const localOnly=local.filter(c=>!remoteIds.has(c.id));
+    const merged=[...remote,...localOnly];
+    saveLibrary(merged);
+    renderLibrary();
+    if(merged.length!==remote.length){
+      ghStatus(`↓ Auto-sync: ${remote.length} casi da GitHub + ${localOnly.length} locali non ancora pushati`,'var(--blue)');
+    } else {
+      ghStatus(`↓ Auto-sync: ${remote.length} casi caricati da GitHub`,'var(--dim)');
+    }
+  }catch(e){
+    // fail silently — don't disturb startup
+    console.warn('Auto-pull GitHub failed:',e.message);
+  }
+})();
 
 </script>
 </body>
