@@ -449,8 +449,12 @@ hr.div{border:none;border-top:1px solid var(--border);margin:18px 0}
       <button class="btn btn-g" style="font-size:10px;padding:6px 13px;" onclick="testGitHubConnection()">⚡ Testa Connessione</button>
       <button class="btn btn-g" style="font-size:10px;padding:6px 13px;" onclick="syncLibraryToGitHub()">↑ Push Libreria</button>
       <button class="btn btn-g" style="font-size:10px;padding:6px 13px;" onclick="pullLibraryFromGitHub()">↓ Pull Libreria</button>
+      <button class="btn btn-p" style="font-size:10px;padding:6px 13px;" onclick="downloadPreConfigured()" title="Scarica una copia del file con token e repo già incorporati — aprila su qualsiasi browser senza riconfigurare">⬇ Scarica pre-configurata</button>
+      <button class="btn btn-g" style="font-size:10px;padding:6px 13px;" onclick="copyPreConfigured(true)" title="Copia HTML completo con token incorporato">⎘ Copia con token</button>
+      <button class="btn btn-g" style="font-size:10px;padding:6px 13px;" onclick="copyPreConfigured(false)" title="Copia HTML senza token — per condividere o incollare in un'AI">⎘ Copia senza token</button>
     </div>
     <div id="ghStatus" style="font-family:'JetBrains Mono',monospace;font-size:10px;margin-top:8px;color:var(--dim);"></div>
+    <div class="ib" style="margin-top:10px;font-size:10px;background:rgba(255,180,0,0.08);border-color:var(--accent);">⚠ La versione pre-configurata contiene il token in chiaro nel file HTML. Conservala come un file privato — non condividerla e non caricarla su repo pubblici.</div>
   </div>
   <div class="btn-row">
     <button class="btn btn-p" onclick="saveBaseSettings()">✓ Salva</button>
@@ -532,6 +536,13 @@ hr.div{border:none;border-top:1px solid var(--border);margin:18px 0}
 
 <script>
 'use strict';
+
+// ═══════════════════════════════════════════════════
+// HARDCODED DEFAULTS (set by "Scarica versione pre-configurata")
+// ═══════════════════════════════════════════════════
+const DEFAULT_GH_TOKEN = '';
+const DEFAULT_GH_REPO  = '';
+const DEFAULT_GH_PATH  = 'cases.json';
 
 // ═══════════════════════════════════════════════════
 // PRICING
@@ -2189,7 +2200,11 @@ function updateDiffHeight(){
 // ═══════════════════════════════════════════════════
 function getGitHubCfg(){
   const c=JSON.parse(localStorage.getItem('letteraai_cfg')||'{}');
-  return{token:c.ghToken||'',repo:c.ghRepo||'',path:c.ghPath||'cases.json'};
+  return{
+    token: c.ghToken || DEFAULT_GH_TOKEN,
+    repo:  c.ghRepo  || DEFAULT_GH_REPO,
+    path:  c.ghPath  || DEFAULT_GH_PATH || 'cases.json',
+  };
 }
 function ghStatus(msg,color='var(--dim)'){
   const el=document.getElementById('ghStatus');
@@ -2246,6 +2261,47 @@ async function pullLibraryFromGitHub(){
     saveLibrary(lib);renderLibrary();
     ghStatus(`✓ ${lib.length} casi scaricati da ${cfg.repo}/${cfg.path}`,'var(--green)');
   }catch(e){ghStatus('✗ '+e.message,'var(--red)');}
+}
+
+function downloadPreConfigured(){
+  const token=document.getElementById('cfg_gh_token').value.trim();
+  const repo=document.getElementById('cfg_gh_repo').value.trim();
+  const path=document.getElementById('cfg_gh_path').value.trim()||'cases.json';
+  if(!token||!repo){
+    ghStatus('✗ Inserisci token e repo prima di scaricare.','var(--red)');return;
+  }
+  const src=document.documentElement.outerHTML;
+  const patched=src
+    .replace(/^const DEFAULT_GH_TOKEN = '';/m, `const DEFAULT_GH_TOKEN = '${token}';`)
+    .replace(/^const DEFAULT_GH_REPO  = '';/m, `const DEFAULT_GH_REPO  = '${repo}';`)
+    .replace(/^const DEFAULT_GH_PATH  = 'cases\.json';/m, `const DEFAULT_GH_PATH  = '${path}';`);
+  const blob=new Blob([patched],{type:'text/html'});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');
+  a.href=url;a.download='Lettera.AI_configured.html';a.click();
+  URL.revokeObjectURL(url);
+  ghStatus('✓ File scaricato — aprilo su qualsiasi browser, si connetterà automaticamente a GitHub.','var(--green)');
+}
+function copyPreConfigured(withToken){
+  const token=document.getElementById('cfg_gh_token').value.trim();
+  const repo=document.getElementById('cfg_gh_repo').value.trim();
+  const path=document.getElementById('cfg_gh_path').value.trim()||'cases.json';
+  if(withToken&&(!token||!repo)){
+    ghStatus('✗ Inserisci token e repo prima di copiare.','var(--red)');return;
+  }
+  const src=document.documentElement.outerHTML;
+  let patched=src
+    .replace(/^const DEFAULT_GH_REPO  = '';/m, `const DEFAULT_GH_REPO  = '${repo}';`)
+    .replace(/^const DEFAULT_GH_PATH  = 'cases\.json';/m, `const DEFAULT_GH_PATH  = '${path}';`);
+  if(withToken){
+    patched=patched.replace(/^const DEFAULT_GH_TOKEN = '';/m, `const DEFAULT_GH_TOKEN = '${token}';`);
+  }
+  navigator.clipboard.writeText(patched).then(()=>{
+    ghStatus(withToken
+      ? '✓ Copiato con token — incolla in un file .html e aprilo in qualsiasi browser.'
+      : '✓ Copiato senza token — sicuro da condividere o incollare in un\'AI.',
+      'var(--green)');
+  }).catch(e=>ghStatus('✗ Copia fallita: '+e.message,'var(--red)'));
 }
 
 // ═══════════════════════════════════════════════════
