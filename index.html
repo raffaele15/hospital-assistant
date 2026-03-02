@@ -6,6 +6,7 @@
 <title>Lettera.AI — Dimissione</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/docx@8.5.0/build/index.min.js"></script>
 <link href="https://fonts.googleapis.com/css2?family=Crimson+Pro:ital,wght@0,300;0,400;0,600;1,300;1,400&family=JetBrains+Mono:wght@300;400;500&display=swap" rel="stylesheet">
 
 <style>
@@ -401,6 +402,7 @@ hr.div{border:none;border-top:1px solid var(--border);margin:18px 0}
   <div class="btn-row" style="margin-top:18px;">
     <button class="btn btn-p" onclick="copyLetter()">⎘ Copia testo</button>
     <button class="btn btn-g" onclick="printLetter()">⎙ Stampa / PDF</button>
+    <button class="btn btn-b" onclick="exportWord()" style="background:var(--blue);color:#fff;">⬇ Esporta Word</button>
     <button class="btn btn-g" onclick="newLetter()">↺ Nuova lettera</button>
   </div>
 </div>
@@ -532,7 +534,7 @@ REGOLE ASSOLUTE:
 - NON aggiungere diagnosi, valori di laboratorio, farmaci, dosi o date non esplicitamente forniti.
 - Se una sezione manca, scrivi: "Non documentato."
 - NON usare nomi di pazienti, medici, ospedali o qualsiasi identificativo personale.
-- USA ESCLUSIVAMENTE passato remoto o imperfetto per eventi durante il ricovero. MAI il passato prossimo (ha eseguito → eseguì / venne eseguito; è stata avviata → venne avviata / fu avviata; è stato ricoverato → venne ricoverato; ha presentato → presentò; è stato sottoposto → venne sottoposto). Regola: se puoi scrivere "venne" o "fu" al posto di "è stato/è stata", fallo sempre.
+- USA ESCLUSIVAMENTE il passato prossimo per eventi durante il ricovero. MAI il passato remoto né l'imperfetto come tempo principale. Esempi corretti: "ha eseguito", "è stata avviata", "è stato ricoverato", "ha presentato", "è stato sottoposto", "si è mantenuto". Regola: usa sempre le forme con "ha/hanno/è/sono + participio passato".
 - Mantieni il registro formale della medicina clinica italiana.
 - Segui esattamente la struttura del template fornito.
 - Restituisci SOLO la lettera, senza preamboli o commenti.
@@ -1715,7 +1717,7 @@ Egregio Collega,
 "${diagnosi}"
 
 **Motivo del ricovero**
-[Prosa continua, passato remoto o imperfetto — MAI passato prossimo — dati di presentazione dall'input]
+[Prosa continua, passato prossimo — MAI passato remoto — dati di presentazione dall'input]
 
 **Non farmacoallergie note.** [oppure allergie se documentate]
 
@@ -1738,7 +1740,7 @@ ed i seguenti **accertamenti strumentali** e **valutazioni specialistiche**:
 [Per ogni accertamento: "Nome esame (DD/MM/YYYY): referto sintetico." — se in refertazione: "(referto in corso di completamento)"]
 
 **Decorso clinico**
-[Prosa clinica 150-300 parole, passato remoto o imperfetto — MAI passato prossimo — sintesi cronologica dell'input]
+[Prosa clinica 150-300 parole, passato prossimo — MAI passato remoto — sintesi cronologica dell'input]
 
 Alla dimissione [condizioni cliniche alla dimissione].
 
@@ -1893,6 +1895,181 @@ function printLetter(){
   const w=window.open('','_blank');
   w.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Lettera di Dimissione</title><style>body{font-family:'Times New Roman',serif;font-size:12pt;line-height:1.8;margin:2.5cm;color:#000}pre{white-space:pre-wrap;font-family:inherit}</style></head><body><pre>${esc(S.letter)}</pre></body></html>`);
   w.document.close();w.print();
+}
+// ═══════════════════════════════════════════════════
+// WORD EXPORT
+// ═══════════════════════════════════════════════════
+async function exportWord(){
+  if(!S.letter||S.letter==='—'){alert('Nessuna lettera da esportare.');return;}
+  const {
+    Document,Packer,Paragraph,TextRun,Table,TableRow,TableCell,
+    AlignmentType,HeadingLevel,BorderStyle,WidthType,ShadingType,
+    LevelFormat,VerticalAlign
+  }=docx;
+
+  // ── Parse inline markdown: **bold**, *italic*, `code`, [PLACEHOLDER]
+  function parseInline(raw){
+    const runs=[];
+    // tokenise: **bold**, *italic*, `code`, and plain text
+    const re=/\*\*(.+?)\*\*|\*(.+?)\*|`(.+?)`|(\[[A-Z_]+\])|([^*`\[]+)/g;
+    let m;
+    while((m=re.exec(raw))!==null){
+      if(m[1]!==undefined) runs.push(new TextRun({text:m[1],bold:true,font:'Arial',size:22}));
+      else if(m[2]!==undefined) runs.push(new TextRun({text:m[2],italics:true,font:'Arial',size:22}));
+      else if(m[3]!==undefined) runs.push(new TextRun({text:m[3],font:'Courier New',size:20}));
+      else if(m[4]!==undefined) runs.push(new TextRun({text:m[4],bold:true,color:'C0392B',font:'Arial',size:22}));
+      else if(m[5]!==undefined) runs.push(new TextRun({text:m[5],font:'Arial',size:22}));
+    }
+    return runs.length?runs:[new TextRun({text:'',font:'Arial',size:22})];
+  }
+
+  // ── Parse a markdown table into a docx Table
+  function parseTable(lines){
+    // lines: ['| H1 | H2 |', '|---|---|', '| v1 | v2 |', ...]
+    const rowLines=lines.filter(l=>/^\|/.test(l)&&!/^\|\s*[-:]+/.test(l));
+    if(!rowLines.length)return null;
+    const PAGE_W=9026; // A4 with 2.5cm margins each side in DXA
+    const borderDef={style:BorderStyle.SINGLE,size:4,color:'AAAAAA'};
+    const borders={top:borderDef,bottom:borderDef,left:borderDef,right:borderDef};
+    const parseRow=line=>line.replace(/^\||\|$/g,'').split('|').map(c=>c.trim());
+    const allRows=rowLines.map(parseRow);
+    const colCount=Math.max(...allRows.map(r=>r.length));
+    const colW=Math.floor(PAGE_W/colCount);
+    const colWidths=Array(colCount).fill(colW);
+    const isHeader=(i)=>i===0;
+    const rows=allRows.map((cells,ri)=>new TableRow({
+      tableHeader:isHeader(ri),
+      children:cells.map((cell,ci)=>new TableCell({
+        borders,
+        width:{size:colWidths[ci]||colW,type:WidthType.DXA},
+        margins:{top:80,bottom:80,left:120,right:120},
+        shading:isHeader(ri)?{fill:'1B4F72',type:ShadingType.CLEAR}:undefined,
+        children:[new Paragraph({
+          children:isHeader(ri)
+            ?[new TextRun({text:cell,bold:true,color:isHeader(ri)?'FFFFFF':'000000',font:'Arial',size:20})]
+            :parseInline(cell),
+          spacing:{before:20,after:20},
+        })],
+      }))
+    }));
+    return new Table({
+      width:{size:PAGE_W,type:WidthType.DXA},
+      columnWidths:colWidths,
+      rows,
+    });
+  }
+
+  // ── Main parser: convert letter text to docx children array
+  function letterToDocx(text){
+    const children=[];
+    const lines=text.split('\n');
+    let i=0;
+    const SPACING_NORMAL={before:0,after:120};
+    const SPACING_HEADING={before:240,after:80};
+
+    while(i<lines.length){
+      const line=lines[i];
+
+      // Table detection: collect consecutive table lines
+      if(/^\|/.test(line)){
+        const tableLines=[];
+        while(i<lines.length&&/^\|/.test(lines[i])){tableLines.push(lines[i]);i++;}
+        const tbl=parseTable(tableLines);
+        if(tbl){children.push(tbl);children.push(new Paragraph({children:[new TextRun('')],spacing:SPACING_NORMAL}));}
+        continue;
+      }
+
+      // Horizontal rule ---
+      if(/^[-*_]{3,}\s*$/.test(line)){
+        children.push(new Paragraph({
+          border:{bottom:{style:BorderStyle.SINGLE,size:6,color:'CCCCCC',space:1}},
+          spacing:{before:120,after:120},children:[new TextRun('')]
+        }));i++;continue;
+      }
+
+      // Heading # / ##
+      if(/^#{1,2}\s/.test(line)){
+        const lvl=line.startsWith('## ')?HeadingLevel.HEADING_2:HeadingLevel.HEADING_1;
+        const txt=line.replace(/^#{1,3}\s/,'');
+        children.push(new Paragraph({
+          heading:lvl,
+          spacing:SPACING_HEADING,
+          children:[new TextRun({text:txt,bold:true,font:'Arial',size:lvl===HeadingLevel.HEADING_1?28:24})]
+        }));i++;continue;
+      }
+
+      // Bullet list: - item
+      if(/^-\s/.test(line)){
+        const txt=line.replace(/^-\s/,'');
+        children.push(new Paragraph({
+          numbering:{reference:'bullets',level:0},
+          spacing:{before:40,after:40},
+          children:parseInline(txt),
+        }));i++;continue;
+      }
+
+      // Blank line → spacer paragraph
+      if(line.trim()===''){
+        children.push(new Paragraph({children:[new TextRun('')],spacing:{before:0,after:60}}));
+        i++;continue;
+      }
+
+      // Plain paragraph (may contain **bold** inline)
+      children.push(new Paragraph({
+        children:parseInline(line),
+        spacing:SPACING_NORMAL,
+        alignment:AlignmentType.JUSTIFIED,
+      }));
+      i++;
+    }
+    return children;
+  }
+
+  try{
+    const children=letterToDocx(S.letter);
+    const doc=new Document({
+      numbering:{config:[
+        {reference:'bullets',levels:[{
+          level:0,format:LevelFormat.BULLET,text:'•',alignment:AlignmentType.LEFT,
+          style:{paragraph:{indent:{left:720,hanging:360}}}
+        }]}
+      ]},
+      styles:{
+        default:{document:{run:{font:'Arial',size:22}}},
+        paragraphStyles:[
+          {id:'Heading1',name:'Heading 1',basedOn:'Normal',next:'Normal',quickFormat:true,
+            run:{size:28,bold:true,font:'Arial',color:'1B4F72'},
+            paragraph:{spacing:{before:240,after:80},outlineLevel:0}},
+          {id:'Heading2',name:'Heading 2',basedOn:'Normal',next:'Normal',quickFormat:true,
+            run:{size:24,bold:true,font:'Arial',color:'1B4F72'},
+            paragraph:{spacing:{before:180,after:60},outlineLevel:1}},
+        ]
+      },
+      sections:[{
+        properties:{
+          page:{
+            size:{width:11906,height:16838}, // A4
+            margin:{top:1418,right:1134,bottom:1134,left:1134}, // 2.5cm top, 2cm others
+          }
+        },
+        children,
+      }]
+    });
+
+    const blob=await Packer.toBlob(doc);
+    const url=URL.createObjectURL(blob);
+    const a=document.createElement('a');
+    a.href=url;
+    // Try to get patient placeholder for filename
+    const patMatch=S.letter.match(/\[PAZIENTE_NOME\]|dimettiamo[^,]+,\s*([A-Za-z\s]+),/i);
+    const _d=new Date();const dd=String(_d.getDate()).padStart(2,'0');const mm=String(_d.getMonth()+1).padStart(2,'0');const yyyy=_d.getFullYear();
+    a.download=`Lettera_dimissione_${dd}_${mm}_${yyyy}.docx`;
+    a.click();
+    URL.revokeObjectURL(url);
+  }catch(e){
+    console.error('Word export error:',e);
+    alert('Errore esportazione Word: '+e.message);
+  }
 }
 function newLetter(){
   if(!confirm('Nuova lettera? I dati correnti andranno persi.'))return;
