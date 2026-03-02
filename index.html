@@ -729,11 +729,11 @@ const ANON_CONFIG = {
       label: '[PAZIENTE]', type: 'name' },
     { pattern: /\b\d{2}[\/\.]\d{2}[\/\.]\d{4}(?=\s+(?:Maschio|Femmina|M\b|F\b))/g,
       label: '[DATA_NASCITA]', type: 'date' },
-    // ALL CAPS full name on own line — excludes clinical locations and exam section labels
-    { pattern: /^(?!(?:STROKE\s+UNIT|PRONTO\s+SOCCORSO|CLINICA\s+NEUROLOGICA|CLINICA\s+NEUROLOG|UNITA\s+STROKE|STROKE\s+UNIT\s+[-–]|ESAME\s+NEUROLOGICO|ESAME\s+OBIETTIVO|ESAME\s+OBBIETTIVO|ANAMNESI\s+PATOLOGICA|ANAMNESI\s+FISIOLOGICA|DECORSO\s+CLINICO|TERAPIA\s+DOMICILIARE|TERAPIA\s+ALLA|MOTIVO\s+DEL\s+RICOVERO|ACCERTAMENTI\s+STRUMENTALI|VALUTAZIONI\s+SPECIALISTICHE|ESAMI\s+DI\s+LABORATORIO|FOLLOW[\s\-]UP))[A-Z]{2,}(?:\s+[A-Z]{2,})+$/gm,
+    // ALL CAPS full name on own line — excludes clinical locations, exam section labels, and lab terms
+    { pattern: /^(?!(?:STROKE\s+UNIT|PRONTO\s+SOCCORSO|CLINICA\s+NEUROLOGICA|CLINICA\s+NEUROLOG|UNITA\s+STROKE|STROKE\s+UNIT\s+[-–]|ESAME\s+NEUROLOGICO|ESAME\s+OBIETTIVO|ESAME\s+OBBIETTIVO|ANAMNESI\s+PATOLOGICA|ANAMNESI\s+FISIOLOGICA|DECORSO\s+CLINICO|TERAPIA\s+DOMICILIARE|TERAPIA\s+ALLA|MOTIVO\s+DEL\s+RICOVERO|ACCERTAMENTI\s+STRUMENTALI|VALUTAZIONI\s+SPECIALISTICHE|ESAMI\s+DI\s+LABORATORIO|FOLLOW[\s\-]UP|EMOGLOBINA\s+GLICATA|PROFILO\s+LIPIDICO|PROFILO\s+METABOLICO|PROFILO\s+PROTEICO|PROFILO\s+ERITROCITARIO|PROFILO\s+COAGULATIVO|FUNZIONALITA\s+RENALE|FUNZIONALITA\s+EPATICA|FUNZIONALITA\s+TIROIDEA|ENZIMI\s+MUSCOLARI|METABOLITI\s+SPECIALI|FORMULA\s+LEUCOCITARIA|INDICI\s+DI\s+FLOGOSI|ESAME\s+URINE|ESAMI\s+MICROBIOLOGICI|EMATOLOGIA\s+E|COSTITUENTI\s+BIOCHIMICI|MICROSCOPIA\s+CLINICA|ORMONI|APTOGLOBINA|COMPLEMENTO))[A-Z]{2,}(?:\s+[A-Z]{2,})+$/gm,
       label: '[OPERATORE]', type: 'name' },
     // ── PATCHED: ALL CAPS single word — expanded exclusion list ───────────
-    { pattern: /^(?!(?:STROKE|URGENTE|ORDINARIO|AMBULATORIALE|DIAGNOSI|REPARTO|COGNOME|NOME|SESSO|DATA|INTERVENTO|PRIMO|SECONDO|ANESTESISTA|INFERMIERE|TECNICO|CHIRURGO|OPERATORE|GLUCOSIO|UREA|CREATININA|SODIO|POTASSIO|CLORO|CALCIO|FOSFATO|ALBUMINA|BILIRUBINA|TOTALE|CONIUGATA|INORGANICO|INORGANICA|URICO|ACIDO|PROTROMBINA|TROMBINA|FIBRINOGENO|FERRITINA|TRANSFERRINA|COLESTEROLO|TRIGLICERIDI|EMOGLOBINA|EMATOCRITO|PIASTRINE|LEUCOCITI|ERITROCITI|BASOFILI|EOSINOFILI|NEUTROFILI|LINFOCITI|MONOCITI|TROPONINA|PROCALCITONINA|SIDEREMIA|PROTEINURIA|MICROALBUMINURIA|CISTATINA|COSTITUENTE|RISULTATO|RIFERIMENTO|PRECEDENTE|INTERVALLO|METODO|CAMPIONE|COMMENTO|OBIETTIVO|NORMALIZZATO|BIOCHIMICI|BIOCHIMICHE|EMATOLOGICI|EMATOLOGICHE|COAGULAZIONE|SIEROLOGIA|IMMUNOLOGIA|ELETTROLITI|COSTITUENTI|URINE|LIQUOR|REATTIVA|CREATINCHINASI|DEIDROGENASI|LATTATO|LIPASI|AMILASI|FOSFATASI|TRANSAMINASI|GLICEMIA|INSULINA|CORTISOLO|PARATORMONE|COMPLEMENTO|ANTICORPI|ANTIGENE|SIEREMIA|VITAMINA|FOLATI|OMOCISTEINA|OSMOLALITA|CLEARANCE|BICARBONATO|MAGNESIO|ZINCO)$)[A-Z]{5,}$/gm,
+    { pattern: /^(?!(?:STROKE|URGENTE|ORDINARIO|AMBULATORIALE|DIAGNOSI|REPARTO|COGNOME|NOME|SESSO|DATA|INTERVENTO|PRIMO|SECONDO|ANESTESISTA|INFERMIERE|TECNICO|CHIRURGO|OPERATORE|GLUCOSIO|UREA|CREATININA|SODIO|POTASSIO|CLORO|CALCIO|FOSFATO|ALBUMINA|BILIRUBINA|TOTALE|CONIUGATA|INORGANICO|INORGANICA|URICO|ACIDO|PROTROMBINA|TROMBINA|FIBRINOGENO|FERRITINA|TRANSFERRINA|COLESTEROLO|TRIGLICERIDI|EMOGLOBINA|EMATOCRITO|PIASTRINE|LEUCOCITI|ERITROCITI|BASOFILI|EOSINOFILI|NEUTROFILI|LINFOCITI|MONOCITI|TROPONINA|PROCALCITONINA|SIDEREMIA|PROTEINURIA|MICROALBUMINURIA|CISTATINA|COSTITUENTE|RISULTATO|RIFERIMENTO|PRECEDENTE|INTERVALLO|METODO|CAMPIONE|COMMENTO|OBIETTIVO|NORMALIZZATO|BIOCHIMICI|BIOCHIMICHE|EMATOLOGICI|EMATOLOGICHE|COAGULAZIONE|SIEROLOGIA|IMMUNOLOGIA|ELETTROLITI|COSTITUENTI|URINE|LIQUOR|REATTIVA|CREATINCHINASI|DEIDROGENASI|LATTATO|LIPASI|AMILASI|FOSFATASI|TRANSAMINASI|GLICEMIA|INSULINA|CORTISOLO|PARATORMONE|COMPLEMENTO|ANTICORPI|ANTIGENE|SIEREMIA|VITAMINA|FOLATI|OMOCISTEINA|OSMOLALITA|CLEARANCE|BICARBONATO|MAGNESIO|ZINCO|GLICATA|GLICATO|GLICOSATA|GLICOSATO|METABOLITI|SPECIALI|LIPIDICO|LIPIDICA|COAGULATIVO|COAGULATIVA|TIROIDEO|TIROIDEA|ERITROCITARIO|ERITROCITARIA|APTOGLOBINA|OSMOLALITA|HBAIC|SIEROLOGICO|MICROSCOPICO|ORMONALE)$)[A-Z]{5,}$/gm,
       label: '[PAZIENTE]', type: 'name' },
     // ALL CAPS name + date
     { pattern: /\b[A-Z]{2,}(?:\s+[A-Z]{2,})+(?=\s+(?:\d{2}[\/\.]\d{2}[\/\.]\d{4}|\())/g,
@@ -873,7 +873,8 @@ function freezeLabLines(text) {
   let frozen = text;
 
   // Freeze P-/B-/U-/C-/S-/E- prefixed lab result lines (e.g. P-GLUCOSIO 4,4 mmol/L)
-  frozen = frozen.replace(/^[PBUCSE]-[A-Z].*/gm, (match) => {
+  // Also matches indented versions from XLS formatter (leading spaces)
+  frozen = frozen.replace(/^[ \t]*[PBUCSE]-[A-Z].*/gm, (match) => {
     const key = '\x00LAB' + (idx++) + '\x00';
     placeholders.push({ key, value: match });
     return key;
@@ -894,7 +895,8 @@ function freezeLabLines(text) {
   });
 
   // Freeze bare lab result lines: ALL_CAPS_WORD * numeric unit range
-  frozen = frozen.replace(/^[A-Z][A-Z\s\-\/\(\)]{3,}\*?\s+[\d,]+\s+\S+.*$/gm, (match) => {
+  // Also matches indented versions from XLS formatter
+  frozen = frozen.replace(/^[ \t]*[A-Z][A-Z\s\-\/\(\)]{3,}\*?\s+[\d,]+\s+\S+.*$/gm, (match) => {
     // Only freeze if it looks like a lab value (has a number after the name)
     if (/\d/.test(match)) {
       const key = '\x00LAB' + (idx++) + '\x00';
@@ -1167,6 +1169,12 @@ function applyNameDict(text) {
     'curante','attenzione','cortese','collega','egregio',
     'dimettiamo','odierna','assistita','assistito',
     'ricoverata','ricoverato','degenza',
+    // Lab section headers and modifiers
+    'glicata','glicato','glicosata','glicosato',
+    'metaboliti','speciali','lipidico','lipidica',
+    'coagulativo','coagulativa','tiroideo','tiroidea',
+    'eritrocitario','eritrocitaria','sierologico','microscopico',
+    'ormonale','aptoglobina',
   ]);
   for(let i=0;i<tokens2.length-1;i++){
     const t1=tokens2[i],t2=tokens2[i+1];
@@ -1231,6 +1239,12 @@ function applyNameDict(text) {
     'curante','attenzione','cortese','collega','egregio',
     'dimettiamo','odierna','assistita','assistito',
     'ricoverata','ricoverato','degenza',
+    // Lab section headers and modifiers
+    'glicata','glicato','glicosata','glicosato',
+    'metaboliti','speciali','lipidico','lipidica',
+    'coagulativo','coagulativa','tiroideo','tiroidea',
+    'eritrocitario','eritrocitaria','sierologico','microscopico',
+    'ormonale','aptoglobina',
   ]);
   for(const name of allSurnames){
     if(name.length<4)continue;
@@ -1383,6 +1397,14 @@ async function processXls(file){
   }catch(err){spin.style.display='none';stxt.style.color='var(--red)';stxt.textContent='✗ '+err.message;}
 }
 function formatLabRows(rows){
+  // ── Strip patient identifiers from any cell ────────────────────────────
+  function stripIds(s){
+    return s
+      .replace(/\bRIC_AO_\d+\b/gi,'[ID_RICOVERO]')           // numero ricovero
+      .replace(/\b\d{7,12}[-/]\d{0,6}\b/g,'[ID_RICOVERO]')   // ID numerico lungo
+      .replace(/\b(?:CF|C\.F\.)\s*:?\s*[A-Z0-9]{16}\b/gi,'[CODICE_FISCALE]') // codice fiscale
+      .replace(/\b[A-Z]{6}\d{2}[A-Z]\d{2}[A-Z]\d{3}[A-Z]\b/g,'[CODICE_FISCALE]'); // CF pattern
+  }
   let dataStart=0;
   for(let i=0;i<Math.min(rows.length,15);i++){
     const r=rows[i].map(c=>String(c).trim().toLowerCase());
@@ -1390,7 +1412,7 @@ function formatLabRows(rows){
   }
   const lines=[];let examCount=0;
   for(let i=dataStart;i<rows.length;i++){
-    const row=rows[i].map(c=>String(c).trim());
+    const row=rows[i].map(c=>stripIds(String(c).trim()));
     const[name,value,,unit,refRange]=row;
     if(!name)continue;
     const isComment=name&&!value&&name.length>40;
