@@ -640,14 +640,47 @@ const ANON_CONFIG = {
       label: '[ETA_DN]', type: 'date' },
     { pattern: /\(n[\s.]+\s*\d{1,2}[\/\-\.]\d{1,2}[\/\-\.]\d{4}\)/gi,
       label: '([DATA_NASCITA])', type: 'date' },
-    { pattern: /Episodio\s+RIC_AO_\S+\s+[A-Z]+(?:\s+[A-Z]+)+\s+nato\/a\s+il\s+[\d\/]+[^\n]*/gi,
+    { pattern: /Episodio\s+RIC_AO_\S+\s+[A-Z]+\s+[A-Z]+\s+nato\/a\s+il\s+[\d\/]+/gi,
       label: '[INTESTAZIONE_EPISODIO]', type: 'boiler' },
     { pattern: /(?:^|\r?\n)\s*(?:Paziente|Intestatario|Nominativo)\s*:\s*(?!(?:Nato|Data|Sesso|Cod|RIC|vigile|orientato|deceduto)\b)[A-Z][a-z\u00C0-\u00FF]+(?:\s+(?!(?:Nato|Data|Sesso|Cod|RIC)\b)[A-Z][a-z\u00C0-\u00FF]+)?/gm,
       label: '[PAZIENTE]', type: 'name' },
     { pattern: /(?<=dimettiamo\s+in\s+data\s+odierna\s+(?:il\s+Sig\.?ra?\.?\s+|la\s+Sig\.?ra\.?\s+))[A-Z][a-zA-Z\u00C0-\u00FF]+(?:\s+[A-Z][a-zA-Z\u00C0-\u00FF]+)?(?=\s*,)/gi,
       label: '[PAZIENTE]', type: 'name' },
     { pattern: /\bil\s+(?:[Ss]ig\.(?:ra)?|[Pp]aziente)\s+([A-Z][a-zA-Z\u00C0-\u00FF]+(?:\s+[A-Z][a-zA-Z\u00C0-\u00FF]+)?)/g,
+
       label: 'il sig. [PAZIENTE]', type: 'name' },
+    // ── Patterns replacing nameDict_fallback ──────────────────────────────────
+    // "Sig. Cognome" / "Sig.ra Cognome" in report headers (microbiologia, sierologia)
+    { pattern: /\bSig\.(?:ra\.?)?\s+[A-Z][a-z\u00C0-\u00FF]{2,}/g,
+      label: '[PAZIENTE]', type: 'name' },
+    // ALL-CAPS surname immediately before [NOME] tag in lab pager headers (MAZZOCCA [NOME])
+    { pattern: /\b[A-Z]{3,}(?=\s+\[NOME\])/g,
+      label: '[PAZIENTE]', type: 'name' },
+    // Digits glued to ALL-CAPS surname before [NOME] (Anni: 63MAZZOCCA [NOME])
+    { pattern: /(?<=\d)[A-Z]{3,}(?=\s+\[NOME\])/g,
+      label: '[PAZIENTE]', type: 'name' },
+    // "Infermiere: [NOME] Cognome" — residual surname after partial redaction (verbali NR)
+    { pattern: /Infermiere\s*:\s*(?:\[NOME\]\s+)?[A-Z][a-z\u00C0-\u00FF]{2,}/g,
+      label: 'Infermiere: [OPERATORE]', type: 'name' },
+    // "Dr. I. D'Errico" — title + optional initials + surname with apostrophe
+    { pattern: /(?:Dott\.(?:ssa\.?)?|Dr\.(?:ssa\.?)?)\s+(?:[A-Z]\.\s*){0,3}[A-Z][a-zA-Z'\u00C0-\u00FF]{2,}/g,
+      label: '[OPERATORE]', type: 'name' },
+    // "[NOME]NomeCognome" or "LUCACognome" — patient name glued to label "Cognome" (verbale op.)
+    { pattern: /[A-Za-z\u00C0-\u00FF]+(?=Cognome\b)/g,
+      label: '[PAZIENTE]', type: 'name' },
+    // "1/2LUCA MAZZOCCA" footer lines in verbale operatorio
+    { pattern: /\b\d+\/\d+[A-Z][a-zA-Z\u00C0-\u00FF]+(?:\s+[A-Z][a-zA-Z\u00C0-\u00FF]+)*/g,
+      label: '[PAGINA]', type: 'boiler' },
+    // Standalone "Cognome Nome" CamelCase pair on its own line (e.g. Turatti Giacomo)
+    { pattern: /^[A-Z][a-z\u00C0-\u00FF]{2,}\s+[A-Z][a-z\u00C0-\u00FF]{2,}\s*$/gm,
+      label: '[OPERATORE]', type: 'name' },
+    // ": COGNOME NOME" ALL-CAPS after colon on own line (e.g. : REGAZZO GIANLUCA)
+    { pattern: /^\s*:\s*[A-Z]{3,}(?:\s+[A-Z]{3,})+\s*$/gm,
+      label: ': [OPERATORE]', type: 'name' },
+    // "con [OPERATORE] e Cognome" — trailing surname in giro visite notes
+    { pattern: /(\[OPERATORE\][^\n]*?\se\s)([A-Z][a-z\u00C0-\u00FF]{3,})/g,
+      replace: (m,pre,name) => pre+'[OPERATORE]', label: 'e [OPERATORE]', type: 'name' },
+    // ─────────────────────────────────────────────────────────────────────────
     { pattern: /\bla\s+[Ss]ig\.?ra\.?\s+([A-Z][a-zA-Z\u00C0-\u00FF]+)/g,
       label: 'la sig.ra [PAZIENTE]', type: 'name' },
     { pattern: /\b[A-Za-z0-9._%+\-]+@[A-Za-z0-9.\-]+\.[A-Za-z]{2,}\b/g,
@@ -724,7 +757,7 @@ const ANON_CONFIG = {
     { pattern: /Al\s+Medico\s+Curante\s*:\s*\S+\s+\S+/gi,
       label: 'Al Medico Curante: [PAZIENTE]', type: 'name' },
     { pattern: /Provenienza\s*:\s*[^\n]+/gi, label: '[PROVENIENZA]', type: 'boiler' },
-    { pattern: /Medico\s+[Rr]ichiedente\s*:\s*[A-Z][a-z\u00C0-\u00FF][a-zA-Z\u00C0-\u00FF]*(?:\s+[A-Z][a-zA-Z\u00C0-\u00FF]+)*/g,
+    { pattern: /Medico\s+[Rr]ichiedente\s*:\s*(?:[A-Z][a-z\u00C0-\u00FF][a-zA-Z\u00C0-\u00FF]*|[A-Z]{2,})(?:\s+(?:[A-Z][a-zA-Z\u00C0-\u00FF]+|[A-Z]{2,}))*/g,
       label: 'Medico richiedente: [OPERATORE]', type: 'name' },
     { pattern: /Medico\s+[Rr]efertante\s*:\s*[A-Z][a-z\u00C0-\u00FF][a-zA-Z\u00C0-\u00FF]*(?:\s+[A-Z][a-zA-Z\u00C0-\u00FF]+)*/g,
       label: 'Medico refertante: [OPERATORE]', type: 'name' },
@@ -785,7 +818,7 @@ const ANON_CONFIG = {
       label: '[FIRMA_DIMISSIONE]', type: 'boiler' },
     { pattern: /\d{5}\s+Padova\s*-\s*Ospedale[^\n]*/gi,
       label: '[INTESTAZIONE_AZ]', type: 'boiler' },
-    { pattern: /^Episodio\s+(?:[A-Z0-9_\-]+|\[ID_EPISODIO\])\s+[A-Z]+(?:\s+[A-Z]+)+\s+(?:[\d\/]+|\[DATA_NASCITA\])[^\n]*/gim,
+    { pattern: /^Episodio\s+[A-Z0-9_\-]+\s+[A-Z]+\s+[A-Z]+\s+[\d\/]+$/gim,
       label: '[INTESTAZIONE_EPISODIO]', type: 'boiler' },
     { pattern: /Data\s+nota\s+Nota\s+P\s+OperatoreData\s+ins\.?/gi,
       label: '[INTESTAZIONE_COLONNE]', type: 'boiler' },
@@ -818,30 +851,7 @@ const ANON_CONFIG = {
       label: '([OPERATORE])', type: 'name' },
   ],
 
-  nameDict_fallback: [
-    'Marcolin','Marianno','MARCOLIN','MARIANNO',
-    'Baracchini','Cavatorti','Favaretto','Ragone','Minicuci','Petrosino',
-    'Fredianelli','Mozzetta','Pieroni','Fabris','Viaro','Rubino',
-    'Biscari','Filosa','Calore','Tommasin','Cuzzilla','Lorioni',
-    'Formentin','Nuzzo','Venuto','Pernice','Montagnana','Fogar',
-    'Faggian','Cattai','Carraro','Manara','Librizzi','Mazzi','Rigato',
-    'Muffatto','Camporese','Corrado','Baritussio','Bauce','Brunello',
-    'Caforio','Cecchetto','Famoso','Fraccaro','Giordani','Schiavon',
-    'Piccione','Bettio','Santoro','Caldon','Cernaz','Palermo',
-    'Acerbi','Campagnolo','Raccanello','Antonini','Rozzi','Boschini',
-    'Bolgan','Bolgon',
-    'Amedeo','Marta','Sofia','Angelo','Martina','Laura',
-    'Giovanni','Maria','Giuseppe','Anna','Antonio','Rosa','Mario','Lucia',
-    'Francesco','Teresa','Luigi','Carmela','Salvatore','Angela','Sergio',
-    'Giovanna','Roberto','Giuseppina','Pietro','Caterina','Carlo','Concetta',
-    'Stefano','Paola','Claudio','Sandra','Maurizio','Giulia','Luca','Elena',
-    'Marco','Andrea','Alessandro','Valentina','Simone','Chiara','Davide',
-    'Alessandra','Matteo','Sara','Daniele','Federica','Emilio','Carla',
-    'Enzo','Ornella','Piero','Roberta','Renato','Patrizia','Giorgio',
-    'Cristina','Massimo','Alfredo','Monica','Bruno','Rossana','Diego',
-    'Claudia','Renzo','Arianna','Lorenzo','Ilaria','Edoardo','Silvia',
-    'Federica','Tiziana','Domenico','Romano','Donato','Francesco',
-  ],
+  nameDict_fallback: [],
 
   boilerplateLinePatterns: [
     /^Regione\s+(?:del\s+)?[Vv]eneto\s*$/,
@@ -1120,7 +1130,7 @@ function applyNameDict(text) {
 
   const exactSurnameSet=new Set(NAMES_DB.surnames);
   const exactFirstSet=new Set(NAMES_DB.firstNames);
-  ANON_CONFIG.nameDict_fallback.forEach(n=>{exactSurnameSet.add(n.toLowerCase());exactFirstSet.add(n.toLowerCase());});
+  // nameDict_fallback removed — replaced by structural regex patterns
 
   function tokenise(str){
     const tokens=[];
