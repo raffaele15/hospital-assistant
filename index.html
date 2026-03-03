@@ -677,7 +677,7 @@ const ANON_CONFIG = {
       label: 'MMG/PLS: [OPERATORE]', type: 'name' },
     { pattern: /\b[A-Z][a-z\u00C0-\u00FF]+\s+[A-Z][a-z\u00C0-\u00FF]+(?=\s+\(\d{2}\/\d{2}\/\d{4})/g,
       label: '[OPERATORE]', type: 'name' },
-    { pattern: /\b[A-Z][a-z\u00C0-\u00FF]+(?:\s+[A-Z][a-z\u00C0-\u00FF]+){1,2}(?=\s+[MIFR][A-Za-z]|\s+[MIFR]\s+[A-Za-z])/g,
+    { pattern: /\b[A-Z][a-z\u00C0-\u00FF]+(?:\s+[A-Z][a-z\u00C0-\u00FF]+){1,2}(?=\s*[MIFR][A-Za-z]|\s+[MIFR]\s+[A-Za-z])/g,
       label: '[OPERATORE]', type: 'name' },
     { pattern: /\b[A-Za-z\u00C0-\u00FF][a-zA-Z\u00C0-\u00FF]{1,}(?:\s+[A-Za-z\u00C0-\u00FF][a-zA-Z\u00C0-\u00FF]{1,}){0,2}(?=\s+(?:Coniuge|Figlio|Figlia|Fratello|Sorella|Genitore|Amico|Convivente|Nipote))/g,
       label: '[CONTATTO]', type: 'name' },
