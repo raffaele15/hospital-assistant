@@ -618,6 +618,15 @@ function goTo(i) {
 // ═══════════════════════════════════════════════════
 const ANON_CONFIG = {
   regexRules: [
+    // ── Episodio headers MUST run before ID/date patterns ───────────────────
+    { pattern: /Episodio\s+RIC_AO_\S+\s+[A-Z]+\s+[A-Z]+\s+nato\/a\s+il\s+[\d\/]+/gi,
+      label: '[INTESTAZIONE_EPISODIO]', type: 'boiler' },
+    { pattern: /^Episodio\s+[A-Z0-9_\-]+\s+[A-Z]+\s+[A-Z]+\s+[\d\/]+$/gim,
+      label: '[INTESTAZIONE_EPISODIO]', type: 'boiler' },
+    // Catch already-partially-replaced episodio lines (ID and/or date already swapped)
+    { pattern: /^Episodio\s+\S+\s+[A-Z]{2,}\s+[A-Z]{2,}(?:\s+\[DATA_NASCITA\])?$/gim,
+      label: '[INTESTAZIONE_EPISODIO]', type: 'boiler' },
+    // ────────────────────────────────────────────────────────────────────────
     { pattern: /\b[A-Z]{6}\d{2}[A-EHLMPRST]\d{2}[A-Z]\d{3}[A-Z]\b/g,
       label: '[CODICE_FISCALE]', type: 'id' },
     { pattern: /\bRIC_AO_\d{6,12}\b/g, label: '[ID_EPISODIO]', type: 'id' },
@@ -640,8 +649,6 @@ const ANON_CONFIG = {
       label: '[ETA_DN]', type: 'date' },
     { pattern: /\(n[\s.]+\s*\d{1,2}[\/\-\.]\d{1,2}[\/\-\.]\d{4}\)/gi,
       label: '([DATA_NASCITA])', type: 'date' },
-    { pattern: /Episodio\s+RIC_AO_\S+\s+[A-Z]+\s+[A-Z]+\s+nato\/a\s+il\s+[\d\/]+/gi,
-      label: '[INTESTAZIONE_EPISODIO]', type: 'boiler' },
     { pattern: /(?:^|\r?\n)\s*(?:Paziente|Intestatario|Nominativo)\s*:\s*(?!(?:Nato|Data|Sesso|Cod|RIC|vigile|orientato|deceduto)\b)[A-Z][a-z\u00C0-\u00FF]+(?:\s+(?!(?:Nato|Data|Sesso|Cod|RIC)\b)[A-Z][a-z\u00C0-\u00FF]+)?/gm,
       label: '[PAZIENTE]', type: 'name' },
     { pattern: /(?<=dimettiamo\s+in\s+data\s+odierna\s+(?:il\s+Sig\.?ra?\.?\s+|la\s+Sig\.?ra\.?\s+))[A-Z][a-zA-Z\u00C0-\u00FF]+(?:\s+[A-Z][a-zA-Z\u00C0-\u00FF]+)?(?=\s*,)/gi,
@@ -659,11 +666,19 @@ const ANON_CONFIG = {
     // Digits glued to ALL-CAPS surname before [NOME] (Anni: 63MAZZOCCA [NOME])
     { pattern: /(?<=\d)[A-Z]{3,}(?=\s+\[NOME\])/g,
       label: '[PAZIENTE]', type: 'name' },
+    { pattern: /Stampato\s+da\s*:\s*[A-Z][a-zA-Z\u00C0-\u00FF]+(?:\s+[A-Z][a-zA-Z\u00C0-\u00FF]+)*/g,
+      label: 'Stampato da: [OPERATORE]', type: 'name' },
+    // "Specializzando: Nome Cognome" in radiology reports
+    { pattern: /Specializzando\s*:\s*(?:\[NOME\]\s+)?[A-Z][a-zA-Z\u00C0-\u00FF]+(?:\s+[A-Z][a-zA-Z\u00C0-\u00FF]+)*/g,
+      label: 'Specializzando: [OPERATORE]', type: 'name' },
+    // "Medico: Nome Cognome" in radiology reports (standalone, NOT richiedente/refertante)
+    { pattern: /\bMedico\s*:\s*[A-Z][a-z\u00C0-\u00FF][a-zA-Z\u00C0-\u00FF]*(?:\s+[A-Z][a-zA-Z\u00C0-\u00FF]+)*/g,
+      label: 'Medico: [OPERATORE]', type: 'name' },
     // "Infermiere: [NOME] Cognome" — residual surname after partial redaction (verbali NR)
     { pattern: /Infermiere\s*:\s*(?:\[NOME\]\s+)?[A-Z][a-z\u00C0-\u00FF]{2,}/g,
       label: 'Infermiere: [OPERATORE]', type: 'name' },
-    // "Dr. I. D'Errico" — title + optional initials + surname with apostrophe
-    { pattern: /(?:Dott\.(?:ssa\.?)?|Dr\.(?:ssa\.?)?)\s+(?:[A-Z]\.\s*){0,3}[A-Z][a-zA-Z'\u00C0-\u00FF]{2,}/g,
+    // "Dr. I. D'Errico" / "Dott.Pieroni" — title (no-space OK) + initials + compound/hyphenated surname
+    { pattern: /(?:Dott\.(?:ssa\.?)?|Dr\.(?:ssa\.?)?)\s*(?:[A-Z]\.\s*){0,3}[A-Z][a-zA-Z'\u00C0-\u00FF\-]{2,}(?:\s+(?:De[ilr]?|Da[il]?|Dal|Di|Della|Von|Al|El)\s+[A-Z][a-zA-Z\u00C0-\u00FF]+|\s+[A-Z][a-zA-Z\u00C0-\u00FF\-]+)*/g,
       label: '[OPERATORE]', type: 'name' },
     // "[NOME]NomeCognome" or "LUCACognome" — patient name glued to label "Cognome" (verbale op.)
     { pattern: /[A-Za-z\u00C0-\u00FF]+(?=Cognome\b)/g,
@@ -674,6 +689,13 @@ const ANON_CONFIG = {
     // Standalone "Cognome Nome" CamelCase pair on its own line (e.g. Turatti Giacomo)
     { pattern: /^[A-Z][a-z\u00C0-\u00FF]{2,}\s+[A-Z][a-z\u00C0-\u00FF]{2,}\s*$/gm,
       label: '[OPERATORE]', type: 'name' },
+    // Single-word CamelCase surname on its own line, between [OPERATORE] context lines
+    // (e.g. "Grassi", "Gobbato" as operator surname only annotations)
+    { pattern: /(?<=\[OPERATORE\]\r?\n)([A-Z][a-z\u00C0-\u00FF]{3,})(?=\r?\n)/gm,
+      label: '[OPERATORE]', type: 'name' },
+    // Single-word CamelCase surname immediately before role-code line (M/I/F/R + text)
+    { pattern: /^([A-Z][a-z\u00C0-\u00FF]{3,})\r?\n(?=[MIFR][A-Z])/gm,
+      replace: (m, name) => '[OPERATORE]\n', label: '[OPERATORE]', type: 'name' },
     // ": COGNOME NOME" ALL-CAPS after colon on own line (e.g. : REGAZZO GIANLUCA)
     { pattern: /^\s*:\s*[A-Z]{3,}(?:\s+[A-Z]{3,})+\s*$/gm,
       label: ': [OPERATORE]', type: 'name' },
@@ -710,7 +732,7 @@ const ANON_CONFIG = {
       label: 'MMG/PLS: [OPERATORE]', type: 'name' },
     { pattern: /\b[A-Z][a-z\u00C0-\u00FF]+\s+[A-Z][a-z\u00C0-\u00FF]+(?=\s+\(\d{2}\/\d{2}\/\d{4})/g,
       label: '[OPERATORE]', type: 'name' },
-    { pattern: /\b[A-Z][a-z\u00C0-\u00FF]+(?:\s+[A-Z][a-z\u00C0-\u00FF]+){1,2}(?=\s*[MIFR][A-Za-z]|\s+[MIFR]\s+[A-Za-z])/g,
+    { pattern: /\b[A-Z][a-z\u00C0-\u00FF]+(?:\s+[A-Z][a-z\u00C0-\u00FF]+){1,2}(?=\s*[MIFR](?:[A-Za-z0-9]|\s|$)|\s+[MIFR]\s+[A-Za-z])/g,
       label: '[OPERATORE]', type: 'name' },
     { pattern: /\b[A-Za-z\u00C0-\u00FF][a-zA-Z\u00C0-\u00FF]{1,}(?:\s+[A-Za-z\u00C0-\u00FF][a-zA-Z\u00C0-\u00FF]{1,}){0,2}(?=\s+(?:Coniuge|Figlio|Figlia|Fratello|Sorella|Genitore|Amico|Convivente|Nipote))/g,
       label: '[CONTATTO]', type: 'name' },
@@ -763,7 +785,7 @@ const ANON_CONFIG = {
       label: 'Medico refertante: [OPERATORE]', type: 'name' },
     { pattern: /Refertato\s+da\s*:\s*(?:Dott\.(?:ssa\.?)?\s+|Dr\.(?:ssa\.?)?\s+)?[A-Z][a-z\u00C0-\u00FF][a-zA-Z\u00C0-\u00FF]*(?:\s+[A-Z][a-zA-Z\u00C0-\u00FF]+)*/g,
       label: 'Refertato da: [OPERATORE]', type: 'name' },
-    { pattern: /Responsabile(?:\s+[A-Za-z]+)?\s*:\s*(?:Dr\.?(?:ssa\.?)?|Prof\.?(?:ssa\.?)?)\s*[A-Z][a-zA-Z\u00C0-\u00FF]+(?:\s+[A-Z][a-zA-Z\u00C0-\u00FF]+)*/gi,
+    { pattern: /Responsabile(?:\s+[A-Za-z]+)?\s*:\s*(?:(?:Dr\.?(?:ssa\.?)?|Prof\.?(?:ssa\.?)?)\s*)?[A-Z][a-zA-Z\u00C0-\u00FF]+(?:\s+[A-Z][a-zA-Z\u00C0-\u00FF]+)*/gi,
       label: 'Responsabile: [OPERATORE]', type: 'name' },
     { pattern: /Operatore\s*:\s*[A-Z][a-z\u00C0-\u00FF][a-zA-Z\u00C0-\u00FF]*(?:\s+[A-Z][a-zA-Z\u00C0-\u00FF]+)*/g,
       label: 'Operatore: [OPERATORE]', type: 'name' },
@@ -818,8 +840,6 @@ const ANON_CONFIG = {
       label: '[FIRMA_DIMISSIONE]', type: 'boiler' },
     { pattern: /\d{5}\s+Padova\s*-\s*Ospedale[^\n]*/gi,
       label: '[INTESTAZIONE_AZ]', type: 'boiler' },
-    { pattern: /^Episodio\s+[A-Z0-9_\-]+\s+[A-Z]+\s+[A-Z]+\s+[\d\/]+$/gim,
-      label: '[INTESTAZIONE_EPISODIO]', type: 'boiler' },
     { pattern: /Data\s+nota\s+Nota\s+P\s+OperatoreData\s+ins\.?/gi,
       label: '[INTESTAZIONE_COLONNE]', type: 'boiler' },
     { pattern: /049\.821\.\d{4}(?:[^\n]*Prenotazioni[^\n]*)?/g,
@@ -830,6 +850,10 @@ const ANON_CONFIG = {
       label: '[PAGINA]', type: 'boiler' },
     { pattern: /FINE\s+DOCUMENTO\s*[-–]\s*PAGINA\s+FINALE/gi,
       label: '[FINE_DOCUMENTO]', type: 'boiler' },
+    // ALLCAPS surname + CamelCase firstname on its own line (e.g. "MAZZOCCA Luca" in lab headers)
+    // Excludes known clinical terms like STROKE, PRONTO, CLINICA, etc.
+    { pattern: /^(?!(?:STROKE|PRONTO|CLINICA|UNITA|REPARTO|ESAME|ANAMNESI|DECORSO|TERAPIA|MOTIVO|AZIENDA|REGIONE|DIPARTIMENTO|AMBULATORIO|INFERMIERE|MEDICO|TECNICO|PAZIENTE|DOTT|PROF)\b)[A-Z]{2,}\s+[A-Z][a-z\u00C0-\u00FF]{2,}\s*$/gm,
+      label: '[PAZIENTE]', type: 'name' },
     // Cap pair before date — exclude clinical locations and exam labels
     { pattern: /\b(?!(?:Stroke\s+Unit|Pronto\s+Soccorso|Clinica\s+Neurologica|Esame\s+Neurologico|Esame\s+Obiettivo|Esame\s+Obbiettivo|Anamnesi\s+Patologica|Anamnesi\s+Fisiologica|Decorso\s+Clinico|Reparto\s+Neurologia|Unita\s+Stroke|Pronto\s+Soc)\b)[A-Z][a-z\u00C0-\u00FF]+\s+[A-Z][a-z\u00C0-\u00FF]+(?=\s+\(\d{2}\/\d{2}\/\d{4})/g,
       label: '[OPERATORE]', type: 'name' },
@@ -996,16 +1020,30 @@ function applyRegex(text) {
   for (const rule of rules) {
     const re = new RegExp(rule.pattern.source, rule.pattern.flags);
     if (re.global) re.lastIndex = 0;
-    result = result.replace(re, (match) => {
-      const m = match.trim();
-      if (m.length > 1 && !reps.find(r => r.orig === m))
-        reps.push({ orig: m, repl: rule.label,
-          type: rule.type === 'id'   ? 'ID/Codice'
-              : rule.type === 'date' ? 'Data sensibile'
-              : rule.type === 'name' ? 'Nome'
-              : 'Boilerplate' });
-      return rule.label;
-    });
+    if (typeof rule.replace === 'function') {
+      // Custom replacer function (e.g. for 'e Cognome' trailing name)
+      result = result.replace(re, (...args) => {
+        const fullMatch = args[0].trim();
+        if (fullMatch.length > 1 && !reps.find(r => r.orig === fullMatch))
+          reps.push({ orig: fullMatch, repl: rule.label,
+            type: rule.type === 'id'   ? 'ID/Codice'
+                : rule.type === 'date' ? 'Data sensibile'
+                : rule.type === 'name' ? 'Nome'
+                : 'Boilerplate' });
+        return rule.replace(...args);
+      });
+    } else {
+      result = result.replace(re, (match) => {
+        const m = match.trim();
+        if (m.length > 1 && !reps.find(r => r.orig === m))
+          reps.push({ orig: m, repl: rule.label,
+            type: rule.type === 'id'   ? 'ID/Codice'
+                : rule.type === 'date' ? 'Data sensibile'
+                : rule.type === 'name' ? 'Nome'
+                : 'Boilerplate' });
+        return rule.label;
+      });
+    }
   }
   return { text: result, reps };
 }
@@ -1347,6 +1385,20 @@ function runPipeline() {
         finalText=restore(res2.text);
         reps=[...res.reps,...res2.reps];
       }
+
+      // ── GLOBAL SWEEP ──────────────────────────────────────────────────────
+      // Every name detected by any pattern gets replaced in ALL its occurrences,
+      // making the anonymized output consistent with what is highlighted in the original.
+      // Longer matches are applied first to avoid partial-match collisions.
+      const sweepReps = [...reps].sort((a,b) => b.orig.length - a.orig.length);
+      for (const r of sweepReps) {
+        if (!r.orig || r.orig.length < 2) continue;
+        try {
+          const esc = r.orig.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+          finalText = finalText.replace(new RegExp(esc, 'g'), r.repl);
+        } catch(e) {}
+      }
+      // ──────────────────────────────────────────────────────────────────────
 
       renderAnonResult(finalText,reps);
       const saved=S.rawText.length-clean.length;
