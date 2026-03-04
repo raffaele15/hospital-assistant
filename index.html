@@ -1453,6 +1453,7 @@ function runPipeline() {
       const saved=S.rawText.length-clean.length;
       stxt.textContent=`✓ ${strippedBlocks.length} blocchi rimossi (−${saved} char) · 🛡 Regex+Dizionario · verifica manualmente`;
       scard.style.borderColor='var(--green)';
+      }
     }catch(err){
       stxt.textContent='✗ '+err.message;
       scard.style.borderColor='var(--red)';
