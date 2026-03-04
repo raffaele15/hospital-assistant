@@ -678,7 +678,7 @@ const ANON_CONFIG = {
     { pattern: /Infermiere\s*:\s*(?:\[NOME\]\s+)?[A-Z][a-z\u00C0-\u00FF]{2,}/g,
       label: 'Infermiere: [OPERATORE]', type: 'name' },
     // "Dr. I. D'Errico" / "Dott.Pieroni" — title (no-space OK) + initials + compound/hyphenated surname
-    { pattern: /(?:Dott\.(?:ssa\.?)?|Dr\.(?:ssa\.?)?)\s*(?:[A-Z]\.\s*){0,3}[A-Z][a-zA-Z'\u00C0-\u00FF\-]{2,}(?:\s+(?:De[ilr]?|Da[il]?|Dal|Di|Della|Von|Al|El)\s+[A-Z][a-zA-Z\u00C0-\u00FF]+|\s+[A-Z][a-zA-Z\u00C0-\u00FF\-]+)*/g,
+    { pattern: /(?:[Dd][Oo][Tt]{2}\.(?:[Ss][Ss][Aa]\.?)?|[Dd][Rr]\.(?:[Ss][Ss][Aa]\.?)?)\s*(?:[A-Z]\.\s*){0,3}[A-Z][a-zA-Z'\u00C0-\u00FF\-]{2,}(?:\s+(?:De[ilr]?|Da[il]?|Dal|Di|Della|Von|Al|El)\s+[A-Z][a-zA-Z\u00C0-\u00FF]+|\s+(?![Dd][Rr]\.|[Dd][Oo][Tt]{2}\.|[Pp][Rr][Oo][Ff]\.)[A-Z][a-zA-Z\u00C0-\u00FF\-]+)*/g,
       label: '[OPERATORE]', type: 'name' },
     // "[NOME]NomeCognome" or "LUCACognome" — patient name glued to label "Cognome" (verbale op.)
     { pattern: /[A-Za-z\u00C0-\u00FF]+(?=Cognome\b)/g,
@@ -783,9 +783,9 @@ const ANON_CONFIG = {
       label: 'Medico richiedente: [OPERATORE]', type: 'name' },
     { pattern: /Medico\s+[Rr]efertante\s*:\s*[A-Z][a-z\u00C0-\u00FF][a-zA-Z\u00C0-\u00FF]*(?:\s+[A-Z][a-zA-Z\u00C0-\u00FF]+)*/g,
       label: 'Medico refertante: [OPERATORE]', type: 'name' },
-    { pattern: /Refertato\s+da\s*:\s*(?:Dott\.(?:ssa\.?)?\s+|Dr\.(?:ssa\.?)?\s+)?[A-Z][a-z\u00C0-\u00FF][a-zA-Z\u00C0-\u00FF]*(?:\s+[A-Z][a-zA-Z\u00C0-\u00FF]+)*/g,
+    { pattern: /Refertato\s+da\s*:\s*(?:(?:[Dd][Oo][Tt]{2}\.(?:[Ss][Ss][Aa]\.?)?|[Dd][Rr]\.(?:[Ss][Ss][Aa]\.?)?)\s+)?[A-Z][a-z\u00C0-\u00FF][a-zA-Z\u00C0-\u00FF]*(?:\s+[A-Z][a-zA-Z\u00C0-\u00FF]+)*/g,
       label: 'Refertato da: [OPERATORE]', type: 'name' },
-    { pattern: /Responsabile(?:\s+[A-Za-z]+)?\s*:\s*(?:(?:Dr\.?(?:ssa\.?)?|Prof\.?(?:ssa\.?)?)\s*)?[A-Z][a-zA-Z\u00C0-\u00FF]+(?:\s+[A-Z][a-zA-Z\u00C0-\u00FF]+)*/gi,
+    { pattern: /Responsabile(?:\s+[A-Za-z]+)?\s*:\s*(?:(?:[Dd][Rr]\.?(?:[Ss][Ss][Aa]\.?)?|[Pp][Rr][Oo][Ff]\.?(?:[Ss][Ss][Aa]\.?)?)\s*)?[A-Z][a-zA-Z\u00C0-\u00FF]+(?:\s+[A-Z][a-zA-Z\u00C0-\u00FF]+)*/gi,
       label: 'Responsabile: [OPERATORE]', type: 'name' },
     { pattern: /Operatore\s*:\s*[A-Z][a-z\u00C0-\u00FF][a-zA-Z\u00C0-\u00FF]*(?:\s+[A-Z][a-zA-Z\u00C0-\u00FF]+)*/g,
       label: 'Operatore: [OPERATORE]', type: 'name' },
@@ -830,7 +830,7 @@ const ANON_CONFIG = {
     { pattern: /\b(?!(?:STROKE|ESAMI|PROFILO|ANAMNESI|DECORSO|TERAPIA|MOTIVO|REGIONE|AZIENDA|MARCATORI|EMATOLOGIA|COSTITUENTI|UNITA|DI|DEL|DELLA|DEGLI|DELLE|AI|AL)\b)[A-Z]{2,}(?:\s+(?!(?:STROKE|ESAMI|PROFILO|ANAMNESI|DECORSO|TERAPIA|MOTIVO|REGIONE|AZIENDA|MARCATORI|EMATOLOGIA|COSTITUENTI|UNITA|UNIT|DI|DEL|DELLA|DEGLI|DELLE|LAB|LABORATORIO|FISIOLOGICA|PATOLOGICA|CLINICO|LIPIDICO|PROTEICO|ERITROCITARIO|COAGULATIVO|RENALE|EPATICA|TIROIDEA|MUSCOLARI|SPECIALI|LEUCOCITARIA|FLOGOSI|URINE|MICROBIOLOGICI|BIOCHIMICI)\b)[A-Z]{2,})+(?=[A-Z][a-z])/g,
       label: '[PAZIENTE]', type: 'name' },
     // Signature blocks
-    { pattern: /(?:Dott\.(?:ssa\.?)?|Dr\.(?:ssa\.?)?|Prof\.?(?:ssa\.?)?|prof\.?(?:ssa\.?)?|dott\.(?:ssa\.?)?|dr\.(?:ssa\.?)?)\s+(?:[A-Z]\.\s*){0,4}[A-Z][a-zA-Z\u00C0-\u00FF]+(?:\s+(?!(?:Dott|Dr|Prof|prof|dott|dr)\.)[A-Z][a-zA-Z\u00C0-\u00FF]+)*/g,
+    { pattern: /(?:[Dd][Oo][Tt]{2}\.(?:[Ss][Ss][Aa]\.?)?|[Dd][Rr]\.(?:[Ss][Ss][Aa]\.?)?|[Pp][Rr][Oo][Ff]\.?(?:[Ss][Ss][Aa]\.?)?)\s+(?:[A-Z]\.\s*){0,4}[A-Z][a-zA-Z\u00C0-\u00FF]+(?:\s+(?![Dd][Rr]\.|[Dd][Oo][Tt]{2}\.|[Pp][Rr][Oo][Ff]\.)[A-Z][a-zA-Z\u00C0-\u00FF]+)*/g,
       label: '[OPERATORE]', type: 'name' },
     { pattern: /\bD\.\s+[A-Z][a-zA-Z\u00C0-\u00FF]{2,}(?:\s+[A-Z][a-zA-Z\u00C0-\u00FF]+)+/g,
       label: '[OPERATORE]', type: 'name' },
