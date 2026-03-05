@@ -570,23 +570,24 @@ hr.div{border:none;border-top:1px solid var(--border);margin:18px 0}
     <!-- ── Fingerprint section ───────────────────────────────────────── -->
     <div style="margin-top:18px;padding-top:14px;border-top:1px solid var(--border);">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;flex-wrap:wrap;gap:8px;">
-        <div style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--accent);text-transform:uppercase;letter-spacing:.1em;">Fingerprint Stilistico</div>
+        <div style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--accent);text-transform:uppercase;letter-spacing:.1em;">Fingerprint V2 — Ragionamento + Modello Sintetico</div>
         <div style="display:flex;gap:8px;flex-wrap:wrap;">
-          <button class="btn btn-g" style="font-size:9px;padding:4px 10px;" onclick="copyFingerprintPrompt()" title="Copia il prompt da incollare in un'AI esterna">⎘ Copia prompt per AI esterna</button>
+          <button class="btn btn-g" style="font-size:9px;padding:4px 10px;" onclick="copyFingerprintPrompt()" title="Copia il prompt 3-fase da incollare in Claude o altra AI">⎘ Copia prompt esterno</button>
           <button class="btn btn-g" onclick="autoExtractTemplate()" style="font-size:9px;padding:4px 10px;">
             <span class="spin" id="tplExtSpin" style="display:none;"></span>
-            ✦ Auto-estrai (API)
+            ✦ Auto-estrai (Sonnet)
           </button>
         </div>
       </div>
       <div class="ib" style="margin-bottom:10px;font-size:10px;line-height:1.6;">
-        <strong>Metodo 1 — Auto (API):</strong> clicca "Auto-estrai" per estrarre automaticamente il fingerprint dalla lettera usando l'API.<br>
-        <strong>Metodo 2 — Manuale:</strong> clicca "Copia prompt per AI esterna", incollalo in Claude/ChatGPT insieme alla cartella e alla lettera, poi incolla il JSON risultante nel campo qui sotto e clicca "Importa JSON".
+        Il fingerprint V2 usa un prompt 3-fase: (1) reverse-engineering del ragionamento clinico, (2) lettera-modello sintetica con placeholder, (3) annotation layer con → che spiega la logica di ogni sezione.<br>
+        <strong>Metodo automatico:</strong> clicca "Auto-estrai" — usa Sonnet, ~30s, richiede cartella + lettera compilate sopra.<br>
+        <strong>Metodo manuale:</strong> copia il prompt, incollalo con cartella e lettera in Claude.ai, poi incolla il JSON qui sotto.
       </div>
       <!-- Manual fingerprint textarea -->
-      <label style="margin-bottom:4px;">Fingerprint JSON <span style="color:var(--dim);font-size:9px;text-transform:none;letter-spacing:0;">(da AI esterna — incolla il JSON e importa)</span></label>
+      <label style="margin-bottom:4px;">JSON Fingerprint V2 <span style="color:var(--dim);font-size:9px;text-transform:none;letter-spacing:0;">(incolla JSON da AI esterna e importa)</span></label>
       <div style="display:flex;gap:8px;align-items:flex-start;">
-        <textarea id="manualFingerprintJson" rows="5" style="font-size:11px;font-family:'JetBrains Mono',monospace;" placeholder='{"apertura":"...","decorso":"...","terapia":"...","chiusura":"..."}' oninput="showManualFpImportBtn()"></textarea>
+        <textarea id="manualFingerprintJson" rows="5" style="font-size:11px;font-family:'JetBrains Mono',monospace;" placeholder='{"ragionamento":{...},"lettera_modello":"...","frasi_chiave":{...},"struttura_terapia":{...},"note_stilistiche":"..."}' oninput="showManualFpImportBtn()"></textarea>
         <button class="btn btn-p" id="manualFpImportBtn" style="display:none;font-size:10px;padding:6px 12px;white-space:nowrap;margin-top:0;" onclick="importManualFingerprint()">↑ Importa</button>
       </div>
       <div id="manualFpStatus" style="margin-top:6px;font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--dim);display:none;"></div>
@@ -627,6 +628,7 @@ const PRICING = {
 const S    = { rawText:'', cleanText:'', anonText:'', letter:'', strippedBlocks:[], activeTemplateId:null };
 const S_XLS = { text:'', filename:'' };
 let newTplSections = [];
+let newTplFingerprintJson = ''; // stores V2 JSON string when set
 
 const DEFAULT_SYS = `Sei un assistente esperto in documentazione medica ospedaliera italiana.
 Genera una lettera di dimissione strutturata in italiano formale clinico.
@@ -1738,7 +1740,7 @@ function renderLibrary(){
       <div style="display:flex;flex-wrap:wrap;gap:4px;">
         ${t.folder?`<span class="chip c-w">📁 ~${tok(t.folder)}t</span>`:''}
         ${t.letter?`<span class="chip c-ok">📄 ~${tok(t.letter)}t</span>`:''}
-        ${t.fingerprint?`<span class="tpl-cached-badge">⚡ fp ~${tok(t.fingerprint)}t</span>`:''}
+        ${t.fingerprint?(()=>{try{const o=JSON.parse(t.fingerprint);return o.lettera_modello?`<span class="tpl-cached-badge" style="background:rgba(110,168,201,.15);border-color:var(--blue);color:var(--blue);">✦ fp V2 ~${tok(t.fingerprint)}t</span>`:`<span class="tpl-cached-badge">⚡ fp ~${tok(t.fingerprint)}t</span>`;}catch(e){return`<span class="tpl-cached-badge">⚡ fp ~${tok(t.fingerprint)}t</span>`;}})()):''}
       </div>
     </div>`;
   }).join('');
@@ -1842,31 +1844,48 @@ function buildFingerprintFromSections(sections){
 async function autoExtractTemplate(){
   const key=document.getElementById('apiKeyInput').value.trim();
   const letter=document.getElementById('newCaseLetter').value.trim();
-  if(!letter){alert('Incolla prima la lettera.');return;}
+  const folder=document.getElementById('newCaseFolder').value.trim();
+  if(!letter){alert('Incolla prima la lettera nel campo "Lettera di Dimissione".');return;}
   if(!key){alert('Inserisci la API key nella sezione Generazione.');return;}
   const spin=document.getElementById('tplExtSpin'),status=document.getElementById('tplExtStatus');
   spin.style.display='inline-block';status.style.display='block';
-  status.style.color='var(--mid)';status.textContent='Estrazione fingerprint con Haiku...';
+  status.style.color='var(--mid)';status.textContent='Estrazione fingerprint V2 con Sonnet (3 fasi — ~30s)...';
   try{
+    const userMsg = (folder?`===== CARTELLA CLINICA =====\n${folder}\n\n`:'') +
+                    `===== LETTERA DI DIMISSIONE =====\n${letter}`;
     const resp=await fetch('https://api.anthropic.com/v1/messages',{
       method:'POST',
       headers:{'Content-Type':'application/json','x-api-key':key,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
-      body:JSON.stringify({model:'claude-haiku-4-5-20251001',max_tokens:500,
-        system:`Estrai lo stile da una lettera di dimissione medica italiana. Restituisci SOLO JSON:
-{"apertura":"...","decorso":"...","terapia":"...","chiusura":"..."} Solo stile/registro, NO dati clinici. Solo JSON nudo.`,
-        messages:[{role:'user',content:`Lettera:\n\n${letter}`}]}),
+      body:JSON.stringify({
+        model:'claude-sonnet-4-6',
+        max_tokens:3000,
+        system:`Sei un esperto di comunicazione clinica neurologica italiana. Esegui l'analisi richiesta e restituisci SOLO il JSON valido, senza testo prima o dopo, senza backtick markdown.`,
+        messages:[{role:'user',content:FINGERPRINT_PROMPT_V2.replace('[INCOLLA QUI LA CARTELLA CLINICA ANONIMIZZATA]', folder||'(non fornita)').replace('[INCOLLA QUI LA LETTERA DI DIMISSIONE]', letter)}]
+      }),
     });
     if(!resp.ok){const e=await resp.json();throw new Error(e.error?.message||`HTTP ${resp.status}`);}
-    const raw=(await resp.json()).content[0].text;
-    const parsed=JSON.parse(raw.replace(/```json|```/g,'').trim());
-    const map={apertura:'Apertura',decorso:'Decorso tipo',terapia:'Terapia tipo',chiusura:'Chiusura'};
-    newTplSections=[];
-    for(const[k,label]of Object.entries(map))
-      if(parsed[k])newTplSections.push({id:'ntpl_'+Date.now()+'_'+k,label,text:parsed[k]});
-    renderNewTplSections();
-    const origTok=tok(letter),newTok=tok(buildFingerprintFromSections(newTplSections));
-    status.style.color='var(--green)';
-    status.textContent=`✓ Fingerprint estratto · da ~${origTok} a ~${newTok} token (−${Math.round((1-newTok/origTok)*100)}%)`;
+    const rawText=(await resp.json()).content[0].text;
+    const parsed=JSON.parse(rawText.replace(/```json[\s\S]*?```|```/g,'').trim());
+
+    if(parsed.lettera_modello){
+      // V2 success
+      newTplFingerprintJson=JSON.stringify(parsed);
+      newTplSections=[];
+      renderFpV2Preview(parsed);
+      const toks=tok(newTplFingerprintJson);
+      const origTok=tok(letter+(folder||''));
+      status.style.color='var(--green)';
+      status.textContent=`✓ Fingerprint V2 estratto · ~${toks} token (lettera-modello + ragionamento + frasi)`;
+    } else {
+      // Fallback: legacy 4-section
+      const map={apertura:'Apertura',decorso:'Decorso tipo',terapia:'Terapia tipo',chiusura:'Chiusura'};
+      newTplSections=[];newTplFingerprintJson='';
+      for(const[k,label]of Object.entries(map))
+        if(parsed[k])newTplSections.push({id:'ntpl_'+Date.now()+'_'+k,label,text:parsed[k]});
+      renderNewTplSections();
+      status.style.color='var(--accent)';
+      status.textContent=`⚠ Schema legacy (4 sezioni) — aggiorna al V2 manualmente o riprova`;
+    }
   }catch(err){status.style.color='var(--red)';status.textContent='✗ '+err.message;}
   finally{spin.style.display='none';}
 }
@@ -1876,12 +1895,16 @@ function saveNewTemplate(){
   const letter=document.getElementById('newCaseLetter').value.trim();
   if(!name){alert('Inserisci un nome.');return;}
   if(!letter){alert('La lettera è obbligatoria.');return;}
-  const fp=buildFingerprintFromSections(newTplSections);
+  // Use V2 JSON if available, else build from legacy sections
+  const fp=newTplFingerprintJson||buildFingerprintFromSections(newTplSections);
   const lib=loadLibrary();
   lib.push({id:'tpl_'+Date.now(),name,folder,letter,fingerprint:fp,createdAt:new Date().toISOString()});
-  saveLibrary(lib);newTplSections=[];renderNewTplSections();
+  saveLibrary(lib);
+  newTplSections=[];newTplFingerprintJson='';
+  renderNewTplSections();
   ['newTplName','newCaseFolder','newCaseLetter'].forEach(id=>document.getElementById(id).value='');
   document.getElementById('tplExtStatus').style.display='none';
+  document.getElementById('newTplSections').innerHTML='';
   renderLibrary();alert(`Caso "${name}" salvato.`);
 }
 
@@ -1896,10 +1919,15 @@ function updateTokenPanel(){
   const price=PRICING[model]||PRICING['claude-sonnet-4-6'];
   const sysTxt=document.getElementById('systemPrompt').value||DEFAULT_SYS;
   const fp=getActiveFingerprint();
+  const fpObj=parseFpJson(fp);
   const ragOn=document.getElementById('ragToggle')?.checked;
   const ragMatches=(ragOn&&S.anonText)?findSimilarCases(S.anonText):[];
   const templateTxt=buildLetterTemplate();
-  const tSys=tok(sysTxt),tFp=tok(fp);
+  // V2: system gets base + reasoning addendum; user turn gets lettera_modello
+  const fpSystemAddendum=fpObj?buildFpSystemAddendum(fpObj):'';
+  const fpUserBlock=fpObj?buildFpUserBlock(fpObj):(fp||'');
+  const tSys=tok(sysTxt+fpSystemAddendum);
+  const tFp=tok(fpUserBlock);
   const tRag=ragMatches.reduce((a,{t})=>a+tok(t.letter||''),0);
   const tTemplate=tok(templateTxt),tClinical=tok(S.anonText),tOut=1800;
   const tCacheable=tFp+tRag,tTotal=tSys+tFp+tRag+tTemplate+tClinical;
@@ -1910,9 +1938,10 @@ function updateTokenPanel(){
   const costNonCached=((tSys+tTemplate+tClinical)/1e6)*price.in;
   const costFirst=costCacheW+costNonCached,costSubseq=costCacheR+costNonCached;
   const costOut=(tOut/1e6)*price.out;
+  const fpLabel=fpObj?'Fingerprint V2 (lettera-modello)':'Fingerprint Stile';
   const sections=[
-    {label:'System Prompt',tokens:tSys,color:'#7a6340',cached:false},
-    {label:'Fingerprint Stile',tokens:tFp,color:'#6ea8c9',cached:cacheActive&&tFp>0},
+    {label:'System Prompt'+(fpObj?' + Ragionamento':''),tokens:tSys,color:'#7a6340',cached:false},
+    {label:fpLabel,tokens:tFp,color:'#6ea8c9',cached:cacheActive&&tFp>0},
     {label:`RAG (${ragMatches.length} casi)`,tokens:tRag,color:'#a96ec9',cached:cacheActive&&tRag>0},
     {label:'Template lettera',tokens:tTemplate,color:'#7a7570',cached:false},
     {label:'Testo clinico',tokens:tClinical,color:'#c9a96e',cached:false},
@@ -2128,10 +2157,17 @@ ${dott.padEnd(46)}${prof}
 
 function buildMessages(){
   const fp=getActiveFingerprint();
+  const fpObj=parseFpJson(fp);
   const ragOn=document.getElementById('ragToggle')?.checked;
   const ragMatches=(ragOn&&S.anonText)?findSimilarCases(S.anonText):[];
   const blocks=[];
-  if(fp)blocks.push({type:'text',text:`## RIFERIMENTO STILISTICO\n\n${fp}\n\n---\n\n`,cache_control:{type:'ephemeral'}});
+  if(fpObj?.lettera_modello){
+    // V2: lettera_modello (with → annotations) goes in user turn as structural scaffold
+    blocks.push({type:'text',text:buildFpUserBlock(fpObj),cache_control:{type:'ephemeral'}});
+  } else if(fp){
+    // Legacy: prose fingerprint in user turn
+    blocks.push({type:'text',text:`## RIFERIMENTO STILISTICO\n\n${fp}\n\n---\n\n`,cache_control:{type:'ephemeral'}});
+  }
   if(ragMatches.length){
     let rb=`## ESEMPI DI RIFERIMENTO — casi simili\n\nUsa per stile e struttura. NON copiare dati clinici.\n\n`;
     ragMatches.forEach(({t,score},i)=>{rb+=`### Esempio ${i+1} — ${t.name} (${(score*100).toFixed(0)}%)\n\n${t.letter}\n\n---\n\n`;});
@@ -2145,10 +2181,12 @@ function buildMessages(){
 
 function buildUserPromptStr(){
   const fp=getActiveFingerprint();
+  const fpObj=parseFpJson(fp);
   const ragOn=document.getElementById('ragToggle')?.checked;
   const ragMatches=(ragOn&&S.anonText)?findSimilarCases(S.anonText):[];
   let p='';
-  if(fp)p+=`## RIFERIMENTO STILISTICO\n\n${fp}\n\n---\n\n`;
+  if(fpObj?.lettera_modello) p+=buildFpUserBlock(fpObj);
+  else if(fp) p+=`## RIFERIMENTO STILISTICO\n\n${fp}\n\n---\n\n`;
   if(ragMatches.length){
     p+=`## ESEMPI DI RIFERIMENTO\n\n`;
     ragMatches.forEach(({t,score},i)=>{p+=`### Esempio ${i+1} — ${t.name} (${(score*100).toFixed(0)}%)\n\n${t.letter}\n\n---\n\n`;});
@@ -2179,11 +2217,15 @@ async function generateLetter(){
   document.getElementById('genErr').style.display='none';
   document.getElementById('statusBadge').textContent='⟳ Generando...';
   const fp=getActiveFingerprint();
+  const fpObj=parseFpJson(fp);
   const ragOn=document.getElementById('ragToggle')?.checked;
   const ragMatches=(ragOn&&S.anonText)?findSimilarCases(S.anonText):[];
   const useCache=fp||ragMatches.length>0;
   const headers={'Content-Type':'application/json','x-api-key':key,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'};
   if(useCache)headers['anthropic-beta']='prompt-caching-2024-07-31';
+  // V2: append reasoning layer to system prompt (why things are included, style, key phrases)
+  const baseSystem=document.getElementById('systemPrompt').value||DEFAULT_SYS;
+  const fullSystem=fpObj ? baseSystem+buildFpSystemAddendum(fpObj) : baseSystem;
   try{
     const resp=await fetch('https://api.anthropic.com/v1/messages',{
       method:'POST',headers,
@@ -2191,7 +2233,7 @@ async function generateLetter(){
         model:document.getElementById('modelSelect').value,
         max_tokens:6000,
         temperature:parseInt(document.getElementById('tempSlider').value)/10,
-        system:[{type:'text',text:document.getElementById('systemPrompt').value||DEFAULT_SYS,...(useCache?{cache_control:{type:'ephemeral'}}:{})}],
+        system:[{type:'text',text:fullSystem,...(useCache?{cache_control:{type:'ephemeral'}}:{})}],
         messages:buildMessages(),
       }),
     });
@@ -2240,7 +2282,9 @@ function renderPromptView(){
 }
 function refreshPrompt(){
   if(!S.anonText){document.getElementById('promptView').value='Completa gli Step 1–2.';return;}
-  pSys=document.getElementById('systemPrompt').value||DEFAULT_SYS;
+  const baseSystem=document.getElementById('systemPrompt').value||DEFAULT_SYS;
+  const fpObj=parseFpJson(getActiveFingerprint());
+  pSys=fpObj ? baseSystem+buildFpSystemAddendum(fpObj) : baseSystem;
   pUsr=buildUserPromptStr();
   renderPromptView();updateTokenPanel();
 }
@@ -2960,17 +3004,92 @@ function autoFillCaseFolder(){
   document.getElementById('newCaseFolder').value=S.anonText;
 }
 
-// ── MANUAL FINGERPRINT ──────────────────────────────────────────────
-const FINGERPRINT_PROMPT = `Analizza questa cartella clinica anonimizzata e la relativa lettera di dimissione. Estrai SOLO lo stile redazionale della lettera (non i dati clinici).
+// ═══════════════════════════════════════════════════
+// FINGERPRINT V2 — 3-phase reasoning + synthetic model
+// ═══════════════════════════════════════════════════
 
-Restituisci ESCLUSIVAMENTE un oggetto JSON valido, senza testo prima o dopo, senza backtick, in questo formato esatto:
-{"apertura":"<stile dell'apertura e presentazione del caso>","decorso":"<stile narrativo usato per descrivere il decorso clinico>","terapia":"<stile con cui viene presentata la terapia alla dimissione>","chiusura":"<stile della chiusura, saluti, follow-up>"}
+const FINGERPRINT_PROMPT_V2 = `Sei un esperto di comunicazione clinica neurologica. Ti fornisco due documenti:
+1. Una cartella clinica anonimizzata (diari, esami, referti)
+2. La lettera di dimissione effettivamente scritta da un neurologo basandosi su quella cartella
 
-Regole:
-- Descrivi SOLO il registro linguistico, la struttura delle frasi, i tempi verbali, le formule fisse
-- NON includere dati clinici specifici (diagnosi, farmaci, nomi, date)
-- Ogni campo max 2-3 frasi
-- Solo JSON, nient'altro
+Il tuo compito è duplice: capire il RAGIONAMENTO CLINICO che ha guidato la scrittura della lettera, e estrarne un MODELLO SINTETICO riutilizzabile.
+
+---
+
+FASE 1 — REVERSE ENGINEERING DEL RAGIONAMENTO
+
+Analizza la lettera rispetto alla cartella e identifica:
+
+A) CRITERI DI SELEZIONE: quali eventi della cartella sono entrati nella lettera e quali no? Qual è il principio implicito (gravità, rilevanza per il curante, novità diagnostica, implicazioni terapeutiche)?
+
+B) STRUTTURA LOGICA: come è organizzata l'informazione? (es: cronologica vs per problemi, dal più grave al più gestibile, dal certo all'incerto)
+
+C) CONNETTORI DI RAGIONAMENTO: quali frasi transitorie collegano un'osservazione a una decisione? (es: "pertanto si è deciso di...", "in considerazione di...", "alla luce di...")
+
+D) GESTIONE DELL'INCERTEZZA: come vengono presentati i risultati dubbi, gli esami pendenti, i rifiuti del paziente, le diagnosi non ancora confermate?
+
+E) CALIBRAZIONE DEL DETTAGLIO: dove il neurologo va nel dettaglio tecnico e dove sintetizza? Qual è il criterio?
+
+---
+
+FASE 2 — MODELLO SINTETICO
+
+Produci una lettera-modello fittizia che NON contenga dati clinici reali del caso, ma che replichi fedelmente:
+- la struttura e la sequenza delle sezioni
+- il livello di dettaglio per sezione
+- le frasi di apertura e chiusura di ogni sezione (con [PLACEHOLDER] per i contenuti clinici)
+- i connettori logici caratteristici
+- il formato della terapia (tabella/bullet, campi usati, ordine)
+- il tono e il registro del follow-up e delle raccomandazioni
+
+La lettera-modello deve essere abbastanza concreta da poter essere usata come guida per scrivere una nuova lettera da zero su un caso diverso dello stesso tipo, dallo stesso reparto.
+
+---
+
+FASE 3 — ANNOTATION LAYER
+
+Per ogni sezione della lettera-modello, aggiungi una riga di annotazione (prefissata con →) che spieghi la logica redazionale di quella sezione:
+- perché quella sezione esiste
+- cosa il neurologo sta comunicando al curante
+- quali decisioni implicite stanno dietro la formulazione scelta
+
+---
+
+FORMATO OUTPUT
+
+Restituisci un oggetto JSON con questa struttura:
+
+{
+  "ragionamento": {
+    "criteri_selezione": "...",
+    "struttura_logica": "...",
+    "gestione_incertezza": "...",
+    "calibrazione_dettaglio": "..."
+  },
+  "lettera_modello": "<testo completo della lettera-modello con placeholder e righe → di annotazione>",
+  "frasi_chiave": {
+    "apertura": ["frase tipo 1", "frase tipo 2"],
+    "connettori": ["pertanto...", "alla luce di...", "in considerazione di..."],
+    "incertezza": ["non ulteriormente caratterizzabile con la metodica...", "si consiglia approfondimento..."],
+    "terapia_intro": "frase di introduzione alla tabella terapia",
+    "chiusura": ["frase tipo 1", "frase tipo 2"]
+  },
+  "struttura_terapia": {
+    "formato": "tabella|bullet|testo",
+    "campi": ["Farmaco", "Dose", "Posologia", "Orario", "Note"],
+    "note_speciali": "come vengono gestiti farmaci nuovi vs continuativi, sospesi, a scalare"
+  },
+  "note_stilistiche": "registro, tempi verbali predominanti, uso del passivo, lunghezza media delle frasi, eventuali formule fisse ricorrenti"
+}
+
+---
+
+REGOLE FERREE:
+- NON includere nella lettera-modello nessun dato clinico reale (diagnosi specifiche, farmaci del caso, valori numerici reali, date)
+- USA [PLACEHOLDER_TIPO] descrittivi come [DIAGNOSI_PRINCIPALE], [PROCEDURA_ESEGUITA], [ESITO_ESAME], [FARMACO_CLASSE]
+- La lettera-modello deve essere lunga abbastanza da coprire tutti i pattern strutturali, non una versione abbreviata
+- Le frasi_chiave devono essere frasi reali estratte o parafrasate dalla lettera originale, non inventate
+- Solo JSON valido, senza testo prima o dopo, senza backtick
 
 ===== CARTELLA CLINICA =====
 [INCOLLA QUI LA CARTELLA CLINICA ANONIMIZZATA]
@@ -2978,10 +3097,54 @@ Regole:
 ===== LETTERA DI DIMISSIONE =====
 [INCOLLA QUI LA LETTERA DI DIMISSIONE]`;
 
+// ── Fingerprint helpers ──────────────────────────────────────────────
+
+// Detect new-style (V2) fingerprint vs old 4-section prose
+function parseFpJson(fpStr){
+  if(!fpStr) return null;
+  try{
+    const obj=JSON.parse(fpStr);
+    if(obj.lettera_modello) return obj; // new V2 style
+    return null; // old style or not JSON
+  }catch(e){ return null; }
+}
+
+// Build system-prompt addendum from V2 fp object
+// (reasoning + frasi + stile → injected into system so Claude understands WHY)
+function buildFpSystemAddendum(fpObj){
+  if(!fpObj) return '';
+  let out='\n\n---\n\n## MODELLO DI RAGIONAMENTO CLINICO (caso di riferimento)\n';
+  const r=fpObj.ragionamento||{};
+  if(r.criteri_selezione) out+=`\n**Criteri di selezione:** ${r.criteri_selezione}`;
+  if(r.struttura_logica)  out+=`\n**Struttura logica:** ${r.struttura_logica}`;
+  if(r.gestione_incertezza) out+=`\n**Gestione incertezza:** ${r.gestione_incertezza}`;
+  if(r.calibrazione_dettaglio) out+=`\n**Calibrazione dettaglio:** ${r.calibrazione_dettaglio}`;
+  if(fpObj.note_stilistiche) out+=`\n\n## REGISTRO STILISTICO\n${fpObj.note_stilistiche}`;
+  const fk=fpObj.frasi_chiave||{};
+  if(Object.keys(fk).length){
+    out+='\n\n## FRASI E CONNETTORI CARATTERISTICI\n';
+    if(fk.apertura?.length)   out+=`- Apertura: "${fk.apertura.join('" / "')}"\n`;
+    if(fk.connettori?.length) out+=`- Connettori: ${fk.connettori.join(' | ')}\n`;
+    if(fk.incertezza?.length) out+=`- Incertezza: "${fk.incertezza.join('" / "')}"\n`;
+    if(fk.terapia_intro)      out+=`- Terapia intro: "${fk.terapia_intro}"\n`;
+    if(fk.chiusura?.length)   out+=`- Chiusura: "${fk.chiusura.join('" / "')}"\n`;
+  }
+  const st=fpObj.struttura_terapia||{};
+  if(st.note_speciali) out+=`\n**Farmaci nuovi vs continuativi:** ${st.note_speciali}`;
+  return out;
+}
+
+// Build user-turn block from V2 fp (lettera_modello with → annotations)
+function buildFpUserBlock(fpObj){
+  if(!fpObj?.lettera_modello) return '';
+  return `## LETTERA-MODELLO DI RIFERIMENTO\n\nQuesta lettera sintetica (con annotazioni →) mostra struttura, ragionamento e stile del reparto. Usala come guida strutturale — NON copiare i placeholder, adatta ogni sezione al caso corrente.\n\n${fpObj.lettera_modello}\n\n---\n\n`;
+}
+
+// ── Copy prompt button ───────────────────────────────────────────────
 function copyFingerprintPrompt(){
   const folder = document.getElementById('newCaseFolder').value.trim();
   const letter = document.getElementById('newCaseLetter').value.trim();
-  let prompt = FINGERPRINT_PROMPT;
+  let prompt = FINGERPRINT_PROMPT_V2;
   if(folder) prompt = prompt.replace('[INCOLLA QUI LA CARTELLA CLINICA ANONIMIZZATA]', folder);
   if(letter) prompt = prompt.replace('[INCOLLA QUI LA LETTERA DI DIMISSIONE]', letter);
   navigator.clipboard.writeText(prompt).then(()=>{
@@ -2992,32 +3155,84 @@ function copyFingerprintPrompt(){
     setTimeout(()=>{btn.textContent=orig;btn.style.color='';}, 2000);
   });
 }
+
+// ── Manual JSON import ───────────────────────────────────────────────
 function showManualFpImportBtn(){
   const val = document.getElementById('manualFingerprintJson').value.trim();
-  const btn = document.getElementById('manualFpImportBtn');
-  btn.style.display = val ? 'inline-block' : 'none';
+  document.getElementById('manualFpImportBtn').style.display = val ? 'inline-block' : 'none';
 }
+
 function importManualFingerprint(){
   const raw = document.getElementById('manualFingerprintJson').value.trim();
   const status = document.getElementById('manualFpStatus');
   status.style.display = 'block';
   try{
-    const parsed = JSON.parse(raw.replace(/```json|```/g,'').trim());
-    const map = {apertura:'Apertura', decorso:'Decorso tipo', terapia:'Terapia tipo', chiusura:'Chiusura'};
-    newTplSections = [];
-    for(const [k,label] of Object.entries(map))
-      if(parsed[k]) newTplSections.push({id:'ntpl_'+Date.now()+'_'+k, label, text:parsed[k]});
-    if(!newTplSections.length) throw new Error('Nessun campo valido trovato (apertura/decorso/terapia/chiusura)');
-    renderNewTplSections();
-    const fp = buildFingerprintFromSections(newTplSections);
-    status.style.color = 'var(--green)';
-    status.textContent = `✓ Fingerprint importato · ${newTplSections.length} sezioni · ~${tok(fp)} token`;
-    document.getElementById('manualFingerprintJson').value = '';
-    document.getElementById('manualFpImportBtn').style.display = 'none';
-  } catch(e){
-    status.style.color = 'var(--red)';
-    status.textContent = '✗ JSON non valido: ' + e.message;
+    const parsed = JSON.parse(raw.replace(/```json[\s\S]*?```|```/g,'').trim());
+
+    if(parsed.lettera_modello){
+      // ── New V2 schema ──────────────────────────────────────────
+      newTplFingerprintJson = JSON.stringify(parsed);
+      newTplSections = []; // clear old sections
+      renderFpV2Preview(parsed);
+      const toks = tok(newTplFingerprintJson);
+      status.style.color='var(--green)';
+      status.textContent=`✓ Fingerprint V2 importato · lettera-modello + ragionamento · ~${toks} token`;
+    } else {
+      // ── Legacy 4-field schema ──────────────────────────────────
+      const map={apertura:'Apertura',decorso:'Decorso tipo',terapia:'Terapia tipo',chiusura:'Chiusura'};
+      newTplSections=[];
+      for(const [k,label] of Object.entries(map))
+        if(parsed[k]) newTplSections.push({id:'ntpl_'+Date.now()+'_'+k,label,text:parsed[k]});
+      if(!newTplSections.length) throw new Error('Nessun campo valido (apertura/decorso/terapia/chiusura o lettera_modello)');
+      newTplFingerprintJson = '';
+      renderNewTplSections();
+      const fp=buildFingerprintFromSections(newTplSections);
+      status.style.color='var(--green)';
+      status.textContent=`✓ Fingerprint legacy importato · ${newTplSections.length} sezioni · ~${tok(fp)} token`;
+    }
+    document.getElementById('manualFingerprintJson').value='';
+    document.getElementById('manualFpImportBtn').style.display='none';
+  }catch(e){
+    status.style.color='var(--red)';
+    status.textContent='✗ JSON non valido: '+e.message;
   }
+}
+
+// ── Render V2 fingerprint preview card ──────────────────────────────
+function renderFpV2Preview(fpObj){
+  const container=document.getElementById('newTplSections');
+  const r=fpObj.ragionamento||{};
+  const fk=fpObj.frasi_chiave||{};
+  const st=fpObj.struttura_terapia||{};
+  const lm=fpObj.lettera_modello||'';
+  const previewLines=lm.split('\n').slice(0,12).join('\n')+(lm.split('\n').length>12?'\n…':'');
+
+  container.innerHTML=`
+  <div style="border:1px solid var(--accent-d);border-radius:var(--r);overflow:hidden;margin-top:4px;">
+    <div style="background:var(--accent-g);padding:8px 12px;display:flex;align-items:center;gap:8px;">
+      <span style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--accent);font-weight:600;text-transform:uppercase;letter-spacing:.1em;">✦ Fingerprint V2</span>
+      <span style="font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--dim);">ragionamento · lettera-modello · frasi · stile</span>
+    </div>
+    <div style="padding:12px;display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+      ${r.criteri_selezione?`<div><div style="font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--dim);margin-bottom:3px;text-transform:uppercase;">Criteri selezione</div><div style="font-size:12px;color:var(--mid);">${r.criteri_selezione.slice(0,120)}…</div></div>`:''}
+      ${r.struttura_logica?`<div><div style="font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--dim);margin-bottom:3px;text-transform:uppercase;">Struttura logica</div><div style="font-size:12px;color:var(--mid);">${r.struttura_logica.slice(0,120)}…</div></div>`:''}
+      ${fpObj.note_stilistiche?`<div style="grid-column:1/-1;"><div style="font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--dim);margin-bottom:3px;text-transform:uppercase;">Stile</div><div style="font-size:12px;color:var(--mid);">${fpObj.note_stilistiche.slice(0,160)}…</div></div>`:''}
+      ${fk.connettori?.length?`<div style="grid-column:1/-1;"><div style="font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--dim);margin-bottom:3px;text-transform:uppercase;">Connettori</div><div style="font-size:12px;color:var(--blue);">${fk.connettori.join(' · ')}</div></div>`:''}
+    </div>
+    <div style="border-top:1px solid var(--border);padding:10px 12px;">
+      <div style="font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--dim);margin-bottom:6px;text-transform:uppercase;">Lettera-modello (preview)</div>
+      <pre style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--mid);white-space:pre-wrap;margin:0;line-height:1.5;">${previewLines.replace(/</g,'&lt;')}</pre>
+    </div>
+    <div style="border-top:1px solid var(--border);padding:8px 12px;display:flex;align-items:center;justify-content:space-between;">
+      <span style="font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--dim);">~${tok(JSON.stringify(fpObj))} token · inietterà ragionamento nel system prompt + lettera-modello nel user turn</span>
+      <button class="btn btn-g" style="font-size:9px;padding:3px 8px;" onclick="clearFpV2()">✕ Rimuovi</button>
+    </div>
+  </div>`;
+}
+
+function clearFpV2(){
+  newTplFingerprintJson='';
+  document.getElementById('newTplSections').innerHTML='';
 }
 
 // ═══════════════════════════════════════════════════
