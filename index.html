@@ -488,15 +488,65 @@ hr.div{border:none;border-top:1px solid var(--border);margin:18px 0}
   </div>
   <div class="card">
     <div class="ctitle">Aggiungi Caso</div>
+
+    <!-- ── PDF + XLS import zone ──────────────────────────────────────── -->
+    <div class="ib blue" style="margin-bottom:12px;font-size:10px;line-height:1.6;">
+      <strong style="color:var(--text);">Import rapido da PDF + XLS:</strong> carica la cartella clinica completa (PDF)
+      e il referto di laboratorio (XLS/XLSX). Il testo viene estratto offline, anonimizzato con la stessa pipeline
+      dello Step 1–2, e la lettera di dimissione viene individuata automaticamente
+      (se presente più di una, viene usata l'ultima).
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px;">
+      <!-- PDF drop -->
+      <div id="caseImportDropPdf" onclick="document.getElementById('caseImportPdfInput').click()"
+        style="border:2px dashed var(--border);border-radius:var(--r);padding:14px 12px;text-align:center;cursor:pointer;background:var(--surface2);"
+        ondragover="event.preventDefault();this.style.borderColor='var(--accent)'"
+        ondragleave="this.style.borderColor='var(--border)'"
+        ondrop="handleCaseImportDrop(event,'pdf')">
+        <input type="file" id="caseImportPdfInput" accept=".pdf" style="display:none;" onchange="handleCaseImportFile(event,'pdf')">
+        <div style="font-size:18px;color:var(--dim);margin-bottom:4px;">📄</div>
+        <div style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--mid);">
+          <strong style="color:var(--text);">Cartella clinica PDF</strong><br>
+          <span id="caseImportPdfName" style="color:var(--dim);">clicca o trascina</span>
+        </div>
+      </div>
+      <!-- XLS drop -->
+      <div id="caseImportDropXls" onclick="document.getElementById('caseImportXlsInput').click()"
+        style="border:2px dashed var(--border);border-radius:var(--r);padding:14px 12px;text-align:center;cursor:pointer;background:var(--surface2);"
+        ondragover="event.preventDefault();this.style.borderColor='var(--accent)'"
+        ondragleave="this.style.borderColor='var(--border)'"
+        ondrop="handleCaseImportDrop(event,'xls')">
+        <input type="file" id="caseImportXlsInput" accept=".xls,.xlsx" style="display:none;" onchange="handleCaseImportFile(event,'xls')">
+        <div style="font-size:18px;color:var(--dim);margin-bottom:4px;">🧪</div>
+        <div style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--mid);">
+          <strong style="color:var(--text);">Laboratorio XLS / XLSX</strong><br>
+          <span id="caseImportXlsName" style="color:var(--dim);">opzionale</span>
+        </div>
+      </div>
+    </div>
+    <!-- Combined status bar -->
+    <div id="caseImportStatus" style="display:none;margin-bottom:12px;">
+      <div style="display:flex;align-items:center;gap:8px;font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--mid);">
+        <span class="spin" id="caseImportSpin" style="display:none;"></span>
+        <span id="caseImportStatusTxt"></span>
+      </div>
+      <div style="background:var(--surface3);border-radius:2px;height:3px;margin-top:5px;overflow:hidden;">
+        <div id="caseImportBar" style="height:100%;background:var(--accent);border-radius:2px;width:0%;transition:width .2s;"></div>
+      </div>
+    </div>
+
     <label>Nome / Etichetta Caso</label>
     <input type="text" id="newTplName" placeholder='Es: "Neurologia — Stroke ischemico"'>
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:5px;margin-top:16px;">
       <label style="margin:0;">Cartella Clinica Anonimizzata <span style="color:var(--dim);font-size:9px;text-transform:none;letter-spacing:0;">(solo locale per RAG)</span></label>
       <button class="btn btn-g" style="font-size:9px;padding:3px 9px;" onclick="autoFillCaseFolder()">⟳ Da sessione</button>
     </div>
-    <textarea id="newCaseFolder" rows="8" placeholder="Incolla la cartella anonimizzata..."></textarea>
-    <label>Lettera di Dimissione Corrispondente <span style="color:var(--dim);font-size:9px;text-transform:none;letter-spacing:0;">(inviata come few-shot)</span></label>
-    <textarea id="newCaseLetter" rows="8" placeholder="Incolla la lettera già generata e revisionata..."></textarea>
+    <textarea id="newCaseFolder" rows="8" placeholder="Incolla la cartella anonimizzata...&#10;&#10;oppure usa il PDF import qui sopra →"></textarea>
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:5px;margin-top:16px;">
+      <label style="margin:0;">Lettera di Dimissione Corrispondente <span style="color:var(--dim);font-size:9px;text-transform:none;letter-spacing:0;">(inviata come few-shot)</span></label>
+      <div id="letterDetectedBadge" style="display:none;" class="chip c-ok" style="font-size:9px;">✓ rilevata dal PDF</div>
+    </div>
+    <textarea id="newCaseLetter" rows="8" placeholder="Incolla la lettera già generata e revisionata...&#10;&#10;oppure usa il PDF import qui sopra →"></textarea>
 
     <!-- ── Fingerprint section ───────────────────────────────────────── -->
     <div style="margin-top:18px;padding-top:14px;border-top:1px solid var(--border);">
@@ -623,7 +673,7 @@ const ANON_CONFIG = {
       label: '[INTESTAZIONE_EPISODIO]', type: 'boiler' },
     { pattern: /^Episodio\s+[A-Z0-9_\-]+\s+[A-Z]+\s+[A-Z]+\s+[\d\/]+$/gim,
       label: '[INTESTAZIONE_EPISODIO]', type: 'boiler' },
-    // Catch already-partially-replaced episodio lines (ID and/or date already swapped)
+    // Catch already-partially-replaced episodio lines
     { pattern: /^Episodio\s+\S+\s+[A-Z]{2,}\s+[A-Z]{2,}(?:\s+\[DATA_NASCITA\])?$/gim,
       label: '[INTESTAZIONE_EPISODIO]', type: 'boiler' },
     // ────────────────────────────────────────────────────────────────────────
@@ -654,49 +704,48 @@ const ANON_CONFIG = {
     { pattern: /(?<=dimettiamo\s+in\s+data\s+odierna\s+(?:il\s+Sig\.?ra?\.?\s+|la\s+Sig\.?ra\.?\s+))[A-Z][a-zA-Z\u00C0-\u00FF]+(?:\s+[A-Z][a-zA-Z\u00C0-\u00FF]+)?(?=\s*,)/gi,
       label: '[PAZIENTE]', type: 'name' },
     { pattern: /\bil\s+(?:[Ss]ig\.(?:ra)?|[Pp]aziente)\s+([A-Z][a-zA-Z\u00C0-\u00FF]+(?:\s+[A-Z][a-zA-Z\u00C0-\u00FF]+)?)/g,
-
       label: 'il sig. [PAZIENTE]', type: 'name' },
-    // ── Patterns replacing nameDict_fallback ──────────────────────────────────
-    // "Sig. Cognome" / "Sig.ra Cognome" in report headers (microbiologia, sierologia)
+    // "Sig. Cognome" / "Sig.ra Cognome" in report headers
     { pattern: /\bSig\.(?:ra\.?)?\s+[A-Z][a-z\u00C0-\u00FF]{2,}/g,
       label: '[PAZIENTE]', type: 'name' },
-    // ALL-CAPS surname immediately before [NOME] tag in lab pager headers (MAZZOCCA [NOME])
+    // ALL-CAPS surname immediately before [NOME] tag
     { pattern: /\b[A-Z]{3,}(?=\s+\[NOME\])/g,
       label: '[PAZIENTE]', type: 'name' },
-    // Digits glued to ALL-CAPS surname before [NOME] (Anni: 63MAZZOCCA [NOME])
+    // Digits glued to ALL-CAPS surname before [NOME]
     { pattern: /(?<=\d)[A-Z]{3,}(?=\s+\[NOME\])/g,
       label: '[PAZIENTE]', type: 'name' },
     { pattern: /Stampato\s+da\s*:\s*[A-Z][a-zA-Z\u00C0-\u00FF]+(?:\s+[A-Z][a-zA-Z\u00C0-\u00FF]+)*/g,
       label: 'Stampato da: [OPERATORE]', type: 'name' },
-    // "Specializzando: Nome Cognome" in radiology reports
-    { pattern: /Specializzando\s*:\s*(?:\[NOME\]\s+)?[A-Z][a-zA-Z\u00C0-\u00FF]+(?:\s+[A-Z][a-zA-Z\u00C0-\u00FF]+)*/g,
+    // FIX: Specializzando pattern — flexible title prefix (dott/dr with or without dot, any case)
+    { pattern: /Specializzando\s*:\s*(?:(?:[Dd]ott\.?(?:ssa\.?)?|[Dd]r\.?(?:ssa\.?)?)\s+)?(?:[A-Z]\.\s*)?[A-Z][a-zA-Z'\u00C0-\u00FF]+(?:\s+[A-Z][a-zA-Z'\u00C0-\u00FF]+)*/g,
       label: 'Specializzando: [OPERATORE]', type: 'name' },
-    // "Medico: Nome Cognome" in radiology reports (standalone, NOT richiedente/refertante)
-    { pattern: /\bMedico\s*:\s*[A-Z][a-z\u00C0-\u00FF][a-zA-Z\u00C0-\u00FF]*(?:\s+[A-Z][a-zA-Z\u00C0-\u00FF]+)*/g,
+    // FIX: "Medico: Nome Cognome" — require line start to avoid matching glued text like "D'ErricoMedico:"
+    { pattern: /(?:^|\n)Medico\s*:\s*[A-Z][a-z\u00C0-\u00FF][a-zA-Z\u00C0-\u00FF]*(?:\s+[A-Z][a-zA-Z\u00C0-\u00FF]+)*/gm,
       label: 'Medico: [OPERATORE]', type: 'name' },
-    // "Infermiere: [NOME] Cognome" — residual surname after partial redaction (verbali NR)
+    // "Infermiere: [NOME] Cognome" — residual surname after partial redaction
     { pattern: /Infermiere\s*:\s*(?:\[NOME\]\s+)?[A-Z][a-z\u00C0-\u00FF]{2,}/g,
       label: 'Infermiere: [OPERATORE]', type: 'name' },
-    // "Dr. I. D'Errico" / "Dott.Pieroni" — title (no-space OK) + initials + compound/hyphenated surname
-    { pattern: /(?:[Dd][Oo][Tt]{2}\.(?:[Ss][Ss][Aa]\.?)?|[Dd][Rr]\.(?:[Ss][Ss][Aa]\.?)?)\s*(?:[A-Z]\.\s*){0,3}[A-Z][a-zA-Z'\u00C0-\u00FF\-]{2,}(?:\s+(?:De[ilr]?|Da[il]?|Dal|Di|Della|Von|Al|El)\s+[A-Z][a-zA-Z\u00C0-\u00FF]+|\s+(?![Dd][Rr]\.|[Dd][Oo][Tt]{2}\.|[Pp][Rr][Oo][Ff]\.)[A-Z][a-zA-Z\u00C0-\u00FF\-]+)*/g,
+    // "Dr. I. D'Errico" / "dott Pieroni" / "prof Guerra" — flexible title (with/without dot,
+    // any case: dott dott. Dott. dr Dr. prof Prof. med), optional ssa suffix,
+    // optional initials, then name with compound/apostrophe surnames
+    { pattern: /(?:[Dd]ott\.?(?:ssa\.?)?|[Dd]r\.?(?:ssa\.?)?|[Pp]rof\.?(?:ssa\.?)?|[Mm]ed\.?)\s+(?:[A-Z]\.\s*){0,3}[A-Z][a-zA-Z'\u00C0-\u00FF\-]{2,}(?:\s+(?:De[ilr]?|Da[il]?|Dal|Di|Della|Von|Al|El)\s+[A-Z][a-zA-Z'\u00C0-\u00FF]+|\s+(?![Dd]ott\.?|[Dd]r\.?|[Pp]rof\.?)[A-Z][a-zA-Z'\u00C0-\u00FF\-]+)*/g,
       label: '[OPERATORE]', type: 'name' },
-    // "[NOME]NomeCognome" or "LUCACognome" — patient name glued to label "Cognome" (verbale op.)
+    // "[NOME]NomeCognome" or "LUCACognome" — patient name glued to label "Cognome"
     { pattern: /[A-Za-z\u00C0-\u00FF]+(?=Cognome\b)/g,
       label: '[PAZIENTE]', type: 'name' },
     // "1/2LUCA MAZZOCCA" footer lines in verbale operatorio
     { pattern: /\b\d+\/\d+[A-Z][a-zA-Z\u00C0-\u00FF]+(?:\s+[A-Z][a-zA-Z\u00C0-\u00FF]+)*/g,
       label: '[PAGINA]', type: 'boiler' },
-    // Standalone "Cognome Nome" CamelCase pair on its own line (e.g. Turatti Giacomo)
+    // Standalone "Cognome Nome" CamelCase pair on its own line
     { pattern: /^[A-Z][a-z\u00C0-\u00FF]{2,}\s+[A-Z][a-z\u00C0-\u00FF]{2,}\s*$/gm,
       label: '[OPERATORE]', type: 'name' },
-    // Single-word CamelCase surname on its own line, between [OPERATORE] context lines
-    // (e.g. "Grassi", "Gobbato" as operator surname only annotations)
+    // Single-word CamelCase surname on its own line, after [OPERATORE] context lines
     { pattern: /(?<=\[OPERATORE\]\r?\n)([A-Z][a-z\u00C0-\u00FF]{3,})(?=\r?\n)/gm,
       label: '[OPERATORE]', type: 'name' },
     // Single-word CamelCase surname immediately before role-code line (M/I/F/R + text)
     { pattern: /^([A-Z][a-z\u00C0-\u00FF]{3,})\r?\n(?=[MIFR][A-Z])/gm,
       replace: (m, name) => '[OPERATORE]\n', label: '[OPERATORE]', type: 'name' },
-    // ": COGNOME NOME" ALL-CAPS after colon on own line (e.g. : REGAZZO GIANLUCA)
+    // ": COGNOME NOME" ALL-CAPS after colon on own line
     { pattern: /^\s*:\s*[A-Z]{3,}(?:\s+[A-Z]{3,})+\s*$/gm,
       label: ': [OPERATORE]', type: 'name' },
     // "con [OPERATORE] e Cognome" — trailing surname in giro visite notes
@@ -820,14 +869,13 @@ const ANON_CONFIG = {
     // ALL CAPS full name on own line — excludes clinical locations, exam section labels, and lab terms
     { pattern: /^(?!(?:STROKE\s+UNIT|PRONTO\s+SOCCORSO|CLINICA\s+NEUROLOGICA|CLINICA\s+NEUROLOG|UNITA\s+STROKE|STROKE\s+UNIT\s+[-–]|ESAME\s+NEUROLOGICO|ESAME\s+OBIETTIVO|ESAME\s+OBBIETTIVO|ANAMNESI\s+PATOLOGICA|ANAMNESI\s+FISIOLOGICA|DECORSO\s+CLINICO|TERAPIA\s+DOMICILIARE|TERAPIA\s+ALLA|MOTIVO\s+DEL\s+RICOVERO|ACCERTAMENTI\s+STRUMENTALI|VALUTAZIONI\s+SPECIALISTICHE|ESAMI\s+DI\s+LABORATORIO|FOLLOW[\s\-]UP|EMOGLOBINA\s+GLICATA|PROFILO\s+LIPIDICO|PROFILO\s+METABOLICO|PROFILO\s+PROTEICO|PROFILO\s+ERITROCITARIO|PROFILO\s+COAGULATIVO|FUNZIONALITA\s+RENALE|FUNZIONALITA\s+EPATICA|FUNZIONALITA\s+TIROIDEA|ENZIMI\s+MUSCOLARI|METABOLITI\s+SPECIALI|FORMULA\s+LEUCOCITARIA|INDICI\s+DI\s+FLOGOSI|ESAME\s+URINE|ESAMI\s+MICROBIOLOGICI|EMATOLOGIA\s+E|COSTITUENTI\s+BIOCHIMICI|MICROSCOPIA\s+CLINICA|ORMONI|APTOGLOBINA|COMPLEMENTO))[A-Z]{2,}(?:\s+[A-Z]{2,})+$/gm,
       label: '[OPERATORE]', type: 'name' },
-    // ── PATCHED: ALL CAPS single word — expanded exclusion list ───────────
+    // ALL CAPS single word — expanded exclusion list
     { pattern: /^(?!(?:STROKE|UNIT|URGENTE|ORDINARIO|AMBULATORIALE|DIAGNOSI|REPARTO|COGNOME|NOME|SESSO|DATA|INTERVENT|PRIMO|SECONDO|ANESTESI|INFERMIER|TECNICO|CHIRURGO|OPERATORE|PROFILO|ESAME|CONTEGGIO|ZONA|INDAGINE|FORMULA|CITOMETRIA|EMATOLOGICO|EMATOLOGICI|EMATOLOGICA|BIOCHIMICI|BIOCHIMICHE|COAGULAZIONE|SIEROLOGIA|IMMUNOLOGIA|MICROSCOPIA|ORMONI|METABOLITI|COSTITUENTI|SPECIALI|LIPIDICO|LIPIDICA|PROTEICO|PROTEICA|ERITROCITARIO|ERITROCITARIA|MICROBIOLOGICI|MICROBIOLOGICA|DIFFERENZIALE|ALBUMINICA|CHIMICO|FISICA|FISICO|URINARIO|URINARIA|CLINICA|AZIENDA|REGIONE|DIPARTIMENTO|AMBULATORIO|INDICAZIONI|CONCLUSIONI|RISULTATI|TECNICA|DESCRIZIONE|INTERVENTO|SALA|FARMACI|BISOGNO|RENALE|EPATICA|TIROIDEA|ORMONALE|SIEROIMMUNOLOGICA|BATTERIOLOGICA|SORVEGLIANZA|COLTURALE|REFERTO|DIMISSIONE|STAMPA|INDICI|DI|FLOGOSI|COMMENTO|ANTICORPI|TREPONEMA|PALLIDUM|LABORATORIO|GERMI|HBSAG|UNKNOWN|EPATITI|METABOLISMO|EMOCROMO|LEUCOCITARIA|LEUCOCITI|ETF|CRIO)\b)[A-Z][A-Z\-]{1,}(?:\s+(?!(?:STROKE|UNIT|URGENTE|ORDINARIO|AMBULATORIALE|DIAGNOSI|REPARTO|COGNOME|NOME|SESSO|DATA|INTERVENT|PRIMO|SECONDO|ANESTESI|INFERMIER|TECNICO|CHIRURGO|OPERATORE|PROFILO|ESAME|CONTEGGIO|ZONA|INDAGINE|FORMULA|CITOMETRIA|EMATOLOGICO|EMATOLOGICI|EMATOLOGICA|BIOCHIMICI|BIOCHIMICHE|COAGULAZIONE|SIEROLOGIA|IMMUNOLOGIA|MICROSCOPIA|ORMONI|METABOLITI|COSTITUENTI|SPECIALI|LIPIDICO|LIPIDICA|PROTEICO|PROTEICA|ERITROCITARIO|ERITROCITARIA|MICROBIOLOGICI|MICROBIOLOGICA|DIFFERENZIALE|ALBUMINICA|CHIMICO|FISICA|FISICO|URINARIO|URINARIA|CLINICA|AZIENDA|REGIONE|DIPARTIMENTO|AMBULATORIO|INDICAZIONI|CONCLUSIONI|RISULTATI|TECNICA|DESCRIZIONE|INTERVENTO|SALA|FARMACI|BISOGNO|RENALE|EPATICA|TIROIDEA|ORMONALE|SIEROIMMUNOLOGICA|BATTERIOLOGICA|SORVEGLIANZA|COLTURALE|REFERTO|DIMISSIONE|STAMPA|INDICI|DI|FLOGOSI|COMMENTO|ANTICORPI|TREPONEMA|PALLIDUM|LABORATORIO|GERMI|HBSAG|UNKNOWN|EPATITI|METABOLISMO|EMOCROMO|LEUCOCITARIA|LEUCOCITI|ETF|CRIO)\b)[A-Z][A-Z\-']{1,})+\s*$/gm,
       label: '[PAZIENTE]', type: 'name' },
     // ALL CAPS name + date or parenthesis — exclude lab section headers
     { pattern: /\b(?!(?:ESAMI\s+DI\s+LABORATORIO|DI\s+LABORATORIO|ESAMI\s+DI|EMOGLOBINA\s+GLICATA|PROFILO\s+LIPIDICO|PROFILO\s+METABOLICO|PROFILO\s+PROTEICO|PROFILO\s+ERITROCITARIO|PROFILO\s+COAGULATIVO|FUNZIONALITA\s+RENALE|FUNZIONALITA\s+EPATICA|FUNZIONALITA\s+TIROIDEA|ENZIMI\s+MUSCOLARI|METABOLITI\s+SPECIALI|FORMULA\s+LEUCOCITARIA|INDICI\s+DI\s+FLOGOSI|DI\s+FLOGOSI|ESAME\s+URINE|ESAMI\s+MICROBIOLOGICI|COSTITUENTI\s+BIOCHIMICI|ORMONI|HBA1C|HBAIC))[A-Z]{2,}(?:\s+[A-Z]{2,})+(?=\s+(?:\d{2}[\/\.]\d{2}[\/\.]\d{4}|\())/g,
       label: '[PAZIENTE]', type: 'name' },
-    // ALL CAPS name immediately concatenated with CamelCase keyword (e.g. MAZZOCCA LUCAPaziente:)
-    // ALL-CAPS name mid-sentence (e.g. 'firmato da JOSEPH GABRIELI il')
+    // ALL CAPS name immediately concatenated with CamelCase keyword
     { pattern: /(?<=[a-z]\s)[A-Z][A-Z\-]{1,}(?:\s+[A-Z][A-Z\-']{1,})+(?=\s+[a-z])/g,
       label: '[OPERATORE]', type: 'name' },
     // ALL-CAPS name at line start followed by role label on next line
@@ -835,8 +883,8 @@ const ANON_CONFIG = {
       label: '[OPERATORE]', type: 'name' },
     { pattern: /\b(?!(?:STROKE|ESAMI|PROFILO|ANAMNESI|DECORSO|TERAPIA|MOTIVO|REGIONE|AZIENDA|MARCATORI|EMATOLOGIA|COSTITUENTI|UNITA|DI|DEL|DELLA|DEGLI|DELLE|AI|AL)\b)[A-Z]{2,}(?:\s+(?!(?:STROKE|ESAMI|PROFILO|ANAMNESI|DECORSO|TERAPIA|MOTIVO|REGIONE|AZIENDA|MARCATORI|EMATOLOGIA|COSTITUENTI|UNITA|UNIT|DI|DEL|DELLA|DEGLI|DELLE|LAB|LABORATORIO|FISIOLOGICA|PATOLOGICA|CLINICO|LIPIDICO|PROTEICO|ERITROCITARIO|COAGULATIVO|RENALE|EPATICA|TIROIDEA|MUSCOLARI|SPECIALI|LEUCOCITARIA|FLOGOSI|URINE|MICROBIOLOGICI|BIOCHIMICI)\b)[A-Z]{2,})+(?=[A-Z][a-z])/g,
       label: '[PAZIENTE]', type: 'name' },
-    // Signature blocks
-    { pattern: /(?:[Dd][Oo][Tt]{2}\.(?:[Ss][Ss][Aa]\.?)?|[Dd][Rr]\.(?:[Ss][Ss][Aa]\.?)?|[Pp][Rr][Oo][Ff]\.?(?:[Ss][Ss][Aa]\.?)?)\s+(?:[A-Z]\.\s*){0,4}[A-Z][a-zA-Z\u00C0-\u00FF]+(?:\s+(?![Dd][Rr]\.|[Dd][Oo][Tt]{2}\.|[Pp][Rr][Oo][Ff]\.)[A-Z][a-zA-Z\u00C0-\u00FF]+)*/g,
+    // Signature blocks — flexible title (dott/dr/prof with or without dot, any case)
+    { pattern: /(?:[Dd]ott\.?(?:ssa\.?)?|[Dd]r\.?(?:ssa\.?)?|[Pp]rof\.?(?:ssa\.?)?|[Mm]ed\.?)\s+(?:[A-Z]\.\s*){0,4}[A-Z][a-zA-Z'\u00C0-\u00FF]+(?:\s+(?![Dd]ott\.?|[Dd]r\.?|[Pp]rof\.?)[A-Z][a-zA-Z'\u00C0-\u00FF]+)*/g,
       label: '[OPERATORE]', type: 'name' },
     { pattern: /\bD\.\s+[A-Z][a-zA-Z\u00C0-\u00FF]{2,}(?:\s+[A-Z][a-zA-Z\u00C0-\u00FF]+)+/g,
       label: '[OPERATORE]', type: 'name' },
@@ -857,7 +905,6 @@ const ANON_CONFIG = {
     { pattern: /FINE\s+DOCUMENTO\s*[-–]\s*PAGINA\s+FINALE/gi,
       label: '[FINE_DOCUMENTO]', type: 'boiler' },
     // ALLCAPS surname + CamelCase firstname on its own line (e.g. "MAZZOCCA Luca" in lab headers)
-    // Excludes known clinical terms like STROKE, PRONTO, CLINICA, etc.
     { pattern: /^(?!(?:STROKE|PRONTO|CLINICA|UNITA|REPARTO|ESAME|ANAMNESI|DECORSO|TERAPIA|MOTIVO|AZIENDA|REGIONE|DIPARTIMENTO|AMBULATORIO|INFERMIERE|MEDICO|TECNICO|PAZIENTE|DOTT|PROF)\b)[A-Z]{2,}\s+[A-Z][a-z\u00C0-\u00FF]{2,}\s*$/gm,
       label: '[PAZIENTE]', type: 'name' },
     // Cap pair before date — exclude clinical locations and exam labels
@@ -879,10 +926,10 @@ const ANON_CONFIG = {
       label: '[CODICE_FISCALE]', type: 'id' },
     { pattern: /\([A-Z][a-z\u00C0-\u00FF]+(?:\s+[A-Z][a-z\u00C0-\u00FF]+){1,2}\)/g,
       label: '([OPERATORE])', type: 'name' },
-    // Trailing first name after placeholder: '[OPERATORE] Maria' or '[PAZIENTE] Loredana,'
+    // Trailing first name after placeholder
     { pattern: /(?<=\[(?:OPERATORE|PAZIENTE)\]\s+)([A-Z][a-z\u00C0-\u00FF]{3,})(?=[,\s.])/g,
       label: '[NOME]', type: 'name' },
-    // Name after date in lab stamp headers: 'Stampa referto del: 25/02/2026 Loredana'
+    // Name after date in lab stamp headers
     { pattern: /(?<=\d{2}\/\d{2}\/\d{4}\s+)([A-Z][a-z\u00C0-\u00FF]{3,})(?=\s*$)/gm,
       label: '[NOME]', type: 'name' },
   ],
@@ -934,15 +981,57 @@ const ANON_CONFIG = {
     /^Medico\s*:\s*(?:Prof\.|Dr(?:\.ssa)?)?\s*[A-Z]/i,
     /^T\.S\.R\.M\.\s+/i,
     /^Equipe\s*:\s*$/i,
-    /^Il\s+Medico\s+Radiologo\s*$/i,
+    // FIX: removed /^Il\s+[Mm]edico\s+[Rr]adiologo\s*$/i — "Il Medico Radiologo" is a valid
+    // role label in radiology report Equipe: blocks and should NOT be stripped as boilerplate.
+    /^Il\s+[Mm]edico\s+[Ss]trutturato\s+Dott\./i,
+    /^MFS\s+Dott\.sse?\s+/i,
     /^Ringraziando\s+per\s+la\s+cortese\s+collaborazione[^\n]*/i,
     /^rimaniamo\s+ad?\s+disposizione[^\n]*/i,
     /^Dott\.?\s*(?:ssa\.?)?\s+[A-Z]\.\s+[A-Z][a-z]+\s*$/,
     /^\(Medici\s+in\s+formazione\s+specialistica\)\s*$/i,
     /^\(Dirigenti\s+medici\)\s*$/i,
     /^Cordiali\s+saluti\s*,?\s*$/i,
-    /^Il\s+medico\s+strutturato\s+Dott\./i,
-    /^MFS\s+Dott\.sse?\s+/i,
+    // ── Institutional / address boilerplate ──────────────────────────────
+    // City standalone or with date
+    /^Padova\s*$/i,
+    /^PADOVA\s*$/,
+    // Street addresses — Via/Viale/Corso/Piazza + anything, but NOT "Via orale/endovenosa/etc" (drug routes)
+    /^Via\s+(?!orale|endovenosa|ev\b|im\b|sc\b|subcut|intramuscol|transdermica|inalatoria|nasale|oftalmica|auricolare|rettale)[A-Z][^\n]{3,}$/i,
+    /^Viale\s+[A-Z][^\n]{3,}$/i,
+    /^Corso\s+[A-Z][^\n]{3,}$/i,
+    /^Piazza\s+[A-Z][^\n]{3,}$/i,
+    /^Largo\s+[A-Z][^\n]{3,}$/i,
+    /^Vicolo\s+[A-Z][^\n]{3,}$/i,
+    // ZIP + city lines (e.g. "35128 PADOVA", "35128 Padova (PD)")
+    /^\d{5}\s+[A-Z][A-Za-z\s]+(?:\([A-Z]{2}\))?\s*$/,
+    // Phone / fax / email lines
+    /^(?:Tel\.?|Telefono|Fax|Tel\/Fax)\s*[:\.\-]?\s*[\d\s\.\-\+\/]+$/i,
+    /^(?:Tel\.?|Telefono|Fax)\s*[:\.\-]?\s*0\d[\d\s\.\-]+$/i,
+    /^[^\s@]+@[^\s@]+\.[^\s@]+\s*$/,
+    // Website
+    /^(?:www\.|https?:\/\/)[^\s]+\s*$/i,
+    // P.IVA / Codice Fiscale azienda
+    /^(?:P\.?\s*IVA|Partita\s+IVA|C\.?F\.?|Cod(?:ice)?\s+Fiscale)\s*[:\-]?\s*[\d\w]+\s*$/i,
+    /^C\.?F\.?\s+P\.?\s*IVA\s+\d+\s*$/i,
+    // Azienda / Ospedale / Università header lines
+    /^Azienda\s+Ospedaliero[^\n]*/i,
+    /^Azienda\s+Ospedale[^\n]*/i,
+    /^Azienda\s+ULSS[^\n]*/i,
+    /^Ospedale\s+[A-Z][^\n]*/i,
+    /^Universit[àa]\s+(?:degli\s+Studi\s+)?di\s+[A-Z][^\n]*/i,
+    /^Policlinico\s+[A-Z][^\n]*/i,
+    // Specific Padova hospital header fragments
+    /^Azienda\s+Ospedale\s*-\s*Universit[àa]\s+Padova\s*$/i,
+    /^Via\s+Giustiniani[^\n]*/i,
+    /^Via\s+A(?:ndrea)?\.\s*Giustiniani[^\n]*/i,
+    // Generic institutional suffix lines
+    /^U\.O\.(?:C\.?|S\.?|D\.?)?\s*(?:di\s+)?[A-Z][^\n]{2,}$/i,
+    /^S\.C\.\s+[A-Z][^\n]*/i,
+    /^S\.S\.\s+[A-Z][^\n]*/i,
+    /^Struttura\s+(?:Complessa|Semplice)\s+[A-Z][^\n]*/i,
+    /^Dipartimento\s+[A-Z][^\n]*/i,
+    /^Dipartimento\s+di\s+[A-Z][^\n]*/i,
+    /^Dip\.\s+[A-Z][^\n]*/i,
   ],
 };
 
@@ -954,32 +1043,25 @@ function freezeLabLines(text) {
   let idx = 0;
   let frozen = text;
 
-  // Freeze P-/B-/U-/C-/S-/E- prefixed lab result lines (e.g. P-GLUCOSIO 4,4 mmol/L)
-  // Also matches indented versions from XLS formatter (leading spaces)
   frozen = frozen.replace(/^[ \t]*[PBUCSE]-[A-Z].*/gm, (match) => {
     const key = '\x00LAB' + (idx++) + '\x00';
     placeholders.push({ key, value: match });
     return key;
   });
 
-  // Freeze spaced-letter section headers (C O S T I T U E N T I B I O C H I M I C I)
   frozen = frozen.replace(/^(?:[A-Z] ){4,}[A-Z]\s*$/gm, (match) => {
     const key = '\x00LAB' + (idx++) + '\x00';
     placeholders.push({ key, value: match });
     return key;
   });
 
-  // Freeze "Costituente Risultato Unita'" header line
   frozen = frozen.replace(/^Costituente\s+Risultato\s+Unit[^\n]*/gm, (match) => {
     const key = '\x00LAB' + (idx++) + '\x00';
     placeholders.push({ key, value: match });
     return key;
   });
 
-  // Freeze bare lab result lines: ALL_CAPS_WORD * numeric unit range
-  // Also matches indented versions from XLS formatter
   frozen = frozen.replace(/^[ \t]*[A-Z][A-Z\s\-\/\(\)]{3,}\*?\s+[\d,]+\s+\S+.*$/gm, (match) => {
-    // Only freeze if it looks like a lab value (has a number after the name)
     if (/\d/.test(match)) {
       const key = '\x00LAB' + (idx++) + '\x00';
       placeholders.push({ key, value: match });
@@ -988,23 +1070,16 @@ function freezeLabLines(text) {
     return match;
   });
 
-
-  // ── Lab-zone header freeze ─────────────────────────────────────────────────
-  // Freeze ALL-CAPS standalone lines (e.g. PROFILO EMATOLOGICO, TREPONEMA PALLIDUM ANTICORPI)
-  // that appear within lab report zones — identified by proximity to P-/B-/U-/S- analyte lines
-  // or by being inside an 'Al Medico Curante' / '## ESAMI DI LABORATORIO' block.
   (function() {
     const lines2 = frozen.split('\n');
     const labZone = new Array(lines2.length).fill(false);
     const isAnalyte = (l) => /^[PBUSE]-[A-Z]/.test(l.trim()) || /^\x00LAB/.test(l.trim());
 
-    // Forward+backward proximity (8 lines around each analyte)
     for (let i = 0; i < lines2.length; i++) {
       if (isAnalyte(lines2[i])) {
         for (let j = Math.max(0,i-8); j < Math.min(lines2.length,i+8); j++) labZone[j] = true;
       }
     }
-    // Block mode: Al Medico Curante / ## ESAMI DI LABORATORIO → until ___ or Copia di documento
     let inBlock = false;
     for (let i = 0; i < lines2.length; i++) {
       if (/^Al Medico Curante\s*:/m.test(lines2[i]) || /^##\s+ESAMI DI LABORATORIO/.test(lines2[i])) inBlock = true;
@@ -1013,7 +1088,6 @@ function freezeLabLines(text) {
         if (/^_{10,}/.test(lines2[i]) || /^Copia di documento/.test(lines2[i])) inBlock = false;
       }
     }
-    // Freeze ALL-CAPS headers in lab zone
     frozen = lines2.map((line, i) => {
       if (!labZone[i]) return line;
       const t = line.trim();
@@ -1071,7 +1145,6 @@ function applyRegex(text) {
     const re = new RegExp(rule.pattern.source, rule.pattern.flags);
     if (re.global) re.lastIndex = 0;
     if (typeof rule.replace === 'function') {
-      // Custom replacer function (e.g. for 'e Cognome' trailing name)
       result = result.replace(re, (...args) => {
         const fullMatch = args[0].trim();
         if (fullMatch.length > 1 && !reps.find(r => r.orig === fullMatch))
@@ -1218,7 +1291,6 @@ function applyNameDict(text) {
 
   const exactSurnameSet=new Set(NAMES_DB.surnames);
   const exactFirstSet=new Set(NAMES_DB.firstNames);
-  // nameDict_fallback removed — replaced by structural regex patterns
 
   function tokenise(str){
     const tokens=[];
@@ -1259,7 +1331,6 @@ function applyNameDict(text) {
   // Pass 2: fuzzy pairs
   const tokens2=tokenise(result);
   const pass2Spans=[];
-  // ── PATCHED: expanded SKIP set with biochemistry terms and clinical labels ──────────────
   const SKIP2=new Set([
     'nascita','cognome','nome','sesso','reparto','diagnosi','anamnesi',
     'terapia','esame','referto','paziente','medico','infermiere',
@@ -1268,7 +1339,6 @@ function applyNameDict(text) {
     'stato','grado','tipo','data','ora','firma','timbro',
     'mese','anno','giorno','settimana',
     'setto','atrio','mitrale','aortica','ventricolo','valvola',
-    // Lab analytes & biochemistry
     'glucosio','urea','creatinina','sodio','potassio','cloro',
     'calcio','fosfato','albumina','bilirubina','totale','coniugata',
     'inorganico','inorganica','urico','acido','ratio','tempo',
@@ -1280,14 +1350,11 @@ function applyNameDict(text) {
     'proteinuria','microalbuminuria','cistatina','osmolalita','clearance',
     'bicarbonato','magnesio','zinco','fosforo','transaminasi','lipasi',
     'amilasi','fosfatasi','creatinchinasi','lattato','deidrogenasi',
-    // Lab header/comment words
     'costituente','risultato','riferimento','precedente',
     'intervallo','metodo','campione','commento','obiettivo',
     'terapeutico','normalizzato','alterata','digiuno',
     'gravidanza','emolizzato','sovrastima','reattiva',
-    // Units
     'mmol','umol','nmol','litro','litri',
-    // Clinical locations and exam section labels — NEW
     'neurologica','neurologico','neurologici','neurologia',
     'obiettivo','obbiettivo','generale','ingresso',
     'soccorso','pronto','clinica','unita','unit',
@@ -1298,12 +1365,10 @@ function applyNameDict(text) {
     'decorso','clinico','farmacologica','motivo',
     'patologica','remota','fisiologica','familiare',
     'accertamenti','strumentali','laboratorio','specialistiche',
-    'valutazioni','neurologica','obiettivi',
-    // Letter structure words — must never be redacted
+    'valutazioni','obiettivi',
     'curante','attenzione','cortese','collega','egregio',
     'dimettiamo','odierna','assistita','assistito',
     'ricoverata','ricoverato','degenza',
-    // Lab section headers and modifiers
     'glicata','glicato','glicosata','glicosato',
     'metaboliti','speciali','lipidico','lipidica',
     'coagulativo','coagulativa','tiroideo','tiroidea',
@@ -1331,7 +1396,6 @@ function applyNameDict(text) {
   // Pass 3: exact individual surnames
   const allSurnames=[...exactSurnameSet];
   allSurnames.sort((a,b)=>b.length-a.length);
-  // ── PATCHED: expanded CLINICAL_KEYWORDS ─────────────────────────────────
   const CLINICAL_KEYWORDS=new Set([
     'nascita','cognome','nome','sesso','reparto','diagnosi','anamnesi',
     'terapia','esame','referto','paziente','medico','infermiere',
@@ -1342,7 +1406,6 @@ function applyNameDict(text) {
     'setto','atrio','mitrale','aortica','ventricolo','valvola',
     'romano','ferrari','russo','esposito','bianchi',
     'greco','lombardi','ricci','marino','gallo','conti','de',
-    // Lab analytes
     'glucosio','urea','creatinina','sodio','potassio','cloro',
     'calcio','fosfato','albumina','bilirubina','totale','coniugata',
     'inorganico','inorganica','urico','acido','ratio','tempo',
@@ -1359,7 +1422,6 @@ function applyNameDict(text) {
     'terapeutico','normalizzato','alterata','digiuno',
     'gravidanza','emolizzato','sovrastima','reattiva',
     'mmol','umol','nmol','litro','litri',
-    // Clinical locations, exam labels, section headers — NEW
     'neurologica','neurologico','neurologici','neurologia',
     'obiettivo','obbiettivo','generale','ingresso',
     'soccorso','pronto','clinica','fisiatrica','fisiatrico','fisiatria',
@@ -1369,11 +1431,9 @@ function applyNameDict(text) {
     'patologica','remota','fisiologica','familiare',
     'accertamenti','strumentali','laboratorio','specialistiche',
     'valutazioni','obiettivi','unita',
-    // Letter structure words — must never be redacted
     'curante','attenzione','cortese','collega','egregio',
     'dimettiamo','odierna','assistita','assistito',
     'ricoverata','ricoverato','degenza',
-    // Lab section headers and modifiers
     'glicata','glicato','glicosata','glicosato',
     'metaboliti','speciali','lipidico','lipidica',
     'coagulativo','coagulativa','tiroideo','tiroidea',
@@ -1416,7 +1476,6 @@ function runPipeline() {
       S.cleanText=clean; S.strippedBlocks=strippedBlocks;
       renderBoilerplateReview(strippedBlocks);
 
-      // ── PATCHED: freeze lab lines before any regex/dict processing ──────
       const{frozen,restore}=freezeLabLines(clean);
       let finalText=clean, reps=[];
 
@@ -1431,29 +1490,26 @@ function runPipeline() {
       }else{
         stxt.textContent='Stage 2 — Ricerca nomi (esatta + fuzzy)...';
         const res2=applyNameDict(res.text);
-        // ── PATCHED: restore lab lines after all processing ──────────────
         finalText=restore(res2.text);
         reps=[...res.reps,...res2.reps];
-      }
 
-      // ── GLOBAL SWEEP ──────────────────────────────────────────────────────
-      // Every name detected by any pattern gets replaced in ALL its occurrences,
-      // making the anonymized output consistent with what is highlighted in the original.
-      // Longer matches are applied first to avoid partial-match collisions.
-      const sweepReps = [...reps].sort((a,b) => b.orig.length - a.orig.length);
-      for (const r of sweepReps) {
-        if (!r.orig || r.orig.length < 2) continue;
-        try {
-          const esc = r.orig.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-          finalText = finalText.replace(new RegExp(esc, 'g'), r.repl);
-        } catch(e) {}
-      }
-      // ──────────────────────────────────────────────────────────────────────
+        // ── GLOBAL SWEEP ────────────────────────────────────────────────────
+        // Every name detected gets replaced in ALL its occurrences for consistency.
+        const sweepReps = [...reps].sort((a,b) => b.orig.length - a.orig.length);
+        for (const r of sweepReps) {
+          if (!r.orig || r.orig.length < 2) continue;
+          try {
+            const esc = r.orig.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+            finalText = finalText.replace(new RegExp(esc, 'g'), r.repl);
+          } catch(e) {}
+        }
+        // ────────────────────────────────────────────────────────────────────
 
-      renderAnonResult(finalText,reps);
-      const saved=S.rawText.length-clean.length;
-      stxt.textContent=`✓ ${strippedBlocks.length} blocchi rimossi (−${saved} char) · 🛡 Regex+Dizionario · verifica manualmente`;
-      scard.style.borderColor='var(--green)';
+        renderAnonResult(finalText,reps);
+        const saved=S.rawText.length-clean.length;
+        stxt.textContent=`✓ ${strippedBlocks.length} blocchi rimossi (−${saved} char) · 🛡 Regex+Dizionario · verifica manualmente`;
+        scard.style.borderColor='var(--green)';
+      }  // ← close else
     }catch(err){
       stxt.textContent='✗ '+err.message;
       scard.style.borderColor='var(--red)';
@@ -1545,13 +1601,12 @@ async function processXls(file){
   }catch(err){spin.style.display='none';stxt.style.color='var(--red)';stxt.textContent='✗ '+err.message;}
 }
 function formatLabRows(rows){
-  // ── Strip patient identifiers from any cell ────────────────────────────
   function stripIds(s){
     return s
-      .replace(/\bRIC_AO_\d+\b/gi,'[ID_RICOVERO]')           // numero ricovero
-      .replace(/\b\d{7,12}[-/]\d{0,6}\b/g,'[ID_RICOVERO]')   // ID numerico lungo
-      .replace(/\b(?:CF|C\.F\.)\s*:?\s*[A-Z0-9]{16}\b/gi,'[CODICE_FISCALE]') // codice fiscale
-      .replace(/\b[A-Z]{6}\d{2}[A-Z]\d{2}[A-Z]\d{3}[A-Z]\b/g,'[CODICE_FISCALE]'); // CF pattern
+      .replace(/\bRIC_AO_\d+\b/gi,'[ID_RICOVERO]')
+      .replace(/\b\d{7,12}[-/]\d{0,6}\b/g,'[ID_RICOVERO]')
+      .replace(/\b(?:CF|C\.F\.)\s*:?\s*[A-Z0-9]{16}\b/gi,'[CODICE_FISCALE]')
+      .replace(/\b[A-Z]{6}\d{2}[A-Z]\d{2}[A-Z]\d{3}[A-Z]\b/g,'[CODICE_FISCALE]');
   }
   let dataStart=0;
   for(let i=0;i<Math.min(rows.length,15);i++){
@@ -2077,10 +2132,8 @@ async function exportWord(){
     LevelFormat,VerticalAlign
   }=docx;
 
-  // ── Parse inline markdown: **bold**, *italic*, `code`, [PLACEHOLDER]
   function parseInline(raw){
     const runs=[];
-    // tokenise: **bold**, *italic*, `code`, and plain text
     const re=/\*\*(.+?)\*\*|\*(.+?)\*|`(.+?)`|(\[[A-Z_]+\])|([^*`\[]+)/g;
     let m;
     while((m=re.exec(raw))!==null){
@@ -2093,12 +2146,10 @@ async function exportWord(){
     return runs.length?runs:[new TextRun({text:'',font:'Arial',size:22})];
   }
 
-  // ── Parse a markdown table into a docx Table
   function parseTable(lines){
-    // lines: ['| H1 | H2 |', '|---|---|', '| v1 | v2 |', ...]
+    const PAGE_W=9026;
     const rowLines=lines.filter(l=>/^\|/.test(l)&&!/^\|\s*[-:]+/.test(l));
     if(!rowLines.length)return null;
-    const PAGE_W=9026; // A4 with 2.5cm margins each side in DXA
     const borderDef={style:BorderStyle.SINGLE,size:4,color:'AAAAAA'};
     const borders={top:borderDef,bottom:borderDef,left:borderDef,right:borderDef};
     const parseRow=line=>line.replace(/^\||\|$/g,'').split('|').map(c=>c.trim());
@@ -2129,7 +2180,6 @@ async function exportWord(){
     });
   }
 
-  // ── Main parser: convert letter text to docx children array
   function letterToDocx(text){
     const children=[];
     const lines=text.split('\n');
@@ -2140,7 +2190,6 @@ async function exportWord(){
     while(i<lines.length){
       const line=lines[i];
 
-      // Table detection: collect consecutive table lines
       if(/^\|/.test(line)){
         const tableLines=[];
         while(i<lines.length&&/^\|/.test(lines[i])){tableLines.push(lines[i]);i++;}
@@ -2149,7 +2198,6 @@ async function exportWord(){
         continue;
       }
 
-      // Horizontal rule ---
       if(/^[-*_]{3,}\s*$/.test(line)){
         children.push(new Paragraph({
           border:{bottom:{style:BorderStyle.SINGLE,size:6,color:'CCCCCC',space:1}},
@@ -2157,7 +2205,6 @@ async function exportWord(){
         }));i++;continue;
       }
 
-      // Heading # / ##
       if(/^#{1,2}\s/.test(line)){
         const lvl=line.startsWith('## ')?HeadingLevel.HEADING_2:HeadingLevel.HEADING_1;
         const txt=line.replace(/^#{1,3}\s/,'');
@@ -2168,7 +2215,6 @@ async function exportWord(){
         }));i++;continue;
       }
 
-      // Bullet list: - item
       if(/^-\s/.test(line)){
         const txt=line.replace(/^-\s/,'');
         children.push(new Paragraph({
@@ -2178,13 +2224,11 @@ async function exportWord(){
         }));i++;continue;
       }
 
-      // Blank line → spacer paragraph
       if(line.trim()===''){
         children.push(new Paragraph({children:[new TextRun('')],spacing:{before:0,after:60}}));
         i++;continue;
       }
 
-      // Plain paragraph (may contain **bold** inline)
       children.push(new Paragraph({
         children:parseInline(line),
         spacing:SPACING_NORMAL,
@@ -2218,8 +2262,8 @@ async function exportWord(){
       sections:[{
         properties:{
           page:{
-            size:{width:11906,height:16838}, // A4
-            margin:{top:1418,right:1134,bottom:1134,left:1134}, // 2.5cm top, 2cm others
+            size:{width:11906,height:16838},
+            margin:{top:1418,right:1134,bottom:1134,left:1134},
           }
         },
         children,
@@ -2230,8 +2274,6 @@ async function exportWord(){
     const url=URL.createObjectURL(blob);
     const a=document.createElement('a');
     a.href=url;
-    // Try to get patient placeholder for filename
-    const patMatch=S.letter.match(/\[PAZIENTE_NOME\]|dimettiamo[^,]+,\s*([A-Za-z\s]+),/i);
     const _d=new Date();const dd=String(_d.getDate()).padStart(2,'0');const mm=String(_d.getMonth()+1).padStart(2,'0');const yyyy=_d.getFullYear();
     a.download=`Lettera_dimissione_${dd}_${mm}_${yyyy}.docx`;
     a.click();
@@ -2420,7 +2462,254 @@ function copyPreConfigured(withToken){
 }
 
 // ═══════════════════════════════════════════════════
-// AUTO-FILL CASE FOLDER
+// DISCHARGE LETTER EXTRACTOR
+// Finds the last discharge letter in an anonymized text block.
+// Start: "Alla C. A. del Medico Curante" or "dimettiamo in data odierna"
+// End:   "(Medici in formazione specialistica)" or first [INFO_DELIBERAZIONE]/[FIRMA_DIMISSIONE] line
+// ═══════════════════════════════════════════════════
+function extractDischargeLetter(anonText) {
+  const lines = anonText.split('\n');
+
+  // Patterns that mark the START of a discharge letter
+  const START_RE = [
+    /Alla\s+C\.\s*A\.\s+del\s+Medico\s+Curante/i,
+    /dimettiamo\s+in\s+data\s+odierna/i,
+  ];
+  // Patterns that mark the END of a discharge letter (inclusive — keep this line)
+  const END_RE = [
+    /^\s*\(Medici\s+in\s+formazione\s+specialistica\)/i,
+    /^\s*\(Dirigenti\s+medici\)\s*$/i,
+  ];
+  // Hard-stop patterns (exclusive — stop before this line)
+  const HARD_STOP_RE = [
+    /^\s*\[INFO_DELIBERAZIONE\]/,
+    /^\s*\[FIRMA_DIMISSIONE\]/,
+    /^\s*\[INFO_COSTO\]/,
+  ];
+
+  // Find ALL start positions
+  const starts = [];
+  for (let i = 0; i < lines.length; i++) {
+    if (START_RE.some(re => re.test(lines[i]))) {
+      // Avoid duplicate starts too close together (within 5 lines)
+      if (!starts.length || i - starts[starts.length - 1] > 5) {
+        starts.push(i);
+      }
+    }
+  }
+  if (!starts.length) return null;
+
+  // Use the LAST start (last discharge letter = most final/definitive copy)
+  const startIdx = starts[starts.length - 1];
+
+  // Include 2 lines before the start line to capture the "Regione Veneto" header if present
+  const captureFrom = Math.max(0, startIdx - 2);
+
+  // Find end
+  let endIdx = lines.length - 1;
+  for (let i = startIdx; i < lines.length; i++) {
+    if (HARD_STOP_RE.some(re => re.test(lines[i]))) {
+      endIdx = i - 1;
+      break;
+    }
+    if (END_RE.some(re => re.test(lines[i]))) {
+      endIdx = i;
+      break;
+    }
+  }
+
+  const letterLines = lines.slice(captureFrom, endIdx + 1);
+
+  // Clean up: remove placeholder-only lines at start/end, collapse runs of blank lines
+  const cleaned = letterLines
+    .join('\n')
+    .replace(/^\s*(\[(?:INTESTAZIONE|PAGINA|DATA_STAMPA|TELEFONO|NUM_DOCUMENTO|INDIRIZZO)[^\]]*\]\s*\n)+/gm, '')
+    .replace(/\n{3,}/g, '\n\n')
+    .trim();
+
+  return cleaned || null;
+}
+
+// ═══════════════════════════════════════════════════
+// CASE IMPORT — state for pending files
+// ═══════════════════════════════════════════════════
+const CASE_IMPORT = { pdfText: null, xlsText: null, pdfPages: 0 };
+
+function handleCaseImportDrop(e, type) {
+  e.preventDefault();
+  const dropEl = type === 'pdf'
+    ? document.getElementById('caseImportDropPdf')
+    : document.getElementById('caseImportDropXls');
+  dropEl.style.borderColor = 'var(--border)';
+  const f = e.dataTransfer.files[0];
+  if (!f) return;
+  if (type === 'pdf' && f.type === 'application/pdf') processCasePdf(f);
+  else if (type === 'xls' && /\.(xlsx?)/i.test(f.name)) processCaseXls(f);
+  else alert(type === 'pdf' ? 'Carica un file PDF.' : 'Carica un file XLS o XLSX.');
+}
+function handleCaseImportFile(e, type) {
+  const f = e.target.files[0];
+  if (!f) return;
+  if (type === 'pdf') processCasePdf(f);
+  else processCaseXls(f);
+}
+
+// ── XLS pipeline for case import ─────────────────────────────────────
+async function processCaseXls(file) {
+  setCaseImportStatus('Caricamento SheetJS...', 0);
+  document.getElementById('caseImportXlsName').textContent = file.name;
+  document.getElementById('caseImportXlsName').style.color = 'var(--accent)';
+  try {
+    const XLS  = await ensureSheetJs();
+    setCaseImportStatus('Parsing ' + file.name + '...', 30);
+    const buf  = await file.arrayBuffer();
+    const wb   = XLS.read(buf, { type:'array', cellText:true, cellDates:true });
+    const ws   = wb.Sheets[wb.SheetNames[0]];
+    const rows = XLS.utils.sheet_to_json(ws, { header:1, defval:'', raw:false });
+
+    // Reuse existing formatLabRows but with the case-local filename
+    const savedFilename = S_XLS.filename;
+    S_XLS.filename = file.name;           // temporarily borrow
+    const fmt = formatLabRows(rows);
+    S_XLS.filename = savedFilename;       // restore
+
+    CASE_IMPORT.xlsText = fmt.text;
+
+    document.getElementById('caseImportXlsName').textContent = `✓ ${fmt.examCount} esami`;
+    document.getElementById('caseImportXlsName').style.color = 'var(--green)';
+    document.getElementById('caseImportXlsInput').value = '';
+
+    setCaseImportStatus(`✓ XLS: ${fmt.examCount} esami estratti`, 100, 'green');
+    mergeCaseImportIntoFolder();
+  } catch(err) {
+    setCaseImportStatus('✗ XLS: ' + err.message, 0, 'red');
+    console.error(err);
+  }
+}
+
+// ── PDF pipeline for case import ─────────────────────────────────────
+async function processCasePdf(file) {
+  CASE_IMPORT.pdfText = null;
+  setCaseImportStatus('Caricamento PDF.js...', 0);
+  document.getElementById('caseImportPdfName').textContent = file.name;
+  document.getElementById('caseImportPdfName').style.color = 'var(--accent)';
+  const badge = document.getElementById('letterDetectedBadge');
+  badge.style.display = 'none';
+
+  try {
+    // Stage 1: extraction
+    const lib = await ensurePdfJs();
+    const ab  = await file.arrayBuffer();
+    const pdf = await lib.getDocument({ data: ab }).promise;
+    const tot = pdf.numPages;
+    let full = '';
+    for (let i = 1; i <= tot; i++) {
+      const pg = await pdf.getPage(i);
+      const ct = await pg.getTextContent();
+      let pt = '', ly = null;
+      for (const it of ct.items) {
+        if ('str' in it) {
+          if (ly !== null && Math.abs(it.transform[5] - ly) > 5) pt += '\n';
+          pt += it.str;
+          if (it.hasEOL) pt += '\n';
+          ly = it.transform[5];
+        }
+      }
+      full += pt.trim() + '\n\n';
+      setCaseImportStatus(`Estrazione pag ${i}/${tot}...`, Math.round((i / tot) * 40));
+    }
+    full = full.replace(/\n{3,}/g, '\n\n').trim();
+    CASE_IMPORT.pdfPages = tot;
+
+    // Stage 2: anonymization
+    setCaseImportStatus('Anonimizzazione — Strip boilerplate...', 45);
+    const { clean } = stripBoilerplate(full);
+
+    setCaseImportStatus('Anonimizzazione — Regex strutturale...', 55);
+    const { frozen, restore } = freezeLabLines(clean);
+    const res = applyRegex(frozen);
+
+    setCaseImportStatus('Anonimizzazione — Dizionario nomi...', 65);
+    if (!NAMES_DB.loaded) await loadNameDictionary();
+    let anonText = clean;
+    if (NAMES_DB.loaded) {
+      const res2   = applyNameDict(res.text);
+      const merged = [...res.reps, ...res2.reps];
+      let finalText = restore(res2.text);
+      for (const r of [...merged].sort((a, b) => b.orig.length - a.orig.length)) {
+        if (!r.orig || r.orig.length < 2) continue;
+        try {
+          const esc = r.orig.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+          finalText = finalText.replace(new RegExp(esc, 'g'), r.repl);
+        } catch(e) {}
+      }
+      anonText = finalText;
+    } else {
+      anonText = restore(res.text);
+    }
+
+    setCaseImportStatus('Rilevamento lettera di dimissione...', 80);
+    CASE_IMPORT.pdfText = anonText;
+
+    // Stage 3: letter extraction
+    const letter = extractDischargeLetter(anonText);
+    if (letter) {
+      document.getElementById('newCaseLetter').value = letter;
+      badge.style.display = 'inline-flex';
+    }
+
+    document.getElementById('caseImportPdfName').textContent =
+      `✓ ${tot} pag · ${letter ? 'lettera rilevata' : 'lettera non rilevata'}`;
+    document.getElementById('caseImportPdfName').style.color =
+      letter ? 'var(--green)' : 'var(--accent)';
+    document.getElementById('caseImportPdfInput').value = '';
+
+    const letterMsg = letter
+      ? `lettera rilevata (${letter.length.toLocaleString()} char)`
+      : 'lettera NON rilevata — incolla manualmente';
+    setCaseImportStatus(`✓ PDF ${tot} pag · ${letterMsg}`, 100, letter ? 'green' : 'accent');
+
+    // Auto-suggest label
+    if (!document.getElementById('newTplName').value.trim()) {
+      const base = file.name.replace(/\.pdf$/i, '').replace(/[_\-]+/g, ' ').trim();
+      document.getElementById('newTplName').value = base;
+    }
+
+    mergeCaseImportIntoFolder();
+  } catch(err) {
+    setCaseImportStatus('✗ PDF: ' + err.message, 0, 'red');
+    console.error(err);
+  } finally {
+    document.getElementById('caseImportSpin').style.display = 'none';
+  }
+}
+
+// ── Merge PDF anon text + XLS lab text into the folder textarea ───────
+function mergeCaseImportIntoFolder() {
+  let combined = '';
+  if (CASE_IMPORT.pdfText) combined += CASE_IMPORT.pdfText;
+  if (CASE_IMPORT.xlsText) {
+    combined += (combined ? '\n\n' : '') + CASE_IMPORT.xlsText;
+  }
+  if (combined) document.getElementById('newCaseFolder').value = combined;
+}
+
+// ── Shared status helper ──────────────────────────────────────────────
+function setCaseImportStatus(msg, pct, color) {
+  const statusEl = document.getElementById('caseImportStatus');
+  const spin     = document.getElementById('caseImportSpin');
+  const stxt     = document.getElementById('caseImportStatusTxt');
+  const bar      = document.getElementById('caseImportBar');
+  statusEl.style.display = 'block';
+  spin.style.display = (pct > 0 && pct < 100) ? 'inline-block' : 'none';
+  stxt.textContent = msg;
+  stxt.style.color = color === 'green' ? 'var(--green)'
+                   : color === 'red'   ? 'var(--red)'
+                   : color === 'accent'? 'var(--accent)'
+                   : 'var(--mid)';
+  bar.style.width = pct + '%';
+}
+
 // ═══════════════════════════════════════════════════
 function autoFillCaseFolder(){
   if(!S.anonText){alert('Nessun testo anonimizzato in sessione. Completa prima lo Step 2.');return;}
@@ -2594,14 +2883,13 @@ window.addEventListener('resize',updateDiffHeight);
 // ── Silent auto-pull from GitHub on startup ──────────────────────────
 (async function autoPullOnStartup(){
   const cfg=getGitHubCfg();
-  if(!cfg.token||!cfg.repo)return; // not configured, skip silently
+  if(!cfg.token||!cfg.repo)return;
   try{
     const file=await ghApiGet(cfg);
-    if(!file)return; // no remote file yet
+    if(!file)return;
     const decoded=decodeURIComponent(escape(atob(file.content.replace(/\n/g,''))));
     const remote=JSON.parse(decoded);
     if(!Array.isArray(remote))return;
-    // Merge: keep any local cases not yet on GitHub (by id), then overwrite with remote
     const local=loadLibrary();
     const remoteIds=new Set(remote.map(c=>c.id));
     const localOnly=local.filter(c=>!remoteIds.has(c.id));
@@ -2614,7 +2902,6 @@ window.addEventListener('resize',updateDiffHeight);
       ghStatus(`↓ Auto-sync: ${remote.length} casi caricati da GitHub`,'var(--dim)');
     }
   }catch(e){
-    // fail silently — don't disturb startup
     console.warn('Auto-pull GitHub failed:',e.message);
   }
 })();
