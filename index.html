@@ -126,6 +126,10 @@ hr.div{border:none;border-top:1px solid var(--border);margin:18px 0}
 ::-webkit-scrollbar-track{background:transparent}
 ::-webkit-scrollbar-thumb{background:var(--border-hi);border-radius:3px}
 @media(max-width:640px){.app{grid-template-columns:1fr}aside{display:none}.diff-grid{grid-template-columns:1fr}}
+
+/* DEBUG */
+.panel.active { border: 3px solid red !important; min-height: 200px !important; }
+.ni.active { background: orange !important; }
 </style>
 </head>
 <body>
@@ -606,6 +610,20 @@ hr.div{border:none;border-top:1px solid var(--border);margin:18px 0}
 
 <script>
 'use strict';
+
+// ═══════════════════════════ DIAGNOSTICS ═══════════════════════════
+window.__diag = { errors: [], log: [] };
+window.onerror = function(msg, src, line, col, err) {
+  window.__diag.errors.push({msg, line, col, err: err && err.stack});
+  console.error('[DIAG] JS Error at line ' + line + ':' + col + ' — ' + msg);
+};
+window.addEventListener('unhandledrejection', e => {
+  window.__diag.errors.push({msg: e.reason && e.reason.message, promise: true});
+  console.error('[DIAG] Unhandled promise rejection:', e.reason);
+});
+console.log('[DIAG] Script started parsing...');
+// ════════════════════════════════════════════════════════════════════
+
 
 // ═══════════════════════════════════════════════════
 // HARDCODED DEFAULTS (set by "Scarica versione pre-configurata")
@@ -2306,7 +2324,33 @@ function flash(){const el=document.getElementById('copyConfirm');el.style.displa
 function copyLetter(){navigator.clipboard.writeText(S.letter).then(()=>alert('Copiato.'));}
 function printLetter(){
   const w=window.open('','_blank');
-  w.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Lettera di Dimissione</title><style>body{font-family:'Times New Roman',serif;font-size:12pt;line-height:1.8;margin:2.5cm;color:#000}pre{white-space:pre-wrap;font-family:inherit}</style></head><body><pre>${esc(S.letter)}</pre></body></html>`);
+  w.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Lettera di Dimissione</title><style>body{font-family:'Times New Roman',serif;font-size:12pt;line-height:1.8;margin:2.5cm;color:#000}pre{white-space:pre-wrap;font-family:inherit}</style></head><body><pre>${esc(S.letter)}</pre>
+<div id="__debugBar" style="position:fixed;bottom:0;left:0;right:0;background:#000;color:#0f0;font-family:monospace;font-size:12px;padding:4px 10px;z-index:99999;">
+  DEBUG — goTo: <span id="__goToStatus">not yet called</span> | 
+  Active panel: <span id="__activePanel">?</span> |
+  Panels found: <span id="__panelCount">?</span>
+</div>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  var panels = document.querySelectorAll('.panel');
+  document.getElementById('__panelCount').textContent = panels.length;
+  
+  var origGoTo = window.goTo;
+  if (typeof origGoTo === 'function') {
+    window.goTo = function(i) {
+      document.getElementById('__goToStatus').textContent = 'called with ' + i + ' @ ' + new Date().toLocaleTimeString();
+      origGoTo(i);
+      var active = document.querySelector('.panel.active');
+      document.getElementById('__activePanel').textContent = active ? active.id : 'none';
+    };
+    document.getElementById('__goToStatus').textContent = 'defined ✓';
+  } else {
+    document.getElementById('__goToStatus').textContent = 'NOT DEFINED ✗';
+  }
+});
+</script>
+
+</body></html>`);
   w.document.close();w.print();
 }
 // ═══════════════════════════════════════════════════
@@ -3372,6 +3416,7 @@ window.addEventListener('resize',updateDiffHeight);
     console.warn('Auto-pull GitHub failed:',e.message);
   }
 })();
+console.log('[DIAG] Script fully parsed and executed. goTo type:', typeof goTo);
 
 </script>
 </body>
