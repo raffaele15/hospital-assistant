@@ -666,8 +666,8 @@ const ANON_CONFIG = {
       label: '[PAZIENTE]', type: 'name' },
     { pattern: /Stampato\s+da\s*:\s*[A-Z][a-zA-Z\u00C0-\u00FF]+(?:\s+[A-Z][a-zA-Z\u00C0-\u00FF]+)*/g,
       label: 'Stampato da: [OPERATORE]', type: 'name' },
-    // FIX: Specializzando pattern — consume optional title prefix (Dott./Dr.) so full name is captured
-    { pattern: /Specializzando\s*:\s*(?:(?:[Dd]ott\.(?:ssa\.?)?|[Dd]r\.(?:ssa\.?)?)\s+)?(?:[A-Z]\.\s*)?[A-Z][a-zA-Z\u00C0-\u00FF]+(?:\s+[A-Z][a-zA-Z\u00C0-\u00FF]+)*/g,
+    // FIX: Specializzando pattern — flexible title prefix (dott/dr with or without dot, any case)
+    { pattern: /Specializzando\s*:\s*(?:(?:[Dd]ott\.?(?:ssa\.?)?|[Dd]r\.?(?:ssa\.?)?)\s+)?(?:[A-Z]\.\s*)?[A-Z][a-zA-Z'\u00C0-\u00FF]+(?:\s+[A-Z][a-zA-Z'\u00C0-\u00FF]+)*/g,
       label: 'Specializzando: [OPERATORE]', type: 'name' },
     // FIX: "Medico: Nome Cognome" — require line start to avoid matching glued text like "D'ErricoMedico:"
     { pattern: /(?:^|\n)Medico\s*:\s*[A-Z][a-z\u00C0-\u00FF][a-zA-Z\u00C0-\u00FF]*(?:\s+[A-Z][a-zA-Z\u00C0-\u00FF]+)*/gm,
@@ -675,8 +675,10 @@ const ANON_CONFIG = {
     // "Infermiere: [NOME] Cognome" — residual surname after partial redaction
     { pattern: /Infermiere\s*:\s*(?:\[NOME\]\s+)?[A-Z][a-z\u00C0-\u00FF]{2,}/g,
       label: 'Infermiere: [OPERATORE]', type: 'name' },
-    // "Dr. I. D'Errico" / "Dott.Pieroni" — title + initials + compound/hyphenated surname
-    { pattern: /(?:[Dd][Oo][Tt]{2}\.(?:[Ss][Ss][Aa]\.?)?|[Dd][Rr]\.(?:[Ss][Ss][Aa]\.?)?)\s*(?:[A-Z]\.\s*){0,3}[A-Z][a-zA-Z'\u00C0-\u00FF\-]{2,}(?:\s+(?:De[ilr]?|Da[il]?|Dal|Di|Della|Von|Al|El)\s+[A-Z][a-zA-Z\u00C0-\u00FF]+|\s+(?![Dd][Rr]\.|[Dd][Oo][Tt]{2}\.|[Pp][Rr][Oo][Ff]\.)[A-Z][a-zA-Z\u00C0-\u00FF\-]+)*/g,
+    // "Dr. I. D'Errico" / "dott Pieroni" / "prof Guerra" — flexible title (with/without dot,
+    // any case: dott dott. Dott. dr Dr. prof Prof. med), optional ssa suffix,
+    // optional initials, then name with compound/apostrophe surnames
+    { pattern: /(?:[Dd]ott\.?(?:ssa\.?)?|[Dd]r\.?(?:ssa\.?)?|[Pp]rof\.?(?:ssa\.?)?|[Mm]ed\.?)\s+(?:[A-Z]\.\s*){0,3}[A-Z][a-zA-Z'\u00C0-\u00FF\-]{2,}(?:\s+(?:De[ilr]?|Da[il]?|Dal|Di|Della|Von|Al|El)\s+[A-Z][a-zA-Z'\u00C0-\u00FF]+|\s+(?![Dd]ott\.?|[Dd]r\.?|[Pp]rof\.?)[A-Z][a-zA-Z'\u00C0-\u00FF\-]+)*/g,
       label: '[OPERATORE]', type: 'name' },
     // "[NOME]NomeCognome" or "LUCACognome" — patient name glued to label "Cognome"
     { pattern: /[A-Za-z\u00C0-\u00FF]+(?=Cognome\b)/g,
@@ -831,8 +833,8 @@ const ANON_CONFIG = {
       label: '[OPERATORE]', type: 'name' },
     { pattern: /\b(?!(?:STROKE|ESAMI|PROFILO|ANAMNESI|DECORSO|TERAPIA|MOTIVO|REGIONE|AZIENDA|MARCATORI|EMATOLOGIA|COSTITUENTI|UNITA|DI|DEL|DELLA|DEGLI|DELLE|AI|AL)\b)[A-Z]{2,}(?:\s+(?!(?:STROKE|ESAMI|PROFILO|ANAMNESI|DECORSO|TERAPIA|MOTIVO|REGIONE|AZIENDA|MARCATORI|EMATOLOGIA|COSTITUENTI|UNITA|UNIT|DI|DEL|DELLA|DEGLI|DELLE|LAB|LABORATORIO|FISIOLOGICA|PATOLOGICA|CLINICO|LIPIDICO|PROTEICO|ERITROCITARIO|COAGULATIVO|RENALE|EPATICA|TIROIDEA|MUSCOLARI|SPECIALI|LEUCOCITARIA|FLOGOSI|URINE|MICROBIOLOGICI|BIOCHIMICI)\b)[A-Z]{2,})+(?=[A-Z][a-z])/g,
       label: '[PAZIENTE]', type: 'name' },
-    // Signature blocks
-    { pattern: /(?:[Dd][Oo][Tt]{2}\.(?:[Ss][Ss][Aa]\.?)?|[Dd][Rr]\.(?:[Ss][Ss][Aa]\.?)?|[Pp][Rr][Oo][Ff]\.?(?:[Ss][Ss][Aa]\.?)?)\s+(?:[A-Z]\.\s*){0,4}[A-Z][a-zA-Z\u00C0-\u00FF]+(?:\s+(?![Dd][Rr]\.|[Dd][Oo][Tt]{2}\.|[Pp][Rr][Oo][Ff]\.)[A-Z][a-zA-Z\u00C0-\u00FF]+)*/g,
+    // Signature blocks — flexible title (dott/dr/prof with or without dot, any case)
+    { pattern: /(?:[Dd]ott\.?(?:ssa\.?)?|[Dd]r\.?(?:ssa\.?)?|[Pp]rof\.?(?:ssa\.?)?|[Mm]ed\.?)\s+(?:[A-Z]\.\s*){0,4}[A-Z][a-zA-Z'\u00C0-\u00FF]+(?:\s+(?![Dd]ott\.?|[Dd]r\.?|[Pp]rof\.?)[A-Z][a-zA-Z'\u00C0-\u00FF]+)*/g,
       label: '[OPERATORE]', type: 'name' },
     { pattern: /\bD\.\s+[A-Z][a-zA-Z\u00C0-\u00FF]{2,}(?:\s+[A-Z][a-zA-Z\u00C0-\u00FF]+)+/g,
       label: '[OPERATORE]', type: 'name' },
@@ -939,6 +941,47 @@ const ANON_CONFIG = {
     /^\(Medici\s+in\s+formazione\s+specialistica\)\s*$/i,
     /^\(Dirigenti\s+medici\)\s*$/i,
     /^Cordiali\s+saluti\s*,?\s*$/i,
+    // ── Institutional / address boilerplate ──────────────────────────────
+    // City standalone or with date
+    /^Padova\s*$/i,
+    /^PADOVA\s*$/,
+    // Street addresses — Via/Viale/Corso/Piazza + anything, but NOT "Via orale/endovenosa/etc" (drug routes)
+    /^Via\s+(?!orale|endovenosa|ev\b|im\b|sc\b|subcut|intramuscol|transdermica|inalatoria|nasale|oftalmica|auricolare|rettale)[A-Z][^\n]{3,}$/i,
+    /^Viale\s+[A-Z][^\n]{3,}$/i,
+    /^Corso\s+[A-Z][^\n]{3,}$/i,
+    /^Piazza\s+[A-Z][^\n]{3,}$/i,
+    /^Largo\s+[A-Z][^\n]{3,}$/i,
+    /^Vicolo\s+[A-Z][^\n]{3,}$/i,
+    // ZIP + city lines (e.g. "35128 PADOVA", "35128 Padova (PD)")
+    /^\d{5}\s+[A-Z][A-Za-z\s]+(?:\([A-Z]{2}\))?\s*$/,
+    // Phone / fax / email lines
+    /^(?:Tel\.?|Telefono|Fax|Tel\/Fax)\s*[:\.\-]?\s*[\d\s\.\-\+\/]+$/i,
+    /^(?:Tel\.?|Telefono|Fax)\s*[:\.\-]?\s*0\d[\d\s\.\-]+$/i,
+    /^[^\s@]+@[^\s@]+\.[^\s@]+\s*$/,
+    // Website
+    /^(?:www\.|https?:\/\/)[^\s]+\s*$/i,
+    // P.IVA / Codice Fiscale azienda
+    /^(?:P\.?\s*IVA|Partita\s+IVA|C\.?F\.?|Cod(?:ice)?\s+Fiscale)\s*[:\-]?\s*[\d\w]+\s*$/i,
+    /^C\.?F\.?\s+P\.?\s*IVA\s+\d+\s*$/i,
+    // Azienda / Ospedale / Università header lines
+    /^Azienda\s+Ospedaliero[^\n]*/i,
+    /^Azienda\s+Ospedale[^\n]*/i,
+    /^Azienda\s+ULSS[^\n]*/i,
+    /^Ospedale\s+[A-Z][^\n]*/i,
+    /^Universit[àa]\s+(?:degli\s+Studi\s+)?di\s+[A-Z][^\n]*/i,
+    /^Policlinico\s+[A-Z][^\n]*/i,
+    // Specific Padova hospital header fragments
+    /^Azienda\s+Ospedale\s*-\s*Universit[àa]\s+Padova\s*$/i,
+    /^Via\s+Giustiniani[^\n]*/i,
+    /^Via\s+A(?:ndrea)?\.\s*Giustiniani[^\n]*/i,
+    // Generic institutional suffix lines
+    /^U\.O\.(?:C\.?|S\.?|D\.?)?\s*(?:di\s+)?[A-Z][^\n]{2,}$/i,
+    /^S\.C\.\s+[A-Z][^\n]*/i,
+    /^S\.S\.\s+[A-Z][^\n]*/i,
+    /^Struttura\s+(?:Complessa|Semplice)\s+[A-Z][^\n]*/i,
+    /^Dipartimento\s+[A-Z][^\n]*/i,
+    /^Dipartimento\s+di\s+[A-Z][^\n]*/i,
+    /^Dip\.\s+[A-Z][^\n]*/i,
   ],
 };
 
