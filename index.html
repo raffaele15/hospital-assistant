@@ -1434,6 +1434,7 @@ function runPipeline() {
         // ── PATCHED: restore lab lines after all processing ──────────────
         finalText=restore(res2.text);
         reps=[...res.reps,...res2.reps];
+      }
 
       // ── GLOBAL SWEEP ──────────────────────────────────────────────────────
       // Every name detected by any pattern gets replaced in ALL its occurrences,
