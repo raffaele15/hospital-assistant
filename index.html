@@ -1725,6 +1725,14 @@ async function processPdf(file){
 function loadLibrary(){try{return JSON.parse(localStorage.getItem('letteraai_lib')||'[]');}catch(e){return[];}}
 function saveLibrary(lib){localStorage.setItem('letteraai_lib',JSON.stringify(lib));}
 
+function renderFpBadge(fp){
+  try{
+    const o=JSON.parse(fp);
+    if(o.lettera_modello)
+      return '<span class="tpl-cached-badge" style="background:rgba(110,168,201,.15);border-color:var(--blue);color:var(--blue);">✦ fp V2 ~'+tok(fp)+'t</span>';
+  }catch(e){}
+  return '<span class="tpl-cached-badge">⚡ fp ~'+tok(fp)+'t</span>';
+}
 function renderLibrary(){
   const lib=loadLibrary();
   const grid=document.getElementById('tplGrid'),noMsg=document.getElementById('noTplMsg'),stats=document.getElementById('libStats');
@@ -1740,7 +1748,7 @@ function renderLibrary(){
       <div style="display:flex;flex-wrap:wrap;gap:4px;">
         ${t.folder?`<span class="chip c-w">📁 ~${tok(t.folder)}t</span>`:''}
         ${t.letter?`<span class="chip c-ok">📄 ~${tok(t.letter)}t</span>`:''}
-        ${t.fingerprint?(()=>{try{const o=JSON.parse(t.fingerprint);return o.lettera_modello?`<span class="tpl-cached-badge" style="background:rgba(110,168,201,.15);border-color:var(--blue);color:var(--blue);">✦ fp V2 ~${tok(t.fingerprint)}t</span>`:`<span class="tpl-cached-badge">⚡ fp ~${tok(t.fingerprint)}t</span>`;}catch(e){return`<span class="tpl-cached-badge">⚡ fp ~${tok(t.fingerprint)}t</span>`;}})()):''}
+        ${t.fingerprint?renderFpBadge(t.fingerprint):''}
       </div>
     </div>`;
   }).join('');
