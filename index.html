@@ -722,7 +722,7 @@ const ANON_CONFIG = {
       label: '([DATA_NASCITA])', type: 'date' },
     { pattern: /(?:^|\r?\n)\s*(?:Paziente|Intestatario|Nominativo)\s*:\s*(?!(?:Nato|Data|Sesso|Cod|RIC|vigile|orientato|deceduto)\b)[A-Z][a-z\u00C0-\u00FF]+(?:\s+(?!(?:Nato|Data|Sesso|Cod|RIC)\b)[A-Z][a-z\u00C0-\u00FF]+)?/gm,
       label: '[PAZIENTE]', type: 'name' },
-    { pattern: /(?<=dimettiamo\s+in\s+data\s+odierna\s+(?:il\s+Sig\.?ra?\.?\s+|la\s+Sig\.?ra\.?\s+))[A-Z][a-zA-Z\u00C0-\u00FF]+(?:\s+[A-Z][a-zA-Z\u00C0-\u00FF]+)?(?=\s*,)/gi,
+    { pattern: (()=>{try{return new RegExp('(?<=dimettiamo\\s+in\\s+data\\s+odierna\\s+(?:il\\s+Sig\\.?ra?\\.?\\s+|la\\s+Sig\\.?ra\\.?\\s+))[A-Z][a-zA-Z\\u00C0-\\u00FF]+(?:\\s+[A-Z][a-zA-Z\\u00C0-\\u00FF]+)?(?=\\s*,)','gi');}catch(e){return /(?:)/g;}})(),
       label: '[PAZIENTE]', type: 'name' },
     { pattern: /\bil\s+(?:[Ss]ig\.(?:ra)?|[Pp]aziente)\s+([A-Z][a-zA-Z\u00C0-\u00FF]+(?:\s+[A-Z][a-zA-Z\u00C0-\u00FF]+)?)/g,
       label: 'il sig. [PAZIENTE]', type: 'name' },
@@ -733,7 +733,7 @@ const ANON_CONFIG = {
     { pattern: /\b[A-Z]{3,}(?=\s+\[NOME\])/g,
       label: '[PAZIENTE]', type: 'name' },
     // Digits glued to ALL-CAPS surname before [NOME]
-    { pattern: /(?<=\d)[A-Z]{3,}(?=\s+\[NOME\])/g,
+    { pattern: (()=>{try{return new RegExp('(?<=\\d)[A-Z]{3,}(?=\\s+\\[NOME\\])','g');}catch(e){return /(?:)/g;}})(),
       label: '[PAZIENTE]', type: 'name' },
     { pattern: /Stampato\s+da\s*:\s*[A-Z][a-zA-Z\u00C0-\u00FF]+(?:\s+[A-Z][a-zA-Z\u00C0-\u00FF]+)*/g,
       label: 'Stampato da: [OPERATORE]', type: 'name' },
@@ -761,7 +761,7 @@ const ANON_CONFIG = {
     { pattern: /^[A-Z][a-z\u00C0-\u00FF]{2,}\s+[A-Z][a-z\u00C0-\u00FF]{2,}\s*$/gm,
       label: '[OPERATORE]', type: 'name' },
     // Single-word CamelCase surname on its own line, after [OPERATORE] context lines
-    { pattern: /(?<=\[OPERATORE\]\r?\n)([A-Z][a-z\u00C0-\u00FF]{3,})(?=\r?\n)/gm,
+    { pattern: (()=>{try{return new RegExp('(?<=\\[OPERATORE\\]\\r?\\n)([A-Z][a-z\\u00C0-\\u00FF]{3,})(?=\\r?\\n)','gm');}catch(e){return /(?:)/gm;}})(),
       label: '[OPERATORE]', type: 'name' },
     // Single-word CamelCase surname immediately before role-code line (M/I/F/R + text)
     { pattern: /^([A-Z][a-z\u00C0-\u00FF]{3,})\r?\n(?=[MIFR][A-Z])/gm,
@@ -897,7 +897,7 @@ const ANON_CONFIG = {
     { pattern: /\b(?!(?:ESAMI\s+DI\s+LABORATORIO|DI\s+LABORATORIO|ESAMI\s+DI|EMOGLOBINA\s+GLICATA|PROFILO\s+LIPIDICO|PROFILO\s+METABOLICO|PROFILO\s+PROTEICO|PROFILO\s+ERITROCITARIO|PROFILO\s+COAGULATIVO|FUNZIONALITA\s+RENALE|FUNZIONALITA\s+EPATICA|FUNZIONALITA\s+TIROIDEA|ENZIMI\s+MUSCOLARI|METABOLITI\s+SPECIALI|FORMULA\s+LEUCOCITARIA|INDICI\s+DI\s+FLOGOSI|DI\s+FLOGOSI|ESAME\s+URINE|ESAMI\s+MICROBIOLOGICI|COSTITUENTI\s+BIOCHIMICI|ORMONI|HBA1C|HBAIC))[A-Z]{2,}(?:\s+[A-Z]{2,})+(?=\s+(?:\d{2}[\/\.]\d{2}[\/\.]\d{4}|\())/g,
       label: '[PAZIENTE]', type: 'name' },
     // ALL CAPS name immediately concatenated with CamelCase keyword
-    { pattern: /(?<=[a-z]\s)[A-Z][A-Z\-]{1,}(?:\s+[A-Z][A-Z\-']{1,})+(?=\s+[a-z])/g,
+    { pattern: (()=>{try{return new RegExp("(?<=[a-z]\\s)[A-Z][A-Z\\-]{1,}(?:\\s+[A-Z][A-Z\\-']{1,})+(?=\\s+[a-z])",'g');}catch(e){return /(?:)/g;}})(),
       label: '[OPERATORE]', type: 'name' },
     // ALL-CAPS name at line start followed by role label on next line
     { pattern: /^[A-Z][A-Z\-]{1,}(?:\s+[A-Z][A-Z\-']{1,})+(?=\r?\n(?:1°|2°|PRIMO|SECONDO|INFERMIERE|TECNICO|CHIRURGO))/gm,
@@ -948,10 +948,10 @@ const ANON_CONFIG = {
     { pattern: /\([A-Z][a-z\u00C0-\u00FF]+(?:\s+[A-Z][a-z\u00C0-\u00FF]+){1,2}\)/g,
       label: '([OPERATORE])', type: 'name' },
     // Trailing first name after placeholder
-    { pattern: /(?<=\[(?:OPERATORE|PAZIENTE)\]\s+)([A-Z][a-z\u00C0-\u00FF]{3,})(?=[,\s.])/g,
+    { pattern: (()=>{try{return new RegExp('(?<=\\[(?:OPERATORE|PAZIENTE)\\]\\s+)([A-Z][a-z\\u00C0-\\u00FF]{3,})(?=[,\\s.])','g');}catch(e){return /(?:)/g;}})(),
       label: '[NOME]', type: 'name' },
     // Name after date in lab stamp headers
-    { pattern: /(?<=\d{2}\/\d{2}\/\d{4}\s+)([A-Z][a-z\u00C0-\u00FF]{3,})(?=\s*$)/gm,
+    { pattern: (()=>{try{return new RegExp('(?<=\\d{2}\\/\\d{2}\\/\\d{4}\\s+)([A-Z][a-z\\u00C0-\\u00FF]{3,})(?=\\s*$)','gm');}catch(e){return /(?:)/gm;}})(),
       label: '[NOME]', type: 'name' },
   ],
 
