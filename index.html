@@ -274,6 +274,25 @@ hr.div{border:none;border-top:1px solid var(--border);margin:18px 0}
   <div class="ptitle">Generazione</div>
   <div class="psub">// step 03 — stima costo → genera</div>
   <div class="card">
+    <div class="ctitle">Modello di Lettera</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:4px;" id="letterTemplateGrid">
+      <label id="ltTile_dimissione" style="cursor:pointer;border:2px solid var(--accent);border-radius:var(--r);padding:12px 14px;background:var(--accent-g);display:block;">
+        <input type="radio" name="letterTemplate" value="dimissione" checked style="display:none;" onchange="onLetterTemplateChange()">
+        <div style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--accent);font-weight:600;margin-bottom:4px;">📋 DIMISSIONE DIRETTA</div>
+        <div style="font-size:13px;color:var(--mid);line-height:1.4;">Ricovero diretto in Stroke Unit da PS. Struttura standard Padova.</div>
+      </label>
+      <label id="ltTile_trasferimento" style="cursor:pointer;border:2px solid var(--border);border-radius:var(--r);padding:12px 14px;background:var(--surface2);display:block;">
+        <input type="radio" name="letterTemplate" value="trasferimento" style="display:none;" onchange="onLetterTemplateChange()">
+        <div style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--dim);font-weight:600;margin-bottom:4px;">🔄 TRASFERIMENTO</div>
+        <div style="font-size:13px;color:var(--mid);line-height:1.4;">Paziente proveniente da altro reparto, trasferito in Stroke Unit.</div>
+      </label>
+    </div>
+    <div id="transferWardRow" style="display:none;margin-top:10px;">
+      <label>Reparto di provenienza</label>
+      <input type="text" id="transferWard" placeholder="es. Endocrinologia" oninput="updateTokenPanel();refreshPrompt()">
+    </div>
+  </div>
+  <div class="card">
     <div class="ctitle">API Key Anthropic</div>
     <input type="password" id="apiKeyInput" placeholder="sk-ant-... (solo in memoria di sessione, mai su disco)">
     <div class="an"><span>ℹ</span><span>Usata solo per questa sessione. Mai salvata. Ottenibile su console.anthropic.com.</span></div>
@@ -1921,72 +1940,189 @@ function updateTokenPanel(){
 // ═══════════════════════════════════════════════════
 // PROMPT BUILDER
 // ═══════════════════════════════════════════════════
+// ═══════════════════════════════════════════════════
+// LETTER TEMPLATE SELECTION
+// ═══════════════════════════════════════════════════
+function onLetterTemplateChange(){
+  const val = document.querySelector('input[name="letterTemplate"]:checked')?.value||'dimissione';
+  ['dimissione','trasferimento'].forEach(t=>{
+    const tile=document.getElementById('ltTile_'+t);
+    const active=(t===val);
+    tile.style.borderColor=active?'var(--accent)':'var(--border)';
+    tile.style.background=active?'var(--accent-g)':'var(--surface2)';
+    tile.querySelector('div').style.color=active?'var(--accent)':'var(--dim)';
+  });
+  document.getElementById('transferWardRow').style.display=(val==='trasferimento')?'block':'none';
+  updateTokenPanel();refreshPrompt();
+}
+
+function getLetterTemplateType(){
+  return document.querySelector('input[name="letterTemplate"]:checked')?.value||'dimissione';
+}
+
 function buildLetterTemplate(){
   const citta=(document.getElementById('cfg_citta').value||'Padova').trim();
   const dott=(document.getElementById('cfg_dott').value||'Dott. [NOME]').trim();
   const prof=(document.getElementById('cfg_prof').value||'Prof. [NOME]').trim();
   const diagnosi=document.getElementById('inp_diagnosi').value.trim()||'[DIAGNOSI_PRINCIPALE]';
   const today=new Date().toLocaleDateString('it-IT',{day:'2-digit',month:'2-digit',year:'numeric'});
-  return `## TEMPLATE LETTERA DI DIMISSIONE
+  const tipo=getLetterTemplateType();
+  const ward=(document.getElementById('transferWard')?.value||'altro reparto').trim();
+
+  if(tipo==='trasferimento'){
+    return `## TEMPLATE LETTERA — TRASFERIMENTO DA ALTRO REPARTO
 
 Genera la lettera seguendo ESATTAMENTE questa struttura. Per dati assenti: "Non documentato." — MAI inventare.
 
 ---
 ${citta}, ${today}
 
-All'attenzione del Medico Curante
+Egregi Colleghi,
 
-Egregio Collega,
-        dimettiamo in data odierna la Sua Assistita, [PAZIENTE_NOME], nata in data [DATA_NASCITA], ricoverata presso la nostra Clinica dal [DATA_RICOVERO] u.s., con diagnosi di:
+        dimettiamo in data odierna il Sig. [PAZIENTE_NOME], di anni [ETA'], nato il [DATA_NASCITA], trasferito presso il nostro Reparto in data [DATA_TRASF] u.s. dal ${ward} dove era stato ricoverato dal [DATA_RIC_ALTRO] u.s. con diagnosi di:
 
 "${diagnosi}"
 
-**Motivo del ricovero**
-[Prosa continua, passato prossimo — MAI passato remoto — dati di presentazione dall'input]
+**In anamnesi:** [APR dall'input — prosa continua]
 
-**Non farmacoallergie note.** [oppure allergie se documentate]
+**Terapia domiciliare:** [farmaci pre-ricovero dall'input]
 
-**Terapia domiciliare**: [farmaci pre-ricovero dall'input]
+**Motivo del ricovero:** [esordio sintomatologico — passato prossimo — dall'input]
 
-**Anamnesi Patologica Remota**
-[Trattini per voce — dati APR dall'input]
+mRS pre-evento = [valore se presente].
 
-**Anamnesi Fisiologica/Sociale/Familiare**
-[Prosa concisa — dati dall'input]
+[farmacoallergie se documentate, altrimenti: Non farmacoallergie note.]
 
-**Esame neurologico all'ingresso**: [se presente — ometti altrimenti]
+In **Pronto Soccorso** è stato sottoposto a:
+> Esami ematochimici: [dall'input]
+> TC cerebrale: [dall'input]
+> Valutazione neurologica: [EON verbatim — NIHSS — dall'input]
 
-**Esame obiettivo generale all'ingresso**: [se presente — ometti altrimenti]
+Si concludeva per [diagnosi PS]. Il paziente veniva ricoverato in ${ward} per la prosecuzione dell'iter diagnostico-terapeutico.
 
-Durante la degenza sono stati eseguiti i seguenti **esami di laboratorio:**
-[Lista — mantieni valori numerici esatti dall'input]
+**In ${ward} ha eseguito:**
+> [accertamento (DD/MM)]: [referto dall'input]
+> [accertamento (DD/MM)]: [referto dall'input]
 
-ed i seguenti **accertamenti strumentali** e **valutazioni specialistiche**:
-[Per ogni accertamento: "Nome esame (DD/MM/YYYY): referto sintetico." — se in refertazione: "(referto in corso di completamento)"]
+**Decorso in ${ward}:** [sintesi dall'input]
 
-**Decorso clinico**
-[Prosa clinica 150-300 parole, passato prossimo — MAI passato remoto — sintesi cronologica dell'input]
+**Parametri vitali all'arrivo in Stroke Unit:** FC XX bpm, PA XXX/XX mmHg, SpO2 XX% in aa, apiretico.
 
-Alla dimissione [condizioni cliniche alla dimissione].
+**Esame obiettivo neurologico all'ingresso in Stroke Unit:** [EON verbatim dall'input]. NIHSS [X].
+
+**Esame obiettivo generale all'ingresso in Stroke Unit:** [dall'input]
+
+Durante la degenza in Stroke Unit il paziente è stato sottoposto ai seguenti **esami ematochimici:**
+[Lista sezioni: Emocromo con formula | Indici di flogosi | Funzionalità epatica | Funzionalità renale con ionemia | Profilo metabolico | Profilo proteico | Enzimi muscolari | Albumina | Profilo carenziale | Funzionalità tiroidea | Esame urine | Microbiologia — mantieni valori esatti dall'input]
+
+e alle seguenti **indagini diagnostico-strumentali e valutazioni specialistiche:**
+> [Nome esame (DD/MM)]: [referto sintetico dall'input — se in corso: "(referto in corso di completamento)"]
+
+**Decorso Clinico presso la Stroke Unit:**
+[Prosa clinica 150-300 parole, passato prossimo, MAI passato remoto — sintesi decisioni terapeutiche e andamento]
+
+**L'obiettività alla dimissione mostra:**
+[condizioni neurologiche e generali alla dimissione. NIHSS: XX. mRS: XX.]
 
 **Terapia alla dimissione:**
 
-| Farmaco | Posologia | Orari | Note |
-|---------|-----------|-------|------|
-[Una riga per farmaco — nome+formulazione | n cp/os | 8.00-20.00 | terapia domiciliare / nuova terapia / dose modificata / fino al GG/MM poi stop]
+| Farmaco | Posologia | Orario | Note |
+|---------|-----------|--------|------|
+[Una riga per farmaco — nome+dosaggio | n cp per os | 8.00 o 8.00-20.00 | terapia domiciliare / nuova terapia / nuova terapia fino a rivalutazione]
 
-[Follow-up e accertamenti pendenti dall'input]
+Il paziente è atteso in regime di post-degenza per eseguire **visita neurologica ed ecocolordoppler dei tronchi sovraortici e transcranico** di controllo in data **[DD/MM/YYYY]** alle ore **[HH:MM]** per l'Ambulatorio di Malattie Cerebrovascolari, al piano terra della Palazzina di Neuroscienze.
 
-Si prega di presentarsi muniti degli appositi foglietti azzurri allegati.
+Si raccomanda:
+[raccomandazioni specifiche dall'input — formato lista con trattino]
 
-Sarà nostra cura fornire gli esiti mediante Lettera di Completamento.
-
-[Raccomandazioni specifiche se presenti nell'input]
-
-Ringraziando per la collaborazione, rimaniamo a disposizione. Cordiali saluti.
+Rimaniamo a disposizione e porgiamo cordiali saluti.
 
 ${dott.padEnd(46)}${prof}
-(Medico in formazione specialistica)${' '.repeat(14)}(Dirigente Medico)
+(medici in formazione specialistica)${' '.repeat(12)}(Dirigente medico)
+---`;
+  }
+
+  // Default: DIMISSIONE DIRETTA
+  return `## TEMPLATE LETTERA — DIMISSIONE DIRETTA DA STROKE UNIT
+
+Genera la lettera seguendo ESATTAMENTE questa struttura. Per dati assenti: "Non documentato." — MAI inventare.
+
+---
+${citta}, ${today}
+
+Egregi Colleghi,
+
+        dimettiamo in data odierna il Sig. [PAZIENTE_NOME], di anni [ETA'], nato il [DATA_NASCITA], ricoverato presso il nostro Reparto in data [DATA_RICOVERO] u.s. con diagnosi di:
+
+"${diagnosi}"
+
+**In anamnesi:** [APR dall'input — prosa continua]
+
+**Terapia domiciliare:** [farmaci pre-ricovero dall'input]
+
+**Motivo del ricovero:**
+[esordio sintomatologico dall'input — passato prossimo — MAI passato remoto]
+
+[farmacoallergie se documentate, altrimenti: Non farmacoallergie note.]
+
+mRS pre-evento = [valore se presente].
+
+Presso il Pronto Soccorso AOUP è stato sottoposto a:
+**> Esami ematochimici:** [dall'input]
+**> TC encefalo:** [dall'input]
+**> AngioTC dei vasi intracranici:** [se eseguita — altrimenti ometti]
+**> Valutazione neurologica:** [EON verbatim — NIHSS — dall'input]
+
+**Esame obiettivo neurologico all'ingresso in Stroke Unit:**
+[EON verbatim dall'input — NIHSS X]
+
+**Esame obiettivo generale all'ingresso in Stroke Unit:**
+[dall'input]
+
+Durante la degenza il paziente è stato sottoposto ai seguenti **esami ematochimici:**
+**Emocromo con formula:** [valori o "nella norma"]
+**Profilo coagulativo:** [dall'input]
+**Indici di flogosi:** [dall'input]
+**Funzionalità epatica:** [dall'input]
+**Funzionalità renale con ionemia:** [dall'input]
+**Profilo metabolico:** [dall'input]
+**Profilo proteico:** [dall'input]
+**Enzimi muscolari:** [dall'input]
+**Albumina:** [dall'input]
+**Profilo carenziale:** [dall'input]
+**Funzionalità tiroidea:** [dall'input]
+**ntBNP:** [dall'input]
+**Esame urine:** [dall'input]
+**Microbiologia:** [dall'input]
+
+e alle seguenti **indagini diagnostico-strumentali e valutazioni specialistiche:**
+**> ECG (DD/MM):** [dall'input]
+**> Rx torace (DD/MM):** [dall'input]
+**> TC encefalo (DD/MM):** [dall'input]
+**> Valutazione fisiatrica (DD/MM):** [se eseguita]
+[altri accertamenti se presenti nell'input]
+
+**Decorso Clinico:**
+[Prosa clinica 150-300 parole, passato prossimo, MAI passato remoto — sintesi decisioni terapeutiche e andamento]
+
+**L'obiettività alla dimissione mostra:**
+[condizioni neurologiche e generali alla dimissione. NIHSS: XX. mRS: XX.]
+
+**Terapia alla dimissione:**
+
+| Farmaco | Posologia | Orario | Note |
+|---------|-----------|--------|------|
+[Una riga per farmaco — nome+dosaggio | n cp per os | 8.00 o 8.00-20.00 | terapia domiciliare / nuova terapia / nuova terapia fino a rivalutazione]
+
+Il paziente è atteso in regime di post-degenza per eseguire **visita neurologica ed ecocolordoppler dei tronchi sovraortici e transcranico** di controllo in data **[DD/MM/YYYY]** alle ore **[HH:MM]** per l'Ambulatorio di Malattie Cerebrovascolari, al piano terra della Palazzina di Neuroscienze.
+
+Si raccomanda:
+[raccomandazioni specifiche dall'input — formato lista con trattino]
+
+Rimaniamo a disposizione e porgiamo cordiali saluti.
+
+${dott.padEnd(46)}${prof}
+(medici in formazione specialistica)${' '.repeat(12)}(Dirigente medico)
 ---`;
 }
 
@@ -2122,116 +2258,234 @@ function printLetter(){
   w.document.close();w.print();
 }
 // ═══════════════════════════════════════════════════
-// WORD EXPORT
+// WORD EXPORT — replicates ODT formatting exactly
 // ═══════════════════════════════════════════════════
 async function exportWord(){
   if(!S.letter||S.letter==='—'){alert('Nessuna lettera da esportare.');return;}
   const {
     Document,Packer,Paragraph,TextRun,Table,TableRow,TableCell,
-    AlignmentType,HeadingLevel,BorderStyle,WidthType,ShadingType,
-    LevelFormat,VerticalAlign
+    AlignmentType,BorderStyle,WidthType,ShadingType,
+    LevelFormat,VerticalAlign,TabStopType,TabStopPosition
   }=docx;
 
-  function parseInline(raw){
-    const runs=[];
-    const re=/\*\*(.+?)\*\*|\*(.+?)\*|`(.+?)`|(\[[A-Z_]+\])|([^*`\[]+)/g;
-    let m;
-    while((m=re.exec(raw))!==null){
-      if(m[1]!==undefined) runs.push(new TextRun({text:m[1],bold:true,font:'Arial',size:22}));
-      else if(m[2]!==undefined) runs.push(new TextRun({text:m[2],italics:true,font:'Arial',size:22}));
-      else if(m[3]!==undefined) runs.push(new TextRun({text:m[3],font:'Courier New',size:20}));
-      else if(m[4]!==undefined) runs.push(new TextRun({text:m[4],bold:true,color:'C0392B',font:'Arial',size:22}));
-      else if(m[5]!==undefined) runs.push(new TextRun({text:m[5],font:'Arial',size:22}));
-    }
-    return runs.length?runs:[new TextRun({text:'',font:'Arial',size:22})];
+  // ── Page constants (A4, margins 2.5cm top, 2cm sides) ──────────────
+  const PAGE_W   = 11906;  // A4
+  const PAGE_H   = 16838;
+  const M_TOP    = 1418;   // ~2.5 cm
+  const M_SIDE   = 1134;   // ~2 cm
+  const CONT_W   = PAGE_W - 2*M_SIDE;  // 9638 DXA
+
+  // ── Shared styles ───────────────────────────────────────────────────
+  const FONT      = 'Times New Roman';
+  const FONT_SIZE = 21; // 10.5pt in half-points
+  const SP_NORM   = { before:0, after:120 };
+  const SP_PARA   = { before:0, after:200 };
+
+  function run(text, opts={}){
+    return new TextRun({ text, font:FONT, size:FONT_SIZE, ...opts });
   }
 
-  function parseTable(lines){
-    const PAGE_W=9026;
+  // Parse inline bold (**text**), italic (*text*), and plain text
+  // Also handles [PLACEHOLDER] tokens in red
+  function parseInline(raw, baseOpts={}){
+    const parts=[];
+    // Pattern: **bold** | *italic* | [PLACEHOLDER] | plain
+    const re=/\*\*(.+?)\*\*|\*(.+?)\*|(\[[A-Z_À-Ö0-9 /]+\])|([^*\[]+)/g;
+    let m;
+    while((m=re.exec(raw))!==null){
+      if(m[1]!==undefined) parts.push(run(m[1],{...baseOpts,bold:true}));
+      else if(m[2]!==undefined) parts.push(run(m[2],{...baseOpts,italics:true}));
+      else if(m[3]!==undefined) parts.push(run(m[3],{...baseOpts,bold:true,color:'C0392B'}));
+      else if(m[4]!==undefined && m[4]) parts.push(run(m[4],{...baseOpts}));
+    }
+    return parts.length?parts:[run('',baseOpts)];
+  }
+
+  // A bold-label paragraph: "**Label:** content" → bold label + normal content
+  function boldLabelPara(line, spacing=SP_NORM){
+    // Match "**Label:**" or "**Label**:" at start
+    const m=line.match(/^\*\*(.+?)\*\*:?\s*(.*)/s);
+    if(!m) return new Paragraph({children:parseInline(line),spacing,alignment:AlignmentType.JUSTIFIED});
+    const labelColon = m[1].endsWith(':') ? m[1] : m[1]+':';
+    const rest = m[2]||'';
+    const children=[run(labelColon,{bold:true})];
+    if(rest) children.push(run(' '),run(rest));
+    return new Paragraph({children,spacing,alignment:AlignmentType.JUSTIFIED});
+  }
+
+  // Therapy table from markdown
+  function buildTherapyTable(lines){
     const rowLines=lines.filter(l=>/^\|/.test(l)&&!/^\|\s*[-:]+/.test(l));
     if(!rowLines.length)return null;
-    const borderDef={style:BorderStyle.SINGLE,size:4,color:'AAAAAA'};
-    const borders={top:borderDef,bottom:borderDef,left:borderDef,right:borderDef};
-    const parseRow=line=>line.replace(/^\||\|$/g,'').split('|').map(c=>c.trim());
+    const parseRow=l=>l.replace(/^\||\|$/g,'').split('|').map(c=>c.trim());
     const allRows=rowLines.map(parseRow);
-    const colCount=Math.max(...allRows.map(r=>r.length));
-    const colW=Math.floor(PAGE_W/colCount);
-    const colWidths=Array(colCount).fill(colW);
-    const isHeader=(i)=>i===0;
-    const rows=allRows.map((cells,ri)=>new TableRow({
-      tableHeader:isHeader(ri),
-      children:cells.map((cell,ci)=>new TableCell({
-        borders,
-        width:{size:colWidths[ci]||colW,type:WidthType.DXA},
-        margins:{top:80,bottom:80,left:120,right:120},
-        shading:isHeader(ri)?{fill:'1B4F72',type:ShadingType.CLEAR}:undefined,
-        children:[new Paragraph({
-          children:isHeader(ri)
-            ?[new TextRun({text:cell,bold:true,color:isHeader(ri)?'FFFFFF':'000000',font:'Arial',size:20})]
-            :parseInline(cell),
-          spacing:{before:20,after:20},
-        })],
-      }))
-    }));
+    // 4 columns: Farmaco(wide), Posologia, Orario, Note
+    const cols=[4500,1600,1200,2338]; // sum = 9638
+    const borderDef={style:BorderStyle.SINGLE,size:4,color:'999999'};
+    const borders={top:borderDef,bottom:borderDef,left:borderDef,right:borderDef};
+    const mkCell=(text,isHdr,ci)=>new TableCell({
+      borders,
+      width:{size:cols[ci]||1500,type:WidthType.DXA},
+      margins:{top:60,bottom:60,left:100,right:100},
+      shading:isHdr?{fill:'D9D9D9',type:ShadingType.CLEAR}:undefined,
+      verticalAlign:VerticalAlign.CENTER,
+      children:[new Paragraph({
+        children:[run(text,{bold:isHdr,size:19})],
+        spacing:{before:0,after:0},
+        alignment:AlignmentType.LEFT,
+      })]
+    });
     return new Table({
-      width:{size:PAGE_W,type:WidthType.DXA},
-      columnWidths:colWidths,
-      rows,
+      width:{size:CONT_W,type:WidthType.DXA},
+      columnWidths:cols,
+      rows:allRows.map((cells,ri)=>new TableRow({
+        tableHeader:ri===0,
+        children:cells.slice(0,4).map((c,ci)=>mkCell(c,ri===0,ci))
+      }))
     });
   }
 
+  // Signature block — two columns via tab stops (exactly like ODT)
+  function sigBlock(dottArr, profArr, leftLabel, rightLabel){
+    const TAB_POS=4800;
+    const rows=Math.max(dottArr.length,profArr.length);
+    const paras=[];
+    for(let i=0;i<rows;i++){
+      const l=dottArr[i]||'';
+      const r=profArr[i]||'';
+      paras.push(new Paragraph({
+        tabStops:[{type:TabStopType.LEFT,position:TAB_POS}],
+        children:[
+          run(l,{size:19}),
+          new TextRun({text:'\t',font:FONT,size:19}),
+          run(r,{size:19}),
+        ],
+        spacing:{before:0,after:60},
+      }));
+    }
+    // Label row
+    paras.push(new Paragraph({
+      tabStops:[{type:TabStopType.LEFT,position:TAB_POS}],
+      children:[
+        run('('+leftLabel+')',{size:17,italics:true}),
+        new TextRun({text:'\t',font:FONT,size:17}),
+        run('('+rightLabel+')',{size:17,italics:true}),
+      ],
+      spacing:{before:60,after:0},
+    }));
+    return paras;
+  }
+
+  // ── Main converter ──────────────────────────────────────────────────
   function letterToDocx(text){
     const children=[];
     const lines=text.split('\n');
     let i=0;
-    const SPACING_NORMAL={before:0,after:120};
-    const SPACING_HEADING={before:240,after:80};
+
+    // Detect signature section at end
+    const sigStartIdx=lines.findIndex(l=>/^\(medici in formazione/i.test(l.trim()));
 
     while(i<lines.length){
       const line=lines[i];
 
+      // ── Therapy table (markdown) ──────────────────────────────────
       if(/^\|/.test(line)){
-        const tableLines=[];
-        while(i<lines.length&&/^\|/.test(lines[i])){tableLines.push(lines[i]);i++;}
-        const tbl=parseTable(tableLines);
-        if(tbl){children.push(tbl);children.push(new Paragraph({children:[new TextRun('')],spacing:SPACING_NORMAL}));}
+        const tLines=[];
+        while(i<lines.length&&/^\|/.test(lines[i])){tLines.push(lines[i]);i++;}
+        const tbl=buildTherapyTable(tLines);
+        if(tbl){children.push(tbl);children.push(new Paragraph({children:[run('')],spacing:{before:0,after:120}}));}
         continue;
       }
 
+      // ── Signature block — collect from the line before label ─────
+      if(/^\(medici in formazione/i.test(line.trim())){
+        // Collect Dott lines just above — walk back
+        const leftNames=[], rightNames=[];
+        let j=i-1;
+        // Skip blanks
+        while(j>=0&&!lines[j].trim())j--;
+        // Collect name pairs (lines with Dott.)
+        const nameLines=[];
+        while(j>=0&&/dott/i.test(lines[j])){nameLines.unshift(lines[j]);j--;}
+        // Split into left/right halves
+        const half=Math.ceil(nameLines.length/2);
+        nameLines.slice(0,half).forEach(l=>leftNames.push(l.trim()));
+        nameLines.slice(half).forEach(l=>rightNames.push(l.trim()));
+        // Remove the name paragraphs we just consumed (they were already pushed as plain text)
+        // Just push the signature block instead of the label line
+        children.push(...sigBlock(leftNames,rightNames,'medici in formazione specialistica','Dirigente medico'));
+        i++;
+        // Skip matching "(Dirigente medico)" line if present
+        if(i<lines.length&&/^\(dirigente/i.test(lines[i].trim()))i++;
+        continue;
+      }
+
+      // ── Horizontal rule ──────────────────────────────────────────
       if(/^[-*_]{3,}\s*$/.test(line)){
         children.push(new Paragraph({
           border:{bottom:{style:BorderStyle.SINGLE,size:6,color:'CCCCCC',space:1}},
-          spacing:{before:120,after:120},children:[new TextRun('')]
+          spacing:{before:120,after:120},children:[run('')]
         }));i++;continue;
       }
 
-      if(/^#{1,2}\s/.test(line)){
-        const lvl=line.startsWith('## ')?HeadingLevel.HEADING_2:HeadingLevel.HEADING_1;
-        const txt=line.replace(/^#{1,3}\s/,'');
-        children.push(new Paragraph({
-          heading:lvl,
-          spacing:SPACING_HEADING,
-          children:[new TextRun({text:txt,bold:true,font:'Arial',size:lvl===HeadingLevel.HEADING_1?28:24})]
-        }));i++;continue;
-      }
-
-      if(/^-\s/.test(line)){
-        const txt=line.replace(/^-\s/,'');
-        children.push(new Paragraph({
-          numbering:{reference:'bullets',level:0},
-          spacing:{before:40,after:40},
-          children:parseInline(txt),
-        }));i++;continue;
-      }
-
+      // ── Empty line ────────────────────────────────────────────────
       if(line.trim()===''){
-        children.push(new Paragraph({children:[new TextRun('')],spacing:{before:0,after:60}}));
+        children.push(new Paragraph({children:[run('')],spacing:{before:0,after:80}}));
         i++;continue;
       }
 
+      // ── ">" bullet lines (accertamenti) ──────────────────────────
+      if(/^[>]\s/.test(line.trim())||/^\*\*>\s/.test(line)){
+        const txt=line.replace(/^\*\*>\s*/,'> ').trim();
+        children.push(new Paragraph({
+          children:parseInline(txt),
+          spacing:SP_NORM,
+          indent:{left:360},
+          alignment:AlignmentType.JUSTIFIED,
+        }));i++;continue;
+      }
+
+      // ── Bold-label line (**Label:** content) ─────────────────────
+      if(/^\*\*/.test(line)){
+        children.push(boldLabelPara(line,SP_NORM));
+        i++;continue;
+      }
+
+      // ── "– " or "- " recommendation list ─────────────────────────
+      if(/^[–-]\s/.test(line)){
+        children.push(new Paragraph({
+          children:parseInline(line.replace(/^[–-]\s/,'')),
+          spacing:SP_NORM,
+          indent:{left:360,hanging:360},
+          alignment:AlignmentType.JUSTIFIED,
+        }));i++;continue;
+      }
+
+      // ── First line (date+city) — right-aligned ────────────────────
+      if(i===0||/^(Padova|Milano|Roma|Verona|Venezia|Torino|Firenze|Bologna|Napoli|Genova|Trento|Brescia|Vicenza|Treviso|Udine|Trieste),\s+\d/.test(line)){
+        children.push(new Paragraph({
+          children:parseInline(line),
+          spacing:SP_NORM,
+          alignment:AlignmentType.RIGHT,
+        }));i++;continue;
+      }
+
+      // ── Opening salutation ────────────────────────────────────────
+      if(/^Egregi Colleghi/.test(line)||/^Egregio Collega/.test(line)){
+        children.push(new Paragraph({children:parseInline(line),spacing:SP_NORM,alignment:AlignmentType.LEFT}));
+        i++;continue;
+      }
+
+      // ── Closing salutation ────────────────────────────────────────
+      if(/^Rimaniamo a disposizione/.test(line)||/^Ringraziando/.test(line)){
+        children.push(new Paragraph({children:parseInline(line),spacing:{before:160,after:160},alignment:AlignmentType.LEFT}));
+        i++;continue;
+      }
+
+      // ── Default: body paragraph, justified ───────────────────────
       children.push(new Paragraph({
         children:parseInline(line),
-        spacing:SPACING_NORMAL,
+        spacing:SP_NORM,
         alignment:AlignmentType.JUSTIFIED,
       }));
       i++;
@@ -2240,30 +2494,23 @@ async function exportWord(){
   }
 
   try{
+    const tipo=getLetterTemplateType();
+    const today=new Date();
+    const dd=String(today.getDate()).padStart(2,'0');
+    const mm=String(today.getMonth()+1).padStart(2,'0');
+    const yyyy=today.getFullYear();
+    const filename=`Lettera_${tipo}_${dd}${mm}${yyyy}.docx`;
+
     const children=letterToDocx(S.letter);
     const doc=new Document({
-      numbering:{config:[
-        {reference:'bullets',levels:[{
-          level:0,format:LevelFormat.BULLET,text:'•',alignment:AlignmentType.LEFT,
-          style:{paragraph:{indent:{left:720,hanging:360}}}
-        }]}
-      ]},
       styles:{
-        default:{document:{run:{font:'Arial',size:22}}},
-        paragraphStyles:[
-          {id:'Heading1',name:'Heading 1',basedOn:'Normal',next:'Normal',quickFormat:true,
-            run:{size:28,bold:true,font:'Arial',color:'1B4F72'},
-            paragraph:{spacing:{before:240,after:80},outlineLevel:0}},
-          {id:'Heading2',name:'Heading 2',basedOn:'Normal',next:'Normal',quickFormat:true,
-            run:{size:24,bold:true,font:'Arial',color:'1B4F72'},
-            paragraph:{spacing:{before:180,after:60},outlineLevel:1}},
-        ]
+        default:{document:{run:{font:FONT,size:FONT_SIZE}}},
       },
       sections:[{
         properties:{
           page:{
-            size:{width:11906,height:16838},
-            margin:{top:1418,right:1134,bottom:1134,left:1134},
+            size:{width:PAGE_W,height:PAGE_H},
+            margin:{top:M_TOP,right:M_SIDE,bottom:M_SIDE,left:M_SIDE},
           }
         },
         children,
@@ -2273,10 +2520,7 @@ async function exportWord(){
     const blob=await Packer.toBlob(doc);
     const url=URL.createObjectURL(blob);
     const a=document.createElement('a');
-    a.href=url;
-    const _d=new Date();const dd=String(_d.getDate()).padStart(2,'0');const mm=String(_d.getMonth()+1).padStart(2,'0');const yyyy=_d.getFullYear();
-    a.download=`Lettera_dimissione_${dd}_${mm}_${yyyy}.docx`;
-    a.click();
+    a.href=url;a.download=filename;a.click();
     URL.revokeObjectURL(url);
   }catch(e){
     console.error('Word export error:',e);
