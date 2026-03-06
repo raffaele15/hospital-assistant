@@ -1740,7 +1740,7 @@ function renderLibrary(){
       <div style="display:flex;flex-wrap:wrap;gap:4px;">
         ${t.folder?`<span class="chip c-w">📁 ~${tok(t.folder)}t</span>`:''}
         ${t.letter?`<span class="chip c-ok">📄 ~${tok(t.letter)}t</span>`:''}
-        ${t.fingerprint?(()=>{try{const o=JSON.parse(t.fingerprint);return o.lettera_modello?`<span class="tpl-cached-badge" style="background:rgba(110,168,201,.15);border-color:var(--blue);color:var(--blue);">✦ fp V2 ~${tok(t.fingerprint)}t</span>`:`<span class="tpl-cached-badge">⚡ fp ~${tok(t.fingerprint)}t</span>`;}catch(e){return`<span class="tpl-cached-badge">⚡ fp ~${tok(t.fingerprint)}t</span>`;}})()):''}
+        ${t.fingerprint?fpBadge(t.fingerprint):''}
       </div>
     </div>`;
   }).join('');
@@ -1912,6 +1912,14 @@ function saveNewTemplate(){
 // TOKEN PANEL
 // ═══════════════════════════════════════════════════
 function tok(str){return Math.round((str||'').length/4);}
+function fpBadge(fp){
+  if(!fp) return '';
+  try{
+    const o=JSON.parse(fp);
+    if(o.lettera_modello) return '<span class="tpl-cached-badge" style="background:rgba(110,168,201,.15);border-color:var(--blue);color:var(--blue);">✦ fp V2 ~'+tok(fp)+'t</span>';
+  }catch(e){}
+  return '<span class="tpl-cached-badge">⚡ fp ~'+tok(fp)+'t</span>';
+}
 
 function updateTokenPanel(){
   if(!S.anonText)return;
@@ -3302,7 +3310,8 @@ Rispondi SOLO con un oggetto JSON valido con questa struttura esatta:
 }
 
 Non aggiungere testo fuori dal JSON.`;
-  const userMsg=`PROMPT DI SISTEMA ATTUALE:\n\`\`\`\n${currentPrompt}\n\`\`\`\n\nCARTELLA CLINICA ANONIMIZZATA:\n\`\`\`\n${S.anonText.slice(0,4000)}\n\`\`\`${similarContext}`;
+  const tick3='```';
+  const userMsg=`PROMPT DI SISTEMA ATTUALE:\n${tick3}\n${currentPrompt}\n${tick3}\n\nCARTELLA CLINICA ANONIMIZZATA:\n${tick3}\n${S.anonText.slice(0,4000)}\n${tick3}${similarContext}`;
   try{
     const resp=await fetch('https://api.anthropic.com/v1/messages',{
       method:'POST',
