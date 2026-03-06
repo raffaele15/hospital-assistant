@@ -92,6 +92,16 @@ select{width:100%;background:var(--surface2);border:1px solid var(--border);bord
 .rnew{color:var(--green);flex:1}
 .rtype{color:var(--dim);font-size:9px;background:var(--surface3);padding:2px 5px;border-radius:3px;white-space:nowrap}
 .paper{background:#faf8f3;color:#1a1a1a;border-radius:var(--r);padding:42px 50px;font-family:'Crimson Pro',Georgia,serif;font-size:15.5px;line-height:1.82;white-space:pre-wrap;border:1px solid #d4d0c8;box-shadow:0 4px 40px rgba(0,0,0,.5);max-height:680px;overflow-y:auto}
+mark.flag-contradict{background:rgba(220,53,53,.28);border-bottom:2px solid rgba(220,53,53,.7);border-radius:2px;cursor:help;padding:0 1px}
+mark.flag-unsupported{background:rgba(220,140,30,.28);border-bottom:2px solid rgba(220,140,30,.7);border-radius:2px;cursor:help;padding:0 1px}
+mark.flag-inferred{background:rgba(210,190,0,.25);border-bottom:2px solid rgba(210,190,0,.6);border-radius:2px;cursor:help;padding:0 1px}
+mark.flag-active{outline:2px solid var(--accent);outline-offset:1px}
+.vflag-row{padding:8px 12px;border-radius:var(--r);margin-bottom:6px;display:flex;gap:10px;align-items:flex-start;cursor:pointer;transition:background .15s}
+.vflag-row:hover{background:var(--surface2)}
+.vflag-sev{font-family:'JetBrains Mono',monospace;font-size:9px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;white-space:nowrap;padding:2px 7px;border-radius:10px;margin-top:2px}
+.vflag-sev.c{background:rgba(220,53,53,.18);color:#dc3535}
+.vflag-sev.u{background:rgba(220,140,30,.18);color:#dc8c1e}
+.vflag-sev.i{background:rgba(185,170,0,.18);color:#958a00}
 .tabs{display:flex;gap:4px;margin-bottom:8px}
 .tab{font-family:'JetBrains Mono',monospace;font-size:10px;padding:5px 12px;border-radius:var(--r);border:1px solid var(--border);background:transparent;color:var(--mid);cursor:pointer;transition:all .12s;text-transform:uppercase;letter-spacing:.05em}
 .tab.active{background:var(--accent-g);color:var(--accent);border-color:var(--accent-d)}
@@ -139,20 +149,21 @@ hr.div{border:none;border-top:1px solid var(--border);margin:18px 0}
 
 <aside>
   <div class="ns">Flusso</div>
-  <button class="ni active" onclick="goTo(0)" id="nav0"><span class="sn">1</span>Testo Clinico</button>
+  <button class="ni active" onclick="goTo(0)" id="nav0"><span class="sn">1</span>Carica Cartella</button>
   <button class="ni" onclick="goTo(1)" id="nav1"><span class="sn">2</span>Anonimizzazione</button>
   <button class="ni" onclick="goTo(2)" id="nav2"><span class="sn">3</span>Generazione</button>
-  <button class="ni" onclick="goTo(3)" id="nav3"><span class="sn">4</span>Lettera</button>
+  <button class="ni" onclick="goTo(3)" id="nav3"><span class="sn">4</span>Verifica</button>
+  <button class="ni" onclick="goTo(4)" id="nav4"><span class="sn">5</span>Esporta</button>
   <div class="ns" style="margin-top:14px;">Config</div>
-  <button class="ni" onclick="goTo(4)" id="nav4"><span class="sn">⚙</span>Impostazioni</button>
-  <button class="ni" onclick="goTo(5)" id="nav5"><span class="sn">📚</span>Libreria Casi</button>
+  <button class="ni" onclick="goTo(5)" id="nav5"><span class="sn">⚙</span>Impostazioni</button>
+  <button class="ni" onclick="goTo(6)" id="nav6"><span class="sn">📚</span>Libreria Casi</button>
 </aside>
 
 <main>
 
 <!-- ═══ STEP 1 ═══ -->
 <div class="panel active" id="panel0">
-  <div class="ptitle">Testo Clinico</div>
+  <div class="ptitle">Carica Cartella</div>
   <div class="psub">// step 01 — carica PDF o incolla il testo</div>
   <div class="ib acc">
     Incolla il testo della cartella o carica il PDF. Le intestazioni (Regione, Azienda, Direttore, metadati paziente, numeri pagina) vengono rimosse automaticamente prima dell'invio al modello.
@@ -417,22 +428,68 @@ hr.div{border:none;border-top:1px solid var(--border);margin:18px 0}
 </div>
 
 <!-- ═══ STEP 4 ═══ -->
-<div class="panel" id="panel3">
-  <div class="ptitle">Lettera Generata</div>
-  <div class="psub">// step 04 — revisiona, stampa, copia</div>
+<div class="panel" id="panel4">
+  <div class="ptitle">Esporta</div>
+  <div class="psub">// step 05 — esporta, stampa, copia</div>
   <div class="ib green">✓ Sostituisci i placeholder <code style="background:var(--surface3);padding:1px 5px;border-radius:3px;">[PAZIENTE_NOME]</code>, <code style="background:var(--surface3);padding:1px 5px;border-radius:3px;">[DATA_NASCITA]</code> ecc. con i dati reali prima di stampare.</div>
   <div id="usageInfo" style="display:none;" class="ib blue"></div>
   <div id="letterOut" class="paper">—</div>
   <div class="btn-row" style="margin-top:18px;">
-    <button class="btn btn-p" onclick="copyLetter()">⎘ Copia testo</button>
+    <button class="btn btn-g" onclick="goTo(3)">← Verifica</button>
+    <button class="btn btn-g" onclick="copyLetter()">⎘ Copia testo</button>
     <button class="btn btn-g" onclick="printLetter()">⎙ Stampa / PDF</button>
     <button class="btn btn-b" onclick="exportWord()" style="background:var(--blue);color:#fff;">⬇ Esporta Word</button>
     <button class="btn btn-g" onclick="newLetter()">↺ Nuova lettera</button>
   </div>
 </div>
 
-<!-- ═══ STEP 5 — IMPOSTAZIONI ═══ -->
-<div class="panel" id="panel4">
+<!-- ═══ STEP 5 — VERIFICA ═══ -->
+<div class="panel" id="panel3">
+  <div class="ptitle">Verifica</div>
+  <div class="psub">// step 04 — controlla allucinazioni → finalizza</div>
+  <div class="ib blue" style="margin-bottom:14px;">
+    Modifica la lettera nel pannello sinistro. Il pannello destro mostra le frasi evidenziate dopo la verifica:
+    <span style="display:inline-block;background:rgba(220,53,53,.25);border-radius:3px;padding:0 5px;margin:0 3px;font-size:11px;">rosso = contraddice la cartella</span>
+    <span style="display:inline-block;background:rgba(220,140,30,.25);border-radius:3px;padding:0 5px;margin:0 3px;font-size:11px;">arancio = assente dalla cartella</span>
+    <span style="display:inline-block;background:rgba(210,190,0,.25);border-radius:3px;padding:0 5px;margin:0 3px;font-size:11px;">giallo = inferenza non esplicita</span>
+  </div>
+  <!-- Action bar -->
+  <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px;align-items:center;">
+    <button class="btn btn-p" id="verifBtn" onclick="runVerifica()">
+      <span class="spin" id="verifSpin" style="display:none;"></span>
+      ✦ Verifica con AI
+    </button>
+    <button class="btn btn-g" onclick="copyVerificaPrompt()">⎘ Copia prompt verifica</button>
+    <button class="btn btn-g" onclick="goTo(2)">← Generazione</button>
+    <div id="verifStats" style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--dim);margin-left:4px;"></div>
+  </div>
+  <div id="verifErr" class="ib red" style="display:none;margin-bottom:10px;"></div>
+  <!-- Two-column layout -->
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;min-height:520px;">
+    <!-- Left: editable letter -->
+    <div style="display:flex;flex-direction:column;gap:6px;">
+      <div style="font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--dim);text-transform:uppercase;letter-spacing:.08em;">Lettera — modificabile</div>
+      <textarea id="verifLetterEdit" style="flex:1;min-height:480px;font-size:12px;line-height:1.7;font-family:'Times New Roman',serif;resize:vertical;" oninput="onVerifLetterEdit()"></textarea>
+    </div>
+    <!-- Right: highlighted view -->
+    <div style="display:flex;flex-direction:column;gap:6px;">
+      <div style="font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--dim);text-transform:uppercase;letter-spacing:.08em;">Analisi — <span id="verifRightLabel">in attesa di verifica</span></div>
+      <div id="verifHighlight" class="paper" style="min-height:480px;font-size:12px;line-height:1.7;overflow-y:auto;white-space:pre-wrap;cursor:default;">
+        <span style="color:var(--dim);font-style:italic;">Clicca "Verifica con AI" per analizzare la lettera contro la cartella anonimizzata.</span>
+      </div>
+    </div>
+  </div>
+  <!-- Flags list -->
+  <div id="verifFlagsList" style="display:none;margin-top:18px;">
+    <div style="font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--dim);text-transform:uppercase;letter-spacing:.08em;margin-bottom:10px;">Dettaglio segnalazioni — <span id="verifFlagCount"></span></div>
+    <div id="verifFlagsInner"></div>
+  </div>
+  <!-- Finalizza -->
+  <div class="btn-row" style="margin-top:20px;">
+    <button class="btn btn-p" onclick="finalizzaLettera()" style="font-size:13px;padding:10px 28px;">✓ Finalizza → Esporta</button>
+  </div>
+</div>
+<div class="panel" id="panel5">
   <div class="ptitle">Impostazioni</div>
   <div class="psub">// config — intestazione, firma, regex custom</div>
 
@@ -480,7 +537,7 @@ hr.div{border:none;border-top:1px solid var(--border);margin:18px 0}
 </div>
 
 <!-- ═══ STEP 6 — LIBRERIA ═══ -->
-<div class="panel" id="panel5">
+<div class="panel" id="panel6">
   <div class="ptitle">Libreria Casi</div>
   <div class="psub">// casi clinici precedenti — RAG + fingerprint + caching</div>
   <div class="ib blue">
@@ -499,6 +556,42 @@ hr.div{border:none;border-top:1px solid var(--border);margin:18px 0}
     </div>
     <div id="tplGrid" class="tpl-grid"></div>
     <div id="noTplMsg" class="ib" style="margin:0;">Nessun caso ancora. Aggiungine uno qui sotto.</div>
+  </div>
+  <!-- ── Edit Case Panel ──────────────────────────────────────────── -->
+  <div class="card" id="caseEditPanel" style="display:none;border-color:var(--accent);">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;flex-wrap:wrap;gap:8px;">
+      <div style="display:flex;align-items:center;gap:10px;">
+        <div class="ctitle" style="margin:0;">Modifica Caso</div>
+        <span id="caseEditNameBadge" class="chip c-ok" style="font-size:9px;"></span>
+      </div>
+      <button class="btn btn-g" style="font-size:10px;padding:4px 11px;" onclick="closeEditCase()">✕ Chiudi</button>
+    </div>
+    <input type="hidden" id="caseEditId">
+    <label>Nome / Etichetta Caso</label>
+    <input type="text" id="caseEditName" placeholder='Es: "Neurologia — Stroke ischemico"'>
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:5px;margin-top:16px;">
+      <label style="margin:0;">Cartella Clinica Anonimizzata <span style="color:var(--dim);font-size:9px;text-transform:none;letter-spacing:0;">(solo locale per RAG)</span></label>
+      <span id="caseEditFolderTok" style="font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--dim);"></span>
+    </div>
+    <textarea id="caseEditFolder" rows="8" placeholder="Cartella clinica anonimizzata..." oninput="updateCaseEditTok()"></textarea>
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:5px;margin-top:16px;">
+      <label style="margin:0;">Lettera di Dimissione <span style="color:var(--dim);font-size:9px;text-transform:none;letter-spacing:0;">(few-shot)</span></label>
+      <span id="caseEditLetterTok" style="font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--dim);"></span>
+    </div>
+    <textarea id="caseEditLetter" rows="8" placeholder="Lettera di dimissione..." oninput="updateCaseEditTok()"></textarea>
+    <div style="margin-top:18px;padding-top:14px;border-top:1px solid var(--border);">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;flex-wrap:wrap;gap:8px;">
+        <div style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--accent);text-transform:uppercase;letter-spacing:.1em;">Fingerprint V2</div>
+        <span id="caseEditFpTok" style="font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--dim);"></span>
+      </div>
+      <textarea id="caseEditFingerprint" rows="6" style="font-size:11px;font-family:'JetBrains Mono',monospace;" placeholder='JSON fingerprint V2 oppure lascia vuoto' oninput="updateCaseEditTok()"></textarea>
+      <div id="caseEditFpPreview" style="margin-top:8px;"></div>
+    </div>
+    <div class="btn-row" style="margin-top:16px;">
+      <button class="btn btn-g" onclick="closeEditCase()">Annulla</button>
+      <button class="btn btn-p" onclick="saveEditedCase()">✓ Salva Modifiche</button>
+    </div>
+    <div id="caseEditStatus" style="margin-top:8px;font-family:'JetBrains Mono',monospace;font-size:11px;display:none;"></div>
   </div>
   <!-- ── Ward Fingerprint card ─────────────────────────────────────── -->
   <div class="card" id="wardFpCard">
@@ -811,8 +904,8 @@ function goTo(i) {
   document.getElementById('panel'+i).classList.add('active');
   document.getElementById('nav'+i).classList.add('active');
   if (i === 1) requestAnimationFrame(updateDiffHeight);
-  if (i===2) updateTokenPanel();
-  if (i===5) renderLibrary();
+  if (i === 2) updateTokenPanel();
+  if (i === 6) renderLibrary();
 }
 
 // ═══════════════════════════════════════════════════
@@ -1868,7 +1961,10 @@ function renderLibrary(){
     grid.innerHTML=cases.map(t=>{
       const isActive=S.activeTemplateId===t.id;
       return `<div class="tpl-card${isActive?' active-tpl':''}" onclick="selectTemplate('${t.id}')">
-        <button class="tpl-del" onclick="event.stopPropagation();deleteTemplate('${t.id}')">✕</button>
+        <div style="position:absolute;top:8px;right:8px;display:flex;gap:4px;">
+          <button class="tpl-del" style="color:var(--dim);" onclick="event.stopPropagation();openEditCase('${t.id}')">✎</button>
+          <button class="tpl-del" onclick="event.stopPropagation();deleteTemplate('${t.id}')">✕</button>
+        </div>
         <div class="tpl-name">${esc(t.name)}</div>
         <div class="tpl-meta" style="margin-bottom:6px;">${new Date(t.createdAt).toLocaleDateString('it-IT')}</div>
         <div style="display:flex;flex-wrap:wrap;gap:4px;">
@@ -2580,6 +2676,18 @@ async function generateLetter(){
     document.getElementById('letterOut').textContent=S.letter;
     document.getElementById('statusBadge').textContent='✓ Lettera generata';
     document.getElementById('nav3').classList.add('done');
+    document.getElementById('nav4').classList.add('done');
+    // Pre-populate Verifica textarea and go there
+    const verifEl=document.getElementById('verifLetterEdit');
+    if(verifEl) verifEl.value=S.letter;
+    // Reset Verifica right pane for fresh run
+    const verifHL=document.getElementById('verifHighlight');
+    if(verifHL) verifHL.innerHTML='<span style="color:var(--dim);font-style:italic;">Clicca "Verifica con AI" per analizzare la lettera contro la cartella anonimizzata.</span>';
+    const verifRL=document.getElementById('verifRightLabel');
+    if(verifRL) verifRL.textContent='in attesa di verifica';
+    const verifFL=document.getElementById('verifFlagsList');
+    if(verifFL) verifFL.style.display='none';
+    S_verifFlags=[];
     goTo(3);
   }catch(err){
     showErr('✗ '+err.message);
@@ -2625,6 +2733,215 @@ function flash(){const el=document.getElementById('copyConfirm');el.style.displa
 // ═══════════════════════════════════════════════════
 // OUTPUT ACTIONS
 // ═══════════════════════════════════════════════════
+// ═══════════════════════════════════════════════════
+// VERIFICA
+// ═══════════════════════════════════════════════════
+
+const VERIFICA_SYSTEM = `Sei un clinico esperto che verifica la coerenza tra una cartella clinica anonimizzata e una lettera di dimissione.
+Analizza ogni affermazione fattuale nella lettera (diagnosi, farmaci, dosi, date, valori di laboratorio, procedure, parametri vitali, anamnesi) e verificala contro la cartella.
+
+Restituisci SOLO un array JSON valido, senza testo prima o dopo, senza backtick.
+Ogni elemento ha questa struttura:
+{
+  "quote": "frase esatta dalla lettera (max 120 caratteri, abbastanza specifica da essere univoca)",
+  "severity": "contradiction" | "unsupported" | "inferred",
+  "reason": "spiegazione in italiano in una riga (max 100 caratteri)"
+}
+
+Severity:
+- "contradiction": la lettera afferma qualcosa che contraddice esplicitamente la cartella
+- "unsupported": la lettera afferma un fatto specifico completamente assente dalla cartella
+- "inferred": la lettera riporta un'inferenza clinicamente ragionevole ma non esplicitamente documentata
+
+Non segnalare frasi generiche, formule di cortesia, struttura della lettera o stile.
+Segnala solo contenuto clinico fattuale. Se la lettera è completamente fedele alla cartella, restituisci [].`;
+
+let S_verifFlags = [];
+
+function goToVerifica(){
+  const el = document.getElementById('verifLetterEdit');
+  if(el && S.letter && S.letter !== '—') el.value = S.letter;
+  // Reset right pane
+  document.getElementById('verifHighlight').innerHTML =
+    '<span style="color:var(--dim);font-style:italic;">Clicca "Verifica con AI" per analizzare la lettera contro la cartella anonimizzata.</span>';
+  document.getElementById('verifRightLabel').textContent = 'in attesa di verifica';
+  document.getElementById('verifFlagsList').style.display = 'none';
+  document.getElementById('verifStats').textContent = '';
+  S_verifFlags = [];
+  goTo(3);
+}
+
+function onVerifLetterEdit(){
+  // When user edits the left pane, clear the right pane highlights (stale)
+  if(S_verifFlags.length){
+    document.getElementById('verifHighlight').innerHTML =
+      '<span style="color:var(--dim);font-style:italic;">Lettera modificata — riesegui la verifica.</span>';
+    document.getElementById('verifRightLabel').textContent = 'in attesa di verifica';
+    S_verifFlags = [];
+    document.getElementById('verifFlagsList').style.display = 'none';
+    document.getElementById('verifStats').textContent = '';
+  }
+}
+
+async function runVerifica(){
+  const key = document.getElementById('apiKeyInput').value.trim();
+  if(!key){ showVerifErr('Inserisci la API key nella pagina Generazione.'); return; }
+  if(!S.anonText){ showVerifErr('Nessun testo anonimizzato — completa prima gli step 1-2.'); return; }
+  const letterText = document.getElementById('verifLetterEdit').value.trim();
+  if(!letterText){ showVerifErr('La lettera è vuota.'); return; }
+
+  const btn = document.getElementById('verifBtn');
+  const spin = document.getElementById('verifSpin');
+  btn.disabled = true; spin.style.display = 'inline-block';
+  document.getElementById('verifErr').style.display = 'none';
+  document.getElementById('verifStats').textContent = 'Analisi in corso…';
+
+  const tick3 = '```';
+  const userMsg =
+    `CARTELLA CLINICA ANONIMIZZATA:\n${tick3}\n${S.anonText}\n${tick3}\n\n` +
+    `LETTERA DI DIMISSIONE:\n${tick3}\n${letterText}\n${tick3}`;
+
+  try{
+    const resp = await fetch('https://api.anthropic.com/v1/messages',{
+      method:'POST',
+      headers:{'Content-Type':'application/json','x-api-key':key,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
+      body: JSON.stringify({
+        model: document.getElementById('modelSelect').value||'claude-sonnet-4-6',
+        max_tokens: 2000,
+        temperature: 0,
+        system: VERIFICA_SYSTEM,
+        messages:[{role:'user',content:userMsg}]
+      }),
+    });
+    if(!resp.ok){const e=await resp.json();throw new Error(e.error?.message||`HTTP ${resp.status}`);}
+    const data = await resp.json();
+    const raw = data.content[0].text.trim().replace(/^```json\s*/,'').replace(/^```\s*/,'').replace(/\s*```$/,'');
+    S_verifFlags = JSON.parse(raw);
+    if(!Array.isArray(S_verifFlags)) throw new Error('Risposta non è un array JSON valido.');
+    renderVerifHighlights(letterText);
+  }catch(e){
+    showVerifErr('✗ '+e.message);
+    document.getElementById('verifStats').textContent = '';
+  }finally{
+    btn.disabled = false; spin.style.display = 'none';
+  }
+}
+
+function renderVerifHighlights(letterText){
+  const sevClass = {contradiction:'flag-contradict', unsupported:'flag-unsupported', inferred:'flag-inferred'};
+  const sevLabel = {contradiction:'contraddice', unsupported:'assente', inferred:'inferenza'};
+  const sevCls   = {contradiction:'c', unsupported:'u', inferred:'i'};
+
+  // Build highlighted HTML — escape text first, then inject marks
+  let html = esc(letterText);
+
+  // Sort flags longest-quote-first to avoid nested replacements breaking shorter overlapping ones
+  const sorted = [...S_verifFlags].sort((a,b)=>(b.quote||'').length-(a.quote||'').length);
+
+  sorted.forEach((flag, idx)=>{
+    if(!flag.quote) return;
+    const escapedQ = esc(flag.quote);
+    const cls = sevClass[flag.severity]||'flag-inferred';
+    const title = esc(flag.reason||'');
+    const replacement = `<mark class="${cls}" id="vmark${idx}" title="${title}" onclick="activateFlag(${idx})">${escapedQ}</mark>`;
+    // Replace only first occurrence
+    html = html.replace(escapedQ, replacement);
+  });
+
+  const pane = document.getElementById('verifHighlight');
+  pane.innerHTML = html;
+
+  // Stats
+  const nc = S_verifFlags.filter(f=>f.severity==='contradiction').length;
+  const nu = S_verifFlags.filter(f=>f.severity==='unsupported').length;
+  const ni = S_verifFlags.filter(f=>f.severity==='inferred').length;
+  const total = S_verifFlags.length;
+  document.getElementById('verifRightLabel').textContent =
+    total === 0 ? '✓ nessuna segnalazione' :
+    `${total} segnalazioni — ${nc} contraddizioni · ${nu} assenti · ${ni} inferenze`;
+  document.getElementById('verifStats').textContent =
+    total === 0 ? '✓ Lettera fedele alla cartella.' :
+    `${nc} contraddizioni · ${nu} assenti · ${ni} inferenze`;
+
+  // Flags list
+  if(total > 0){
+    const inner = document.getElementById('verifFlagsInner');
+    document.getElementById('verifFlagCount').textContent = `${total} elementi`;
+    inner.innerHTML = S_verifFlags.map((flag,idx)=>`
+      <div class="vflag-row" onclick="activateFlag(${idx})">
+        <span class="vflag-sev ${sevCls[flag.severity]||'i'}">${sevLabel[flag.severity]||'inferenza'}</span>
+        <div style="flex:1;">
+          <div style="font-size:12px;color:var(--text);margin-bottom:2px;">&ldquo;${esc((flag.quote||'').slice(0,100))}${(flag.quote||'').length>100?'…':''}&rdquo;</div>
+          <div style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--dim);">${esc(flag.reason||'')}</div>
+        </div>
+      </div>`).join('');
+    document.getElementById('verifFlagsList').style.display = 'block';
+  } else {
+    document.getElementById('verifFlagsList').style.display = 'none';
+  }
+}
+
+function activateFlag(idx){
+  // Remove previous active
+  document.querySelectorAll('mark.flag-active').forEach(m=>m.classList.remove('flag-active'));
+  const mark = document.getElementById('vmark'+idx);
+  if(mark){
+    mark.classList.add('flag-active');
+    mark.scrollIntoView({behavior:'smooth',block:'center'});
+  }
+}
+
+function showVerifErr(msg){
+  const el = document.getElementById('verifErr');
+  el.textContent = msg; el.style.display = 'block';
+}
+
+function copyVerificaPrompt(){
+  const letterText = document.getElementById('verifLetterEdit').value.trim() || S.letter || '';
+  if(!letterText){ alert('La lettera è vuota.'); return; }
+  if(!S.anonText){ alert('Nessun testo anonimizzato disponibile.'); return; }
+  const tick3 = '```';
+  const prompt =
+`Sei un clinico esperto che verifica la coerenza tra una cartella clinica anonimizzata e una lettera di dimissione.
+
+Analizza ogni affermazione fattuale nella lettera (diagnosi, farmaci, dosi, date, valori di laboratorio, procedure, parametri vitali, anamnesi) e verificala contro la cartella.
+
+Per ogni problema trovato restituisci una riga con questo formato:
+[TIPO] "frase dalla lettera" → motivo
+
+Dove TIPO è:
+- CONTRADDICE — la lettera afferma qualcosa che contraddice esplicitamente la cartella
+- ASSENTE — la lettera afferma un fatto specifico non presente nella cartella
+- INFERENZA — inferenza clinicamente plausibile ma non documentata
+
+Se la lettera è completamente fedele alla cartella scrivi: "Nessuna segnalazione."
+
+CARTELLA CLINICA ANONIMIZZATA:
+${tick3}
+${S.anonText}
+${tick3}
+
+LETTERA DI DIMISSIONE:
+${tick3}
+${letterText}
+${tick3}`;
+
+  navigator.clipboard.writeText(prompt).then(()=>{
+    const btn = event.target;
+    const orig = btn.textContent;
+    btn.textContent = '✓ Copiato!'; btn.style.color = 'var(--green)';
+    setTimeout(()=>{ btn.textContent = orig; btn.style.color = ''; }, 1800);
+  });
+}
+
+function finalizzaLettera(){
+  const edited = document.getElementById('verifLetterEdit').value.trim();
+  if(edited) S.letter = edited;
+  document.getElementById('letterOut').textContent = S.letter;
+  document.getElementById('nav4').classList.add('done');
+  goTo(4);
+}
+
 function copyLetter(){navigator.clipboard.writeText(S.letter).then(()=>alert('Copiato.'));}
 function printLetter(){
   const w=window.open('','_blank');
@@ -3695,7 +4012,91 @@ function clearFpV2(){
 // ═══════════════════════════════════════════════════
 
 // ═══════════════════════════════════════════════════
-// CASO DI RIFERIMENTO
+// CASE EDIT
+// ═══════════════════════════════════════════════════
+
+function openEditCase(id){
+  const lib=loadLibrary();
+  const t=lib.find(x=>x.id===id);
+  if(!t) return;
+  document.getElementById('caseEditId').value=id;
+  document.getElementById('caseEditName').value=t.name||'';
+  document.getElementById('caseEditFolder').value=t.folder||'';
+  document.getElementById('caseEditLetter').value=t.letter||'';
+  // Fingerprint — show raw JSON if V2, otherwise raw string
+  const fp=t.fingerprint||'';
+  document.getElementById('caseEditFingerprint').value=fp;
+  document.getElementById('caseEditNameBadge').textContent=t.name||'';
+  document.getElementById('caseEditStatus').style.display='none';
+  updateCaseEditTok();
+  // Show panel and scroll to it
+  const panel=document.getElementById('caseEditPanel');
+  panel.style.display='block';
+  setTimeout(()=>panel.scrollIntoView({behavior:'smooth',block:'start'}),60);
+  // Render fingerprint preview if V2
+  renderCaseEditFpPreview(fp);
+}
+
+function closeEditCase(){
+  document.getElementById('caseEditPanel').style.display='none';
+  document.getElementById('caseEditFpPreview').innerHTML='';
+}
+
+function updateCaseEditTok(){
+  const f=document.getElementById('caseEditFolder').value;
+  const l=document.getElementById('caseEditLetter').value;
+  const fp=document.getElementById('caseEditFingerprint').value;
+  document.getElementById('caseEditFolderTok').textContent=f?`~${tok(f)} tok`:'';
+  document.getElementById('caseEditLetterTok').textContent=l?`~${tok(l)} tok`:'';
+  document.getElementById('caseEditFpTok').textContent=fp?`~${tok(fp)} tok`:'';
+}
+
+function renderCaseEditFpPreview(fpStr){
+  const container=document.getElementById('caseEditFpPreview');
+  if(!fpStr||!fpStr.trim()){container.innerHTML='';return;}
+  const fpObj=parseFpJson(fpStr);
+  if(!fpObj){
+    container.innerHTML=`<div style="font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--dim);">JSON non valido — verrà salvato come stringa grezza.</div>`;
+    return;
+  }
+  // Show a compact quality summary
+  const q=fpObj.qualita||{};
+  const fields=['lettera_modello','ragionamento','frasi_chiave','override_rules'];
+  const badges=fields.map(f=>{
+    const qf=q[f];
+    if(!qf) return '';
+    const col=qf.livello==='alta'?'var(--green)':qf.livello==='media'?'var(--accent)':'var(--red)';
+    return `<span style="font-family:'JetBrains Mono',monospace;font-size:9px;color:${col};margin-right:6px;">${f}: ${qf.livello}</span>`;
+  }).join('');
+  container.innerHTML=`<div style="margin-top:6px;">${badges||'<span style="font-family:\'JetBrains Mono\',monospace;font-size:9px;color:var(--dim);">V2 valido — qualità non dichiarata</span>'}</div>`;
+}
+
+function saveEditedCase(){
+  const id=document.getElementById('caseEditId').value;
+  if(!id) return;
+  const name=document.getElementById('caseEditName').value.trim();
+  if(!name){alert('Inserisci un nome per il caso.');return;}
+  const folder=document.getElementById('caseEditFolder').value.trim();
+  const letter=document.getElementById('caseEditLetter').value.trim();
+  const fingerprint=document.getElementById('caseEditFingerprint').value.trim();
+  const lib=loadLibrary();
+  const idx=lib.findIndex(x=>x.id===id);
+  if(idx===-1){alert('Caso non trovato.');return;}
+  lib[idx]={...lib[idx], name, folder, letter, fingerprint, updatedAt:Date.now()};
+  saveLibrary(lib);
+  renderLibrary();
+  updateTokenPanel();
+  populateRefCaseDropdown();
+  // Flash confirmation
+  const st=document.getElementById('caseEditStatus');
+  st.textContent='✓ Modifiche salvate.';
+  st.style.color='var(--green)';
+  st.style.display='block';
+  document.getElementById('caseEditNameBadge').textContent=name;
+  setTimeout(()=>{st.style.display='none';},2000);
+}
+
+
 // ═══════════════════════════════════════════════════
 
 function getRefMode(){
