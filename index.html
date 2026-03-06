@@ -582,9 +582,17 @@ hr.div{border:none;border-top:1px solid var(--border);margin:18px 0}
     <div style="margin-top:18px;padding-top:14px;border-top:1px solid var(--border);">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;flex-wrap:wrap;gap:8px;">
         <div style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--accent);text-transform:uppercase;letter-spacing:.1em;">Fingerprint V2</div>
-        <span id="caseEditFpTok" style="font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--dim);"></span>
+        <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;">
+          <span id="caseEditFpTok" style="font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--dim);"></span>
+          <button class="btn btn-g" style="font-size:9px;padding:3px 9px;" onclick="copyFingerprintPromptForEdit()">⎘ Copia prompt esterno</button>
+          <button class="btn btn-g" style="font-size:9px;padding:3px 9px;" id="caseEditExtBtn" onclick="autoExtractForEdit()">
+            <span class="spin" id="caseEditExtSpin" style="display:none;"></span>
+            ✦ Auto-estrai (Sonnet)
+          </button>
+        </div>
       </div>
-      <textarea id="caseEditFingerprint" rows="6" style="font-size:11px;font-family:'JetBrains Mono',monospace;" placeholder='JSON fingerprint V2 oppure lascia vuoto' oninput="updateCaseEditTok()"></textarea>
+      <textarea id="caseEditFingerprint" rows="6" style="font-size:11px;font-family:'JetBrains Mono',monospace;" placeholder='JSON fingerprint V2 oppure lascia vuoto' oninput="updateCaseEditTok();renderCaseEditFpPreview(this.value)"></textarea>
+      <div id="caseEditExtStatus" style="margin-top:6px;font-family:'JetBrains Mono',monospace;font-size:11px;display:none;"></div>
       <div id="caseEditFpPreview" style="margin-top:8px;"></div>
     </div>
     <div class="btn-row" style="margin-top:16px;">
@@ -4110,6 +4118,66 @@ function saveEditedCase(){
   st.style.display='block';
   document.getElementById('caseEditNameBadge').textContent=name;
   setTimeout(()=>{st.style.display='none';},2000);
+}
+
+function copyFingerprintPromptForEdit(){
+  const folder = document.getElementById('caseEditFolder').value.trim();
+  const letter = document.getElementById('caseEditLetter').value.trim();
+  let prompt = FINGERPRINT_PROMPT_V2;
+  if(folder) prompt = prompt.replace('[INCOLLA QUI LA CARTELLA CLINICA ANONIMIZZATA]', folder);
+  if(letter) prompt = prompt.replace('[INCOLLA QUI LA LETTERA DI DIMISSIONE]', letter);
+  navigator.clipboard.writeText(prompt).then(()=>{
+    const btn = document.getElementById('caseEditPanel').querySelector('[onclick="copyFingerprintPromptForEdit()"]');
+    if(!btn) return;
+    const orig = btn.textContent;
+    btn.textContent = '✓ Copiato!'; btn.style.color = 'var(--green)';
+    setTimeout(()=>{ btn.textContent = orig; btn.style.color = ''; }, 2000);
+  });
+}
+
+async function autoExtractForEdit(){
+  const key = document.getElementById('apiKeyInput').value.trim();
+  if(!key){ alert('Inserisci la API key nella sezione Generazione.'); return; }
+  const letter = document.getElementById('caseEditLetter').value.trim();
+  const folder = document.getElementById('caseEditFolder').value.trim();
+  if(!letter){ alert('Incolla prima la lettera nel campo Lettera di Dimissione.'); return; }
+  const btn  = document.getElementById('caseEditExtBtn');
+  const spin = document.getElementById('caseEditExtSpin');
+  const status = document.getElementById('caseEditExtStatus');
+  btn.disabled = true; spin.style.display = 'inline-block';
+  status.style.display = 'block'; status.style.color = 'var(--mid)';
+  status.textContent = 'Estrazione fingerprint V2 con Sonnet (~30s)...';
+  try{
+    const userMsg = (folder ? `===== CARTELLA CLINICA =====\n${folder}\n\n` : '') +
+                    `===== LETTERA DI DIMISSIONE =====\n${letter}`;
+    const resp = await fetch('https://api.anthropic.com/v1/messages',{
+      method: 'POST',
+      headers: {'Content-Type':'application/json','x-api-key':key,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-6',
+        max_tokens: 3000,
+        system: `Sei un esperto di comunicazione clinica neurologica italiana. Esegui l\'analisi richiesta e restituisci SOLO il JSON valido, senza testo prima o dopo, senza backtick markdown.`,
+        messages: [{role:'user', content: FINGERPRINT_PROMPT_V2
+          .replace('[INCOLLA QUI LA CARTELLA CLINICA ANONIMIZZATA]', folder||'(non fornita)')
+          .replace('[INCOLLA QUI LA LETTERA DI DIMISSIONE]', letter)}]
+      }),
+    });
+    if(!resp.ok){ const e=await resp.json(); throw new Error(e.error?.message||`HTTP ${resp.status}`); }
+    const rawText = (await resp.json()).content[0].text;
+    const parsed = JSON.parse(rawText.replace(/```json[\s\S]*?```|```/g,'').trim());
+    if(!parsed.lettera_modello) throw new Error('Risposta non contiene lettera_modello — schema non V2.');
+    const jsonStr = JSON.stringify(parsed, null, 2);
+    document.getElementById('caseEditFingerprint').value = jsonStr;
+    updateCaseEditTok();
+    renderCaseEditFpPreview(jsonStr);
+    status.style.color = 'var(--green)';
+    status.textContent = `✓ Fingerprint V2 estratto (~${tok(jsonStr)} token) — clicca "Salva Modifiche" per applicare.`;
+  } catch(err){
+    status.style.color = 'var(--red)';
+    status.textContent = '✗ ' + err.message;
+  } finally {
+    btn.disabled = false; spin.style.display = 'none';
+  }
 }
 
 
