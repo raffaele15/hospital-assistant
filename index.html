@@ -291,6 +291,10 @@ hr.div{border:none;border-top:1px solid var(--border);margin:18px 0}
       <label>Reparto di provenienza</label>
       <input type="text" id="transferWard" placeholder="es. Endocrinologia" oninput="updateTokenPanel();refreshPrompt()">
     </div>
+    <div style="margin-top:10px;display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+      <span style="font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--dim);text-transform:uppercase;letter-spacing:.08em;">Reparto in lettera:</span>
+      <span id="activeWardBadge" style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--dim);">— nessun fingerprint attivo</span>
+    </div>
   </div>
   <div class="card">
     <div class="ctitle">API Key Anthropic</div>
@@ -314,11 +318,6 @@ hr.div{border:none;border-top:1px solid var(--border);margin:18px 0}
       </div>
     </div>
   </div>
-  <div id="ragPreviewGen" style="display:none;" class="card">
-    <div class="ctitle">Casi Simili Trovati <span class="chip c-purple" style="margin-left:6px;">RAG auto</span></div>
-    <div id="ragMatchesGen"></div>
-    <div style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--dim);margin-top:8px;">Le lettere di questi casi vengono incluse nel prompt come esempi few-shot. Le cartelle restano locali.</div>
-  </div>
   <div class="tok-panel" id="tokPanel">
     <div class="ctitle" style="margin-bottom:14px;">
       Stima Token & Costo
@@ -330,57 +329,63 @@ hr.div{border:none;border-top:1px solid var(--border);margin:18px 0}
     <div class="ctitle">Prompt di Sistema — modificabile</div>
     <textarea id="systemPrompt" rows="8" style="font-size:11px;"></textarea>
   </div>
-  <div class="card" id="optimizerCard">
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;flex-wrap:wrap;gap:8px;">
-      <div class="ctitle" style="margin:0;">Ottimizzatore Prompt <span class="chip c-purple" style="margin-left:6px;">AI</span></div>
-      <button class="btn btn-g" style="font-size:10px;padding:5px 11px;" onclick="toggleOptimizer()">▾ Espandi</button>
-    </div>
-    <div id="optimizerBody" style="display:none;">
-      <div class="ib purple" style="margin-bottom:12px;">
-        Analizza la cartella corrente + il prompt attuale e suggerisce: (1) un prompt di sistema migliorato, (2) sezioni mancanti, (3) un addendum specifico per questo caso.
-      </div>
-      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px;">
-        <label style="display:flex;align-items:center;gap:5px;margin:0;text-transform:none;font-size:11px;cursor:pointer;">
-          <input type="checkbox" id="optUseSimilar" checked style="width:auto;accent-color:var(--purple);">
-          <span style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--mid);">Confronta con caso simile (RAG)</span>
+  <div class="card" id="refCaseCard">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;flex-wrap:wrap;gap:8px;">
+      <div class="ctitle" style="margin:0;">Caso di Riferimento</div>
+      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+        <label style="display:flex;align-items:center;gap:5px;margin:0;text-transform:none;cursor:pointer;">
+          <input type="radio" name="refCaseMode" value="auto" checked onchange="onRefCaseModeChange()" style="width:auto;accent-color:var(--accent);">
+          <span style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--mid);">Auto (RAG)</span>
         </label>
-        <label style="display:flex;align-items:center;gap:5px;margin:0;text-transform:none;font-size:11px;cursor:pointer;">
-          <input type="checkbox" id="optApplyAddendum" checked style="width:auto;accent-color:var(--purple);">
-          <span style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--mid);">Genera addendum user-prompt</span>
+        <label style="display:flex;align-items:center;gap:5px;margin:0;text-transform:none;cursor:pointer;">
+          <input type="radio" name="refCaseMode" value="manual" onchange="onRefCaseModeChange()" style="width:auto;accent-color:var(--accent);">
+          <span style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--mid);">Manuale</span>
+        </label>
+        <label style="display:flex;align-items:center;gap:5px;margin:0;text-transform:none;cursor:pointer;">
+          <input type="radio" name="refCaseMode" value="none" onchange="onRefCaseModeChange()" style="width:auto;accent-color:var(--accent);">
+          <span style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--mid);">Nessuno</span>
         </label>
       </div>
-      <button class="btn btn-g" style="border-color:var(--purple);color:var(--purple);" id="optBtn" onclick="runPromptOptimizer()">
-        <span id="optSpin" class="spin" style="display:none;border-top-color:var(--purple);"></span>
-        ✦ Analizza &amp; Ottimizza
-      </button>
-      <div id="optErr" class="ib red" style="display:none;margin-top:10px;"></div>
-      <div id="optResults" style="display:none;margin-top:14px;">
-        <div style="display:flex;gap:8px;margin-bottom:10px;flex-wrap:wrap;">
-          <button class="btn btn-g" style="font-size:10px;padding:4px 10px;" onclick="showOptTab('missing')" id="optTab_missing">⚠ Sezioni Mancanti</button>
-          <button class="btn btn-g" style="font-size:10px;padding:4px 10px;" onclick="showOptTab('improved')" id="optTab_improved">✦ Prompt Migliorato</button>
-          <button class="btn btn-g" style="font-size:10px;padding:4px 10px;" onclick="showOptTab('addendum')" id="optTab_addendum">＋ Addendum</button>
-        </div>
-        <div id="optPane_missing" style="display:none;">
-          <div class="ctitle" style="margin-bottom:8px;">Sezioni / Istruzioni Mancanti</div>
-          <div id="optMissingText" class="dtext" style="min-height:80px;white-space:pre-wrap;font-size:11px;"></div>
-        </div>
-        <div id="optPane_improved" style="display:none;">
-          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
-            <div class="ctitle" style="margin:0;">Prompt di Sistema Suggerito</div>
-            <button class="btn btn-p" style="font-size:10px;padding:4px 11px;" onclick="applyImprovedPrompt()">✓ Applica</button>
+    </div>
+    <!-- Auto mode info -->
+    <div id="refCaseAutoInfo" style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--dim);margin-bottom:10px;">
+      Il caso più simile viene selezionato automaticamente via TF-IDF sulla cartella anonimizzata.
+    </div>
+    <!-- Manual mode dropdown -->
+    <div id="refCaseManualRow" style="display:none;margin-bottom:10px;">
+      <select id="refCaseSelect" onchange="onRefCaseSelectChange()" style="font-size:11px;">
+        <option value="">— Seleziona un caso dalla libreria —</option>
+      </select>
+    </div>
+    <!-- Injection mode -->
+    <div id="refCaseInjectRow" style="margin-top:8px;padding-top:10px;border-top:1px solid var(--border);">
+      <div style="font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--dim);text-transform:uppercase;letter-spacing:.08em;margin-bottom:8px;">Cosa iniettare nel prompt</div>
+      <div style="display:flex;flex-direction:column;gap:7px;">
+        <label style="display:flex;align-items:flex-start;gap:8px;margin:0;text-transform:none;cursor:pointer;">
+          <input type="radio" name="refInjectMode" value="fingerprint" checked onchange="onRefInjectModeChange()" style="width:auto;accent-color:var(--accent);margin-top:2px;">
+          <div>
+            <span style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--text);">Solo fingerprint</span>
+            <div style="font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--dim);margin-top:2px;">Ragionamento + lettera-modello — leggero, cacheable</div>
           </div>
-          <textarea id="optImprovedText" rows="10" style="font-size:11px;" readonly></textarea>
-        </div>
-        <div id="optPane_addendum" style="display:none;">
-          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
-            <div class="ctitle" style="margin:0;">Addendum User-Prompt (caso specifico)</div>
-            <button class="btn btn-p" style="font-size:10px;padding:4px 11px;" onclick="applyAddendum()">✓ Aggiungi al Prompt</button>
+        </label>
+        <label style="display:flex;align-items:flex-start;gap:8px;margin:0;text-transform:none;cursor:pointer;">
+          <input type="radio" name="refInjectMode" value="full" onchange="onRefInjectModeChange()" style="width:auto;accent-color:var(--accent);margin-top:2px;">
+          <div>
+            <span style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--text);">Cartella + Lettera completa</span>
+            <div style="font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--dim);margin-top:2px;">Invia il caso reale come esempio few-shot — più token, più contestuale</div>
           </div>
-          <textarea id="optAddendumText" rows="6" style="font-size:11px;" readonly></textarea>
-          <div style="font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--dim);margin-top:6px;">Verrà accodato al prompt utente al momento della generazione.</div>
-        </div>
+        </label>
+        <label style="display:flex;align-items:flex-start;gap:8px;margin:0;text-transform:none;cursor:pointer;">
+          <input type="radio" name="refInjectMode" value="both" onchange="onRefInjectModeChange()" style="width:auto;accent-color:var(--accent);margin-top:2px;">
+          <div>
+            <span style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--text);">Entrambi</span>
+            <div style="font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--dim);margin-top:2px;">Fingerprint nel sistema + cartella e lettera nel turno utente</div>
+          </div>
+        </label>
       </div>
     </div>
+    <!-- Status line -->
+    <div id="refCaseStatus" style="margin-top:10px;font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--dim);display:none;"></div>
   </div>
   <div class="card">
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;flex-wrap:wrap;gap:8px;">
@@ -655,7 +660,7 @@ let newTplFingerprintJson = ''; // stores V2 JSON string when set
 const DEFAULT_SYS = `Sei il sistema di generazione delle lettere di dimissione ospedaliere italiane.
 Il reparto e il contesto clinico dipendono dal template e dal fingerprint selezionati.
 Scrivi in italiano formale clinico. Restituisci SOLO la lettera, senza preamboli, commenti o spiegazioni.
-I placeholder [PAZIENTE_NOME] e [DATA_NASCITA] rimarranno nella lettera generata e verranno sostituiti offline dal sistema locale dopo la generazione.
+I placeholder [PAZIENTE_NOME], [DATA_NASCITA], [CITTA] e [REPARTO] rimarranno nella lettera generata e verranno sostituiti offline dal sistema locale dopo la generazione.
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 REGOLE ASSOLUTE — inviolabili, nessun fingerprint le sovrascrive
@@ -665,6 +670,7 @@ REGOLE ASSOLUTE — inviolabili, nessun fingerprint le sovrascrive
 - Non aggiungere diagnosi, valori di laboratorio, farmaci, dosi o date non forniti.
 - Se una sezione è prevista ma i dati mancano: "Non documentato."
 - Non usare nomi di pazienti, medici, ospedali o identificativi personali — usa i placeholder.
+- Usa [CITTA] e [REPARTO] esattamente come appaiono nel template — non sostituirli con valori reali.
 - Usa il passato prossimo per tutti gli eventi del ricovero ("ha eseguito", "è stata avviata", "ha presentato"). Mai passato remoto come tempo principale.
 - Restituisci SOLO la lettera, senza testo prima o dopo.
 
@@ -1890,10 +1896,11 @@ function renderLibrary(){
     }).join(''):'<div style="font-family:\'JetBrains Mono\',monospace;font-size:10px;color:var(--dim);">Nessun fingerprint reparto. Clicca "Sintetizza" per crearne uno.</div>';
   }
   updateRagPreview();
+  if(getRefMode()==='manual') populateRefCaseDropdown();
 }
 function selectWard(id){
   S.activeWardId=(S.activeWardId===id)?null:id;
-  renderLibrary();updateTokenPanel();
+  renderLibrary();updateTokenPanel();updateWardBadge();
   const w=loadLibrary().find(x=>x.id===id);
   if(w&&S.activeWardId===id) document.getElementById('statusBadge').textContent='🏥 '+w.name;
 }
@@ -2002,7 +2009,7 @@ function updateRagPreview(){
       </div>`).join('');
   };
   show('ragPreview','ragMatches',false);
-  show('ragPreviewGen','ragMatchesGen',true);
+  updateRefCaseStatus();
 }
 
 function deleteNewTplSection(id){newTplSections=newTplSections.filter(s=>s.id!==id);renderNewTplSections();}
@@ -2181,19 +2188,17 @@ function updateTokenPanel(){
   const model=document.getElementById('modelSelect').value;
   const price=PRICING[model]||PRICING['claude-sonnet-4-6'];
   const sysTxt=document.getElementById('systemPrompt').value||DEFAULT_SYS;
-  const{caseFpObj,wardFpObj}=getActiveFpObjects();
-  const legacyFp=(!caseFpObj&&!wardFpObj)?getActiveFingerprint():'';
-  const ragOn=document.getElementById('ragToggle')?.checked;
-  const ragMatches=(ragOn&&S.anonText)?findSimilarCases(S.anonText):[];
-  const templateTxt=buildLetterTemplate();
+  const{wardFpObj}=getActiveFpObjects();
+  const refCase=getRefCase();
+  const injectMode=refCase?getRefInjectMode():'none';
+  const refFpObj=(injectMode==='fingerprint'||injectMode==='both')?parseFpJson(refCase?.fingerprint||''):null;
   const wardAddendum=wardFpObj?buildWardFpSystemAddendum(wardFpObj):'';
-  const caseAddendum=caseFpObj?buildFpSystemAddendum(caseFpObj):'';
+  const caseAddendum=refFpObj?buildFpSystemAddendum(refFpObj):'';
   const tSys=tok(sysTxt+wardAddendum+caseAddendum);
-  const userFpObj=wardFpObj||caseFpObj;
-  const tFp=userFpObj?tok(userFpObj.lettera_modello||''):tok(legacyFp);
-  const tRag=ragMatches.reduce((a,{t})=>a+tok(t.letter||''),0);
-  const tTemplate=tok(templateTxt),tClinical=tok(S.anonText),tOut=1800;
-  const tCacheable=tFp+tRag,tTotal=tSys+tFp+tRag+tTemplate+tClinical;
+  const tFp=refFpObj?tok(refFpObj.lettera_modello||''):0;
+  const tFullCase=(refCase&&(injectMode==='full'||injectMode==='both'))?tok((refCase.folder||'')+(refCase.letter||'')):0;
+  const tTemplate=tok(buildLetterTemplate()),tClinical=tok(S.anonText),tOut=1800;
+  const tCacheable=tFp+tFullCase,tTotal=tSys+tFp+tFullCase+tTemplate+tClinical;
   const cacheActive=tCacheable>0;
   const costNoCache=(tTotal/1e6)*price.in;
   const costCacheW=cacheActive?(tCacheable/1e6)*price.in_cache_write:0;
@@ -2201,12 +2206,13 @@ function updateTokenPanel(){
   const costNonCached=((tSys+tTemplate+tClinical)/1e6)*price.in;
   const costFirst=costCacheW+costNonCached,costSubseq=costCacheR+costNonCached;
   const costOut=(tOut/1e6)*price.out;
-  const fpLabel=wardFpObj?'Ward Fingerprint (lettera-modello)':caseFpObj?'Fingerprint V2 (lettera-modello)':'Fingerprint Stile';
-  const syslabel='System'+(wardFpObj?' + Ward ragionamento':'')+(caseFpObj?' + Case ragionamento':'');
+  const fpLabel=refFpObj?`Fingerprint (${refCase?.name||'ref'})`:'—';
+  const fullLabel=refCase&&(injectMode==='full'||injectMode==='both')?`Cartella+Lettera (${refCase.name})`:'—';
+  const syslabel='System'+(wardFpObj?' + Ward':'')+(refFpObj?' + Fingerprint':'');
   const sections=[
     {label:syslabel,tokens:tSys,color:'#7a6340',cached:false},
     {label:fpLabel,tokens:tFp,color:'#6ea8c9',cached:cacheActive&&tFp>0},
-    {label:`RAG (${ragMatches.length} casi)`,tokens:tRag,color:'#a96ec9',cached:cacheActive&&tRag>0},
+    {label:fullLabel,tokens:tFullCase,color:'#a96ec9',cached:cacheActive&&tFullCase>0},
     {label:'Template lettera',tokens:tTemplate,color:'#7a7570',cached:false},
     {label:'Testo clinico',tokens:tClinical,color:'#c9a96e',cached:false},
     {label:'Output stimato',tokens:tOut,color:'#6ec98a',cached:false},
@@ -2253,8 +2259,45 @@ function getLetterTemplateType(){
   return document.querySelector('input[name="letterTemplate"]:checked')?.value||'dimissione';
 }
 
+function updateWardBadge(){
+  const el=document.getElementById('activeWardBadge');
+  if(!el) return;
+  const name=getActiveWardName();
+  if(name){
+    el.textContent=name;
+    el.style.color='var(--accent)';
+  } else {
+    el.textContent='— nessun fingerprint attivo';
+    el.style.color='var(--dim)';
+  }
+}
+
+// Derive ward name from active ward fingerprint or ref case fingerprint name
+function getActiveWardName(){
+  // 1. Active ward fingerprint — extract readable name from entry name
+  const lib=loadLibrary();
+  if(S.activeWardId){
+    const w=lib.find(x=>x.id===S.activeWardId);
+    if(w){
+      // Strip the "— Ward Fingerprint" suffix if present
+      return w.name.replace(/\s*[—–-]\s*Ward Fingerprint\s*$/i,'').trim()||w.name;
+    }
+  }
+  // 2. Ref case fingerprint name
+  const refCase=getRefCase();
+  if(refCase){
+    const fp=parseFpJson(refCase.fingerprint||'');
+    if(fp){
+      // Try to infer from case name — take first segment before " — "
+      const seg=refCase.name.split(/\s*[—–-]\s*/)[0].trim();
+      if(seg) return seg;
+    }
+    return refCase.name;
+  }
+  return null; // unknown — will show placeholder
+}
+
 function buildLetterTemplate(){
-  const citta='Padova';
   const diagnosi=document.getElementById('inp_diagnosi').value.trim()||'[DIAGNOSI_PRINCIPALE]';
   const today=new Date().toLocaleDateString('it-IT',{day:'2-digit',month:'2-digit',year:'numeric'});
   const tipo=getLetterTemplateType();
@@ -2266,7 +2309,7 @@ function buildLetterTemplate(){
 Genera la lettera seguendo ESATTAMENTE questa struttura. Per dati assenti: "Non documentato." — MAI inventare.
 
 ---
-${citta}, ${today}
+[CITTA], ${today}
 
 Egregi Colleghi,
 
@@ -2297,19 +2340,19 @@ Si concludeva per [diagnosi PS]. Il paziente veniva ricoverato in ${ward} per la
 
 **Decorso in ${ward}:** [sintesi dall'input]
 
-**Parametri vitali all'arrivo in Stroke Unit:** FC XX bpm, PA XXX/XX mmHg, SpO2 XX% in aa, apiretico.
+**Parametri vitali all'arrivo in [REPARTO]:** FC XX bpm, PA XXX/XX mmHg, SpO2 XX% in aa, apiretico.
 
-**Esame obiettivo neurologico all'ingresso in Stroke Unit:** [EON verbatim dall'input]. NIHSS [X].
+**Esame obiettivo neurologico all'ingresso in [REPARTO]:** [EON verbatim dall'input]. NIHSS [X].
 
-**Esame obiettivo generale all'ingresso in Stroke Unit:** [dall'input]
+**Esame obiettivo generale all'ingresso in [REPARTO]:** [dall'input]
 
-Durante la degenza in Stroke Unit il paziente è stato sottoposto ai seguenti **esami ematochimici:**
+Durante la degenza in [REPARTO] il paziente è stato sottoposto ai seguenti **esami ematochimici:**
 [Lista sezioni: Emocromo con formula | Indici di flogosi | Funzionalità epatica | Funzionalità renale con ionemia | Profilo metabolico | Profilo proteico | Enzimi muscolari | Albumina | Profilo carenziale | Funzionalità tiroidea | Esame urine | Microbiologia — mantieni valori esatti dall'input]
 
 e alle seguenti **indagini diagnostico-strumentali e valutazioni specialistiche:**
 > [Nome esame (DD/MM)]: [referto sintetico dall'input — se in corso: "(referto in corso di completamento)"]
 
-**Decorso Clinico presso la Stroke Unit:**
+**Decorso Clinico presso la [REPARTO]:**
 [Prosa clinica 150-300 parole, passato prossimo, MAI passato remoto — sintesi decisioni terapeutiche e andamento]
 
 **L'obiettività alla dimissione mostra:**
@@ -2335,12 +2378,12 @@ Rimaniamo a disposizione e porgiamo cordiali saluti.
   }
 
   // Default: DIMISSIONE DIRETTA
-  return `## TEMPLATE LETTERA — DIMISSIONE DIRETTA DA STROKE UNIT
+  return `## TEMPLATE LETTERA — DIMISSIONE DIRETTA DA [REPARTO]
 
 Genera la lettera seguendo ESATTAMENTE questa struttura. Per dati assenti: "Non documentato." — MAI inventare.
 
 ---
-${citta}, ${today}
+[CITTA], ${today}
 
 Egregi Colleghi,
 
@@ -2365,10 +2408,10 @@ Presso il Pronto Soccorso AOUP è stato sottoposto a:
 **> AngioTC dei vasi intracranici:** [se eseguita — altrimenti ometti]
 **> Valutazione neurologica:** [EON verbatim — NIHSS — dall'input]
 
-**Esame obiettivo neurologico all'ingresso in Stroke Unit:**
+**Esame obiettivo neurologico all'ingresso in [REPARTO]:**
 [EON verbatim dall'input — NIHSS X]
 
-**Esame obiettivo generale all'ingresso in Stroke Unit:**
+**Esame obiettivo generale all'ingresso in [REPARTO]:**
 [dall'input]
 
 Durante la degenza il paziente è stato sottoposto ai seguenti **esami ematochimici:**
@@ -2420,51 +2463,56 @@ Rimaniamo a disposizione e porgiamo cordiali saluti.
 }
 
 function buildMessages(){
-  const{caseFpObj,wardFpObj}=getActiveFpObjects();
-  // Fallback: legacy fingerprint string if no V2 parsed object
-  const legacyFp=(!caseFpObj&&!wardFpObj)?getActiveFingerprint():'';
-  const ragOn=document.getElementById('ragToggle')?.checked;
-  const ragMatches=(ragOn&&S.anonText)?findSimilarCases(S.anonText):[];
+  const{wardFpObj}=getActiveFpObjects();
+  const refCase=getRefCase();
+  const injectMode=refCase?getRefInjectMode():'none';
+  const refFpObj=(injectMode==='fingerprint'||injectMode==='both')?parseFpJson(refCase?.fingerprint||''):null;
+  const useCache=!!(wardFpObj||refFpObj||refCase);
+  const headers_cache={type:'ephemeral'};
   const blocks=[];
-  // Ward lettera_modello OR case lettera_modello in user turn (ward takes priority if both present)
-  const userFpObj=wardFpObj||caseFpObj;
+
+  // Fingerprint lettera-modello in user turn (ref case or ward)
+  const userFpObj=refFpObj||(!refCase&&wardFpObj?wardFpObj:null);
   if(userFpObj?.lettera_modello){
-    const label=wardFpObj?'LETTERA-MODELLO REPARTO (sintetizzata da più casi)':'LETTERA-MODELLO DI RIFERIMENTO';
-    blocks.push({type:'text',text:`## ${label}\n\nQuesta lettera sintetica (con annotazioni →) mostra struttura, ragionamento e stile. Usala come guida strutturale — NON copiare i placeholder, adatta ogni sezione al caso corrente.\n\n${userFpObj.lettera_modello}\n\n---\n\n`,cache_control:{type:'ephemeral'}});
-  } else if(legacyFp){
-    blocks.push({type:'text',text:`## RIFERIMENTO STILISTICO\n\n${legacyFp}\n\n---\n\n`,cache_control:{type:'ephemeral'}});
+    const label=(!refCase&&wardFpObj)?'LETTERA-MODELLO REPARTO':'LETTERA-MODELLO DI RIFERIMENTO';
+    blocks.push({type:'text',text:`## ${label}\n\nQuesta lettera sintetica (con annotazioni →) mostra struttura, ragionamento e stile. Usala come guida strutturale — NON copiare i placeholder, adatta ogni sezione al caso corrente.\n\n${userFpObj.lettera_modello}\n\n---\n\n`,cache_control:headers_cache});
   }
-  if(ragMatches.length){
-    let rb=`## ESEMPI DI RIFERIMENTO — casi simili\n\nUsa per stile e struttura. NON copiare dati clinici.\n\n`;
-    ragMatches.forEach(({t,score},i)=>{rb+=`### Esempio ${i+1} — ${t.name} (${(score*100).toFixed(0)}%)\n\n${t.letter}\n\n---\n\n`;});
-    blocks.push({type:'text',text:rb,cache_control:{type:'ephemeral'}});
+
+  // Full case example (folder + letter)
+  if(refCase&&(injectMode==='full'||injectMode==='both')){
+    let block=`## ESEMPIO DI RIFERIMENTO — ${esc(refCase.name)}\n\nUsa per stile e struttura. NON copiare dati clinici.\n\n`;
+    if(refCase.folder) block+=`### Cartella clinica anonimizzata\n\n${refCase.folder}\n\n`;
+    if(refCase.letter) block+=`### Lettera di dimissione corrispondente\n\n${refCase.letter}\n\n`;
+    block+='---\n\n';
+    blocks.push({type:'text',text:block,cache_control:headers_cache});
   }
-  const addendum=S_optAddendum?`\n\n[ISTRUZIONI AGGIUNTIVE PER QUESTO CASO]\n${S_optAddendum}`:'';
-  blocks.push({type:'text',text:`## DATI CLINICI ANONIMIZZATI\n\n<clinical_input>\n${S.anonText}\n</clinical_input>\n\n---\n\n`+buildLetterTemplate()+addendum});
-  const useCache=userFpObj||legacyFp||ragMatches.length;
+
+  blocks.push({type:'text',text:`## DATI CLINICI ANONIMIZZATI\n\n<clinical_input>\n${S.anonText}\n</clinical_input>\n\n---\n\n`+buildLetterTemplate()});
   return[{role:'user',content:useCache?blocks:blocks.map(b=>b.text).join('')}];
 }
 
 function buildUserPromptStr(){
-  const{caseFpObj,wardFpObj}=getActiveFpObjects();
-  const legacyFp=(!caseFpObj&&!wardFpObj)?getActiveFingerprint():'';
-  const ragOn=document.getElementById('ragToggle')?.checked;
-  const ragMatches=(ragOn&&S.anonText)?findSimilarCases(S.anonText):[];
+  const{wardFpObj}=getActiveFpObjects();
+  const refCase=getRefCase();
+  const injectMode=refCase?getRefInjectMode():'none';
+  const refFpObj=(injectMode==='fingerprint'||injectMode==='both')?parseFpJson(refCase?.fingerprint||''):null;
   let p='';
-  const userFpObj=wardFpObj||caseFpObj;
+
+  const userFpObj=refFpObj||(!refCase&&wardFpObj?wardFpObj:null);
   if(userFpObj?.lettera_modello){
-    const label=wardFpObj?'LETTERA-MODELLO REPARTO (sintetizzata da più casi)':'LETTERA-MODELLO DI RIFERIMENTO';
+    const label=(!refCase&&wardFpObj)?'LETTERA-MODELLO REPARTO':'LETTERA-MODELLO DI RIFERIMENTO';
     p+=`## ${label}\n\nQuesta lettera sintetica (con annotazioni →) mostra struttura, ragionamento e stile. Usala come guida strutturale — NON copiare i placeholder, adatta ogni sezione al caso corrente.\n\n${userFpObj.lettera_modello}\n\n---\n\n`;
-  } else if(legacyFp){
-    p+=`## RIFERIMENTO STILISTICO\n\n${legacyFp}\n\n---\n\n`;
   }
-  if(ragMatches.length){
-    p+=`## ESEMPI DI RIFERIMENTO\n\n`;
-    ragMatches.forEach(({t,score},i)=>{p+=`### Esempio ${i+1} — ${t.name} (${(score*100).toFixed(0)}%)\n\n${t.letter}\n\n---\n\n`;});
+
+  if(refCase&&(injectMode==='full'||injectMode==='both')){
+    p+=`## ESEMPIO DI RIFERIMENTO — ${refCase.name}\n\nUsa per stile e struttura. NON copiare dati clinici.\n\n`;
+    if(refCase.folder) p+=`### Cartella clinica anonimizzata\n\n${refCase.folder}\n\n`;
+    if(refCase.letter) p+=`### Lettera di dimissione corrispondente\n\n${refCase.letter}\n\n`;
+    p+='---\n\n';
   }
+
   p+=`## DATI CLINICI ANONIMIZZATI\n\n<clinical_input>\n${S.anonText}\n</clinical_input>\n\n---\n\n`;
   p+=buildLetterTemplate();
-  if(S_optAddendum)p+=`\n\n[ISTRUZIONI AGGIUNTIVE PER QUESTO CASO]\n${S_optAddendum}`;
   return p;
 }
 
@@ -2487,19 +2535,17 @@ async function generateLetter(){
   btn.disabled=true;spin.style.display='inline-block';
   document.getElementById('genErr').style.display='none';
   document.getElementById('statusBadge').textContent='⟳ Generando...';
-  const{caseFpObj,wardFpObj}=getActiveFpObjects();
-  const legacyFp=(!caseFpObj&&!wardFpObj)?getActiveFingerprint():'';
-  const ragOn=document.getElementById('ragToggle')?.checked;
-  const ragMatches=(ragOn&&S.anonText)?findSimilarCases(S.anonText):[];
-  const useCache=(caseFpObj||wardFpObj||legacyFp||ragMatches.length>0);
+  const{wardFpObj}=getActiveFpObjects();
+  const refCase=getRefCase();
+  const injectMode=refCase?getRefInjectMode():'none';
+  const refFpObj=(injectMode==='fingerprint'||injectMode==='both')?parseFpJson(refCase?.fingerprint||''):null;
+  const useCache=!!(wardFpObj||refFpObj||refCase);
   const headers={'Content-Type':'application/json','x-api-key':key,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'};
   if(useCache)headers['anthropic-beta']='prompt-caching-2024-07-31';
   const baseSystem=document.getElementById('systemPrompt').value||DEFAULT_SYS;
-  // Ward reasoning → system prompt (base layer), case reasoning adds on top if both present
   let fullSystem=baseSystem;
   if(wardFpObj) fullSystem+=buildWardFpSystemAddendum(wardFpObj);
-  if(caseFpObj) fullSystem+=buildFpSystemAddendum(caseFpObj);
-  else if(!wardFpObj&&legacyFp) fullSystem+='\n\n---\n\n## RIFERIMENTO STILISTICO\n\n'+legacyFp;
+  if(refFpObj)  fullSystem+=buildFpSystemAddendum(refFpObj);
   try{
     const resp=await fetch('https://api.anthropic.com/v1/messages',{
       method:'POST',headers,
@@ -2514,6 +2560,10 @@ async function generateLetter(){
     if(!resp.ok){const e=await resp.json();throw new Error(e.error?.message||`HTTP ${resp.status}`);}
     const data=await resp.json();
     S.letter=data.content[0].text;
+    // Replace [CITTA] and [REPARTO] with resolved values
+    const resolvedWard=getActiveWardName();
+    S.letter=S.letter.replace(/\[CITTA\]/g,'Padova');
+    if(resolvedWard) S.letter=S.letter.replace(/\[REPARTO\]/g,resolvedWard);
     const u=data.usage||{};
     const price=PRICING[document.getElementById('modelSelect').value]||PRICING['claude-sonnet-4-6'];
     const inCost=((u.input_tokens||0)/1e6)*price.in;
@@ -2557,10 +2607,13 @@ function renderPromptView(){
 function refreshPrompt(){
   if(!S.anonText){document.getElementById('promptView').value='Completa gli Step 1–2.';return;}
   const baseSystem=document.getElementById('systemPrompt').value||DEFAULT_SYS;
-  const{caseFpObj,wardFpObj}=getActiveFpObjects();
+  const{wardFpObj}=getActiveFpObjects();
+  const refCase=getRefCase();
+  const injectMode=refCase?getRefInjectMode():'none';
+  const refFpObj=(injectMode==='fingerprint'||injectMode==='both')?parseFpJson(refCase?.fingerprint||''):null;
   let pSysLocal=baseSystem;
   if(wardFpObj) pSysLocal+=buildWardFpSystemAddendum(wardFpObj);
-  if(caseFpObj) pSysLocal+=buildFpSystemAddendum(caseFpObj);
+  if(refFpObj)  pSysLocal+=buildFpSystemAddendum(refFpObj);
   pSys=pSysLocal;
   pUsr=buildUserPromptStr();
   renderPromptView();updateTokenPanel();
@@ -3640,93 +3693,90 @@ function clearFpV2(){
 // ═══════════════════════════════════════════════════
 // PROMPT OPTIMIZER
 // ═══════════════════════════════════════════════════
-let S_optAddendum='';
 
-function toggleOptimizer(){
-  const body=document.getElementById('optimizerBody');
-  const btn=document.querySelector('#optimizerCard .btn-g');
-  const visible=body.style.display!=='none';
-  body.style.display=visible?'none':'block';
-  btn.textContent=visible?'▾ Espandi':'▴ Chiudi';
+// ═══════════════════════════════════════════════════
+// CASO DI RIFERIMENTO
+// ═══════════════════════════════════════════════════
+
+function getRefMode(){
+  return(document.querySelector('input[name="refCaseMode"]:checked')||{}).value||'auto';
 }
-function showOptTab(tab){
-  ['missing','improved','addendum'].forEach(t=>{
-    document.getElementById('optPane_'+t).style.display=t===tab?'block':'none';
-    const btn=document.getElementById('optTab_'+t);
-    if(btn){btn.style.borderColor=t===tab?'var(--purple)':'';btn.style.color=t===tab?'var(--purple)':'';}
-  });
+function getRefInjectMode(){
+  return(document.querySelector('input[name="refInjectMode"]:checked')||{}).value||'fingerprint';
 }
-function applyImprovedPrompt(){
-  const val=document.getElementById('optImprovedText').value;
-  if(!val)return;
-  if(!confirm('Sostituire il prompt di sistema corrente con quello suggerito?'))return;
-  document.getElementById('systemPrompt').value=val;
-  updateTokenPanel();
-}
-function applyAddendum(){
-  const val=document.getElementById('optAddendumText').value;
-  if(!val)return;
-  S_optAddendum=val;
-  alert('Addendum salvato. Verrà incluso nella prossima generazione.');
-}
-async function runPromptOptimizer(){
-  const key=document.getElementById('apiKeyInput').value.trim();
-  if(!key){document.getElementById('optErr').style.display='block';document.getElementById('optErr').textContent='✗ Inserisci la API key nella sezione sopra.';return;}
-  if(!S.anonText){document.getElementById('optErr').style.display='block';document.getElementById('optErr').textContent='✗ Nessun testo anonimizzato. Completa prima lo Step 1-2.';return;}
-  const btn=document.getElementById('optBtn'),spin=document.getElementById('optSpin');
-  btn.disabled=true;spin.style.display='inline-block';
-  document.getElementById('optErr').style.display='none';
-  document.getElementById('optResults').style.display='none';
-  const currentPrompt=document.getElementById('systemPrompt').value||DEFAULT_SYS;
-  const useSimilar=document.getElementById('optUseSimilar')?.checked;
-  const wantAddendum=document.getElementById('optApplyAddendum')?.checked;
-  let similarContext='';
-  if(useSimilar&&S.anonText){
-    const matches=findSimilarCases(S.anonText).slice(0,1);
-    if(matches.length>0){
-      const t=matches[0];
-      similarContext=`\n\n---\nCASO SIMILE IN LIBRERIA (${t.name}):\n${t.letter?t.letter.slice(0,1200):'(lettera non disponibile)'}\n---`;
-    }
+
+// Returns the library case object to use as reference (null if none)
+function getRefCase(){
+  const mode=getRefMode();
+  if(mode==='none') return null;
+  if(mode==='manual'){
+    const id=document.getElementById('refCaseSelect').value;
+    if(!id) return null;
+    return loadLibrary().find(t=>t.type!=='ward'&&t.id===id)||null;
   }
-  const metaPrompt=`Sei un esperto di prompt engineering per documentazione medica italiana.
-Ti viene fornito:
-1. Il PROMPT DI SISTEMA attuale usato per generare lettere di dimissione
-2. Una CARTELLA CLINICA ANONIMIZZATA di esempio
-${similarContext?'3. Una LETTERA DI ESEMPIO da un caso simile in libreria':''}
-
-Il tuo compito è analizzare e ottimizzare il prompt.
-
-Rispondi SOLO con un oggetto JSON valido con questa struttura esatta:
-{
-  "missing_sections": "Elenco puntato delle sezioni o istruzioni mancanti nel prompt attuale, basandoti sulla cartella clinica fornita. Sii specifico su cosa manca.",
-  "improved_system_prompt": "Il prompt di sistema completo e migliorato, in italiano, incorporando le istruzioni mancanti. Mantieni le regole esistenti e aggiungi quelle necessarie.",
-  "user_addendum": "${wantAddendum?'Breve addendum specifico per questo caso (2-5 righe) da aggiungere al prompt utente, con istruzioni su come gestire elementi clinici peculiari di questa cartella.':'(non richiesto)'}"
+  // auto — best TF-IDF match
+  if(!S.anonText) return null;
+  const matches=findSimilarCases(S.anonText,1);
+  return matches.length?matches[0].t:null;
 }
 
-Non aggiungere testo fuori dal JSON.`;
-  const tick3='```';
-  const userMsg=`PROMPT DI SISTEMA ATTUALE:\n${tick3}\n${currentPrompt}\n${tick3}\n\nCARTELLA CLINICA ANONIMIZZATA:\n${tick3}\n${S.anonText.slice(0,4000)}\n${tick3}${similarContext}`;
-  try{
-    const resp=await fetch('https://api.anthropic.com/v1/messages',{
-      method:'POST',
-      headers:{'Content-Type':'application/json','x-api-key':key,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
-      body:JSON.stringify({model:'claude-haiku-4-5-20251001',max_tokens:2000,temperature:0,system:metaPrompt,messages:[{role:'user',content:userMsg}]}),
-    });
-    if(!resp.ok){const e=await resp.json();throw new Error(e.error?.message||`HTTP ${resp.status}`);}
-    const data=await resp.json();
-    const raw=data.content[0].text.trim();
-    const cleaned=raw.replace(/^```json\s*/,'').replace(/^```\s*/,'').replace(/\s*```$/,'');
-    const parsed=JSON.parse(cleaned);
-    document.getElementById('optMissingText').textContent=parsed.missing_sections||'(nessuna sezione mancante identificata)';
-    document.getElementById('optImprovedText').value=parsed.improved_system_prompt||currentPrompt;
-    document.getElementById('optAddendumText').value=parsed.user_addendum&&parsed.user_addendum!=='(non richiesto)'?parsed.user_addendum:'';
-    document.getElementById('optResults').style.display='block';
-    showOptTab('missing');
-  }catch(e){
-    document.getElementById('optErr').style.display='block';
-    document.getElementById('optErr').textContent='✗ '+e.message;
-  }finally{btn.disabled=false;spin.style.display='none';}
+function onRefCaseModeChange(){
+  const mode=getRefMode();
+  document.getElementById('refCaseAutoInfo').style.display=mode==='auto'?'block':'none';
+  document.getElementById('refCaseManualRow').style.display=mode==='manual'?'block':'none';
+  document.getElementById('refCaseInjectRow').style.display=mode==='none'?'none':'block';
+  if(mode==='manual') populateRefCaseDropdown();
+  updateRefCaseStatus();updateWardBadge();
+  updateTokenPanel();refreshPrompt();
 }
+
+function onRefCaseSelectChange(){
+  updateRefCaseStatus();updateWardBadge();
+  updateTokenPanel();refreshPrompt();
+}
+
+function onRefInjectModeChange(){
+  updateRefCaseStatus();
+  updateTokenPanel();refreshPrompt();
+}
+
+function populateRefCaseDropdown(){
+  const sel=document.getElementById('refCaseSelect');
+  const current=sel.value;
+  const lib=loadLibrary().filter(t=>t.type!=='ward');
+  sel.innerHTML='<option value="">— Seleziona un caso —</option>'+
+    lib.map(t=>`<option value="${t.id}">${esc(t.name)}${t.fingerprint?' ✦':''}</option>`).join('');
+  if(current) sel.value=current;
+}
+
+function updateRefCaseStatus(){
+  const el=document.getElementById('refCaseStatus');
+  if(!el) return;
+  const mode=getRefMode();
+  if(mode==='none'){el.style.display='none';return;}
+  const c=getRefCase();
+  if(!c){
+    el.style.display='block';
+    el.style.color='var(--dim)';
+    el.textContent=mode==='auto'?(S.anonText?'Nessun caso sufficientemente simile trovato.':'Carica una cartella per trovare il caso simile.'):'Nessun caso selezionato.';
+    return;
+  }
+  const injectMode=getRefInjectMode();
+  const fp=parseFpJson(c.fingerprint||'');
+  const parts=[];
+  if(injectMode==='fingerprint'||injectMode==='both'){
+    parts.push(fp?`fingerprint V2 (~${tok(c.fingerprint)} tok)`:'nessun fingerprint');
+  }
+  if(injectMode==='full'||injectMode==='both'){
+    if(c.folder) parts.push(`cartella (~${tok(c.folder)} tok)`);
+    if(c.letter) parts.push(`lettera (~${tok(c.letter)} tok)`);
+  }
+  el.style.display='block';
+  el.style.color='var(--accent)';
+  el.textContent=`✦ ${c.name} — iniettando: ${parts.join(', ')||'(niente da iniettare)'}`;
+}
+
+
 
 // ═══════════════════════════════════════════════════
 // INIT
@@ -3738,6 +3788,7 @@ document.getElementById('systemPrompt').addEventListener('input',()=>{updateToke
 loadBaseSettings();
 document.getElementById('systemPrompt').value=DEFAULT_SYS;
 renderLibrary();
+updateWardBadge();
 loadNameDictionary();
 document.getElementById('panel1').addEventListener('scroll',updateDiffHeight);
 window.addEventListener('resize',updateDiffHeight);
