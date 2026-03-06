@@ -114,15 +114,11 @@ mark.flag-active{outline:2px solid var(--accent);outline-offset:1px}
 .tok-bar-wrap{width:180px;height:6px;background:var(--surface3);border-radius:3px;overflow:hidden;margin:0 12px}
 .tok-bar{height:100%;border-radius:3px;transition:width .3s}
 .tok-val{width:70px;text-align:right;color:var(--dim)}
-.tok-cost{width:90px;text-align:right}
-.tok-cached{color:var(--blue);font-size:9px;margin-left:5px}
-.tok-total-row{margin-top:12px;padding-top:10px;border-top:2px solid var(--border);display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.tok-cost{width:90px;text-align:right}.tok-total-row{margin-top:12px;padding-top:10px;border-top:2px solid var(--border);display:grid;grid-template-columns:1fr 1fr;gap:8px}
 .tok-total-box{background:var(--surface2);border:1px solid var(--border);border-radius:var(--r);padding:10px 14px;text-align:center}
 .tok-total-box .tlabel{font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--dim);text-transform:uppercase;letter-spacing:.1em;margin-bottom:4px}
 .tok-total-box .tval{font-family:'JetBrains Mono',monospace;font-size:18px;color:var(--accent);font-weight:500}
-.tok-total-box .tsub{font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--dim);margin-top:2px}
-.tok-cache-note{font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--blue);margin-top:10px;line-height:1.6}
-.tpl-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:10px;margin-bottom:14px}
+.tok-total-box .tsub{font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--dim);margin-top:2px}.tpl-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:10px;margin-bottom:14px}
 .tpl-card{background:var(--surface2);border:1px solid var(--border);border-radius:var(--r);padding:12px;cursor:pointer;transition:all .12s;position:relative}
 .tpl-card:hover{border-color:var(--border-hi);background:var(--surface3)}
 .tpl-card.active-tpl{border-color:var(--accent-d);background:var(--accent-g)}
@@ -330,10 +326,7 @@ hr.div{border:none;border-top:1px solid var(--border);margin:18px 0}
     </div>
   </div>
   <div class="tok-panel" id="tokPanel">
-    <div class="ctitle" style="margin-bottom:14px;">
-      Stima Token & Costo
-      <span id="cacheActiveBadge" class="chip c-blue" style="margin-left:8px;display:none;">⚡ Cache Attiva</span>
-    </div>
+    <div class="ctitle" style="margin-bottom:14px;">Stima Token & Costo</div>
     <div id="tokRows"><div style="font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--dim);">Completa gli Step 1–2 per vedere la stima.</div></div>
   </div>
   <div class="card">
@@ -376,7 +369,7 @@ hr.div{border:none;border-top:1px solid var(--border);margin:18px 0}
           <input type="radio" name="refInjectMode" value="fingerprint" checked onchange="onRefInjectModeChange()" style="width:auto;accent-color:var(--accent);margin-top:2px;">
           <div>
             <span style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--text);">Solo fingerprint</span>
-            <div style="font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--dim);margin-top:2px;">Ragionamento + lettera-modello — leggero, cacheable</div>
+            <div style="font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--dim);margin-top:2px;">Ragionamento + lettera-modello — leggero</div>
           </div>
         </label>
         <label style="display:flex;align-items:flex-start;gap:8px;margin:0;text-transform:none;cursor:pointer;">
@@ -539,7 +532,7 @@ hr.div{border:none;border-top:1px solid var(--border);margin:18px 0}
 <!-- ═══ STEP 6 — LIBRERIA ═══ -->
 <div class="panel" id="panel6">
   <div class="ptitle">Libreria Casi</div>
-  <div class="psub">// casi clinici precedenti — RAG + fingerprint + caching</div>
+  <div class="psub">// casi clinici precedenti — RAG + fingerprint</div>
   <div class="ib blue">
     <strong style="color:var(--text);">Come funziona:</strong> ogni caso memorizza la cartella anonimizzata (usata localmente per TF-IDF), la lettera generata (iniettata come few-shot), e un fingerprint stilistico compresso (cacheable). I 1–2 casi più simili vengono recuperati automaticamente. Solo le <em>lettere</em>, non le cartelle, vengono inviate al modello.
   </div>
@@ -746,8 +739,8 @@ const DEFAULT_GH_PATH  = 'cases.json';
 // PRICING
 // ═══════════════════════════════════════════════════
 const PRICING = {
-  'claude-sonnet-4-6':        { in:3.00,  in_cache_write:3.75, in_cache_read:0.30, out:15.00 },
-  'claude-haiku-4-5-20251001':{ in:0.80,  in_cache_write:1.00, in_cache_read:0.08, out:4.00  },
+  'claude-sonnet-4-6':        { in:3.00,  out:15.00 },
+  'claude-haiku-4-5-20251001':{ in:0.80,  out:4.00  },
 };
 
 // ═══════════════════════════════════════════════════
@@ -2318,40 +2311,30 @@ function updateTokenPanel(){
   const tFp=refFpObj?tok(refFpObj.lettera_modello||''):0;
   const tFullCase=(refCase&&(injectMode==='full'||injectMode==='both'))?tok((refCase.folder||'')+(refCase.letter||'')):0;
   const tTemplate=tok(buildLetterTemplate()),tClinical=tok(S.anonText),tOut=1800;
-  const tCacheable=tFp+tFullCase,tTotal=tSys+tFp+tFullCase+tTemplate+tClinical;
-  const cacheActive=tCacheable>0;
-  const costNoCache=(tTotal/1e6)*price.in;
-  const costCacheW=cacheActive?(tCacheable/1e6)*price.in_cache_write:0;
-  const costCacheR=cacheActive?(tCacheable/1e6)*price.in_cache_read:0;
-  const costNonCached=((tSys+tTemplate+tClinical)/1e6)*price.in;
-  const costFirst=costCacheW+costNonCached,costSubseq=costCacheR+costNonCached;
-  const costOut=(tOut/1e6)*price.out;
   const fpLabel=refFpObj?`Fingerprint (${refCase?.name||'ref'})`:'—';
   const fullLabel=refCase&&(injectMode==='full'||injectMode==='both')?`Cartella+Lettera (${refCase.name})`:'—';
   const syslabel='System'+(wardFpObj?' + Ward':'')+(refFpObj?' + Fingerprint':'');
+  const tTotal=tSys+tFp+tFullCase+tTemplate+tClinical;
+  const costTotal=(tTotal/1e6)*price.in;
+  const costOut=(tOut/1e6)*price.out;
   const sections=[
-    {label:syslabel,tokens:tSys,color:'#7a6340',cached:false},
-    {label:fpLabel,tokens:tFp,color:'#6ea8c9',cached:cacheActive&&tFp>0},
-    {label:fullLabel,tokens:tFullCase,color:'#a96ec9',cached:cacheActive&&tFullCase>0},
-    {label:'Template lettera',tokens:tTemplate,color:'#7a7570',cached:false},
-    {label:'Testo clinico',tokens:tClinical,color:'#c9a96e',cached:false},
-    {label:'Output stimato',tokens:tOut,color:'#6ec98a',cached:false},
+    {label:syslabel,tokens:tSys,color:'#7a6340'},
+    {label:fpLabel,tokens:tFp,color:'#6ea8c9'},
+    {label:fullLabel,tokens:tFullCase,color:'#a96ec9'},
+    {label:'Template lettera',tokens:tTemplate,color:'#7a7570'},
+    {label:'Testo clinico',tokens:tClinical,color:'#c9a96e'},
+    {label:'Output stimato',tokens:tOut,color:'#6ec98a'},
   ].filter(s=>s.tokens>0);
   const maxTok=Math.max(...sections.map(s=>s.tokens),1);
   let html='<div style="margin-bottom:12px;">';
   for(const s of sections){
     const pct=Math.round((s.tokens/maxTok)*100);
     const up=s.label==='Output stimato'?price.out:price.in;
-    html+=`<div class="tok-row"><span class="tok-label">${s.label}${s.cached?'<span class="tok-cached">⚡ cached</span>':''}</span><div class="tok-bar-wrap"><div class="tok-bar" style="width:${pct}%;background:${s.color};"></div></div><span class="tok-val">${s.tokens.toLocaleString()} tok</span><span class="tok-cost" style="color:${s.cached?'var(--blue)':'var(--dim)'};">$${((s.tokens/1e6)*up).toFixed(4)}</span></div>`;
+    html+=`<div class="tok-row"><span class="tok-label">${s.label}</span><div class="tok-bar-wrap"><div class="tok-bar" style="width:${pct}%;background:${s.color};"></div></div><span class="tok-val">${s.tokens.toLocaleString()} tok</span><span class="tok-cost" style="color:var(--dim);">$${((s.tokens/1e6)*up).toFixed(4)}</span></div>`;
   }
   html+='</div>';
-  html+=`<div class="tok-total-row"><div class="tok-total-box"><div class="tlabel">Senza caching</div><div class="tval">$${(costNoCache+costOut).toFixed(4)}</div><div class="tsub">${(tTotal+tOut).toLocaleString()} token</div></div><div class="tok-total-box" style="${cacheActive?'border-color:var(--blue);':''}"><div class="tlabel">${cacheActive?'Con caching (1ª)':'Nessun caso/template'}</div><div class="tval" style="color:${cacheActive?'var(--blue)':'var(--accent)'};">$${(costFirst+costOut).toFixed(4)}</div><div class="tsub">${cacheActive?`Successive: $${(costSubseq+costOut).toFixed(4)}`:'Seleziona un caso'}</div></div></div>`;
-  if(cacheActive){
-    const saving=costNoCache>0?((costNoCache-costSubseq)/costNoCache*100).toFixed(0):0;
-    html+=`<div class="tok-cache-note">⚡ ${tCacheable} token cacheable. Risparmio dalla 2ª chiamata: <strong>${saving}%</strong> sull'input.</div>`;
-  }
+  html+=`<div class="tok-total-row"><div class="tok-total-box" style="border-color:var(--accent);"><div class="tlabel">Costo stimato</div><div class="tval" style="color:var(--accent);">$${(costTotal+costOut).toFixed(4)}</div><div class="tsub">${(tTotal+tOut).toLocaleString()} token totali</div></div></div>`;
   document.getElementById('tokRows').innerHTML=html;
-  document.getElementById('cacheActiveBadge').style.display=cacheActive?'inline-flex':'none';
   updateRagPreview();
 }
 
@@ -2587,28 +2570,24 @@ function buildMessages(){
   const refCase=getRefCase();
   const injectMode=refCase?getRefInjectMode():'none';
   const refFpObj=(injectMode==='fingerprint'||injectMode==='both')?parseFpJson(refCase?.fingerprint||''):null;
-  const useCache=!!(wardFpObj||refFpObj||refCase);
-  const headers_cache={type:'ephemeral'};
   const blocks=[];
 
-  // Fingerprint lettera-modello in user turn (ref case or ward)
   const userFpObj=refFpObj||(!refCase&&wardFpObj?wardFpObj:null);
   if(userFpObj?.lettera_modello){
     const label=(!refCase&&wardFpObj)?'LETTERA-MODELLO REPARTO':'LETTERA-MODELLO DI RIFERIMENTO';
-    blocks.push({type:'text',text:`## ${label}\n\nQuesta lettera sintetica (con annotazioni →) mostra struttura, ragionamento e stile. Usala come guida strutturale — NON copiare i placeholder, adatta ogni sezione al caso corrente.\n\n${userFpObj.lettera_modello}\n\n---\n\n`,cache_control:headers_cache});
+    blocks.push({type:'text',text:`## ${label}\n\nQuesta lettera sintetica (con annotazioni →) mostra struttura, ragionamento e stile. Usala come guida strutturale — NON copiare i placeholder, adatta ogni sezione al caso corrente.\n\n${userFpObj.lettera_modello}\n\n---\n\n`});
   }
 
-  // Full case example (folder + letter)
   if(refCase&&(injectMode==='full'||injectMode==='both')){
     let block=`## ESEMPIO DI RIFERIMENTO — ${esc(refCase.name)}\n\nUsa per stile e struttura. NON copiare dati clinici.\n\n`;
     if(refCase.folder) block+=`### Cartella clinica anonimizzata\n\n${refCase.folder}\n\n`;
     if(refCase.letter) block+=`### Lettera di dimissione corrispondente\n\n${refCase.letter}\n\n`;
     block+='---\n\n';
-    blocks.push({type:'text',text:block,cache_control:headers_cache});
+    blocks.push({type:'text',text:block});
   }
 
   blocks.push({type:'text',text:`## DATI CLINICI ANONIMIZZATI\n\n<clinical_input>\n${S.anonText}\n</clinical_input>\n\n---\n\n`+buildLetterTemplate()});
-  return[{role:'user',content:useCache?blocks:blocks.map(b=>b.text).join('')}];
+  return[{role:'user',content:blocks.map(b=>b.text).join('')}];
 }
 
 function buildUserPromptStr(){
@@ -2659,9 +2638,7 @@ async function generateLetter(){
   const refCase=getRefCase();
   const injectMode=refCase?getRefInjectMode():'none';
   const refFpObj=(injectMode==='fingerprint'||injectMode==='both')?parseFpJson(refCase?.fingerprint||''):null;
-  const useCache=!!(wardFpObj||refFpObj||refCase);
   const headers={'Content-Type':'application/json','x-api-key':key,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'};
-  if(useCache)headers['anthropic-beta']='prompt-caching-2024-07-31';
   const baseSystem=document.getElementById('systemPrompt').value||DEFAULT_SYS;
   let fullSystem=baseSystem;
   if(wardFpObj) fullSystem+=buildWardFpSystemAddendum(wardFpObj);
@@ -2673,7 +2650,7 @@ async function generateLetter(){
         model:document.getElementById('modelSelect').value,
         max_tokens:6000,
         temperature:parseInt(document.getElementById('tempSlider').value)/10,
-        system:[{type:'text',text:fullSystem,...(useCache?{cache_control:{type:'ephemeral'}}:{})}],
+        system:fullSystem,
         messages:buildMessages(),
       }),
     });
@@ -2687,16 +2664,11 @@ async function generateLetter(){
     const u=data.usage||{};
     const price=PRICING[document.getElementById('modelSelect').value]||PRICING['claude-sonnet-4-6'];
     const inCost=((u.input_tokens||0)/1e6)*price.in;
-    const cacheCr=((u.cache_creation_input_tokens||0)/1e6)*price.in_cache_write;
-    const cacheRd=((u.cache_read_input_tokens||0)/1e6)*price.in_cache_read;
     const outCost=((u.output_tokens||0)/1e6)*price.out;
-    const total=inCost+cacheCr+cacheRd+outCost;
+    const total=inCost+outCost;
     const usageEl=document.getElementById('usageInfo');
     usageEl.style.display='block';
-    usageEl.innerHTML=`✓ Costo reale — input: ${u.input_tokens||0} tok ($${inCost.toFixed(4)})`
-      +(u.cache_creation_input_tokens?` · cache write: ${u.cache_creation_input_tokens} tok ($${cacheCr.toFixed(4)})`:'')+
-      (u.cache_read_input_tokens?` · cache read: ${u.cache_read_input_tokens} tok ($${cacheRd.toFixed(4)})`:'')+
-      ` · output: ${u.output_tokens||0} tok ($${outCost.toFixed(4)}) — <strong style="color:var(--text);">totale: $${total.toFixed(4)}</strong>`;
+    usageEl.innerHTML=`✓ Costo reale — input: ${u.input_tokens||0} tok ($${inCost.toFixed(4)}) · output: ${u.output_tokens||0} tok ($${outCost.toFixed(4)}) — <strong style="color:var(--text);">totale: $${total.toFixed(4)}</strong>`;
     document.getElementById('letterOut').textContent=S.letter;
     document.getElementById('statusBadge').textContent='✓ Lettera generata';
     document.getElementById('nav3').classList.add('done');
