@@ -430,13 +430,7 @@ hr.div{border:none;border-top:1px solid var(--border);margin:18px 0}
 <div class="panel" id="panel4">
   <div class="ptitle">Impostazioni</div>
   <div class="psub">// config — intestazione, firma, regex custom</div>
-  <div class="card">
-    <div class="ctitle">Intestazione & Firme</div>
-    <label>Città</label><input type="text" id="cfg_citta" placeholder="Es: Padova">
-    <label>U.O. / Reparto</label><input type="text" id="cfg_reparto" placeholder="Es: U.O. di Neurologia">
-    <label>Firma — Medico in Formazione Specialistica</label><input type="text" id="cfg_dott" placeholder="Es: Dott. [COGNOME]">
-    <label>Firma — Dirigente Medico</label><input type="text" id="cfg_prof" placeholder="Es: Prof. [COGNOME]">
-  </div>
+
   <div class="card">
     <div class="ctitle">Pattern Regex Custom</div>
     <div class="ib" style="margin-bottom:10px;">Pattern aggiuntivi in JSON. I pattern base sono già inclusi.</div>
@@ -500,6 +494,34 @@ hr.div{border:none;border-top:1px solid var(--border);margin:18px 0}
     </div>
     <div id="tplGrid" class="tpl-grid"></div>
     <div id="noTplMsg" class="ib" style="margin:0;">Nessun caso ancora. Aggiungine uno qui sotto.</div>
+  </div>
+  <!-- ── Ward Fingerprint card ─────────────────────────────────────── -->
+  <div class="card" id="wardFpCard">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;flex-wrap:wrap;gap:8px;">
+      <div style="display:flex;align-items:center;gap:8px;">
+        <div class="ctitle" style="margin:0;">Fingerprint Reparto</div>
+        <span class="chip c-blue" style="font-size:9px;">Ward-level</span>
+      </div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;">
+        <button class="btn btn-g" style="font-size:9px;padding:4px 10px;" onclick="toggleWardFpPanel()">▾ Sintetizza</button>
+      </div>
+    </div>
+    <div class="ib blue" style="font-size:10px;margin-bottom:10px;">
+      Sintetizza un fingerprint di reparto inviando a Claude tutte le lettere + cartelle della libreria. Il risultato viene salvato come voce speciale selezionabile accanto ai casi.
+    </div>
+    <div id="wardGrid" class="tpl-grid" style="margin-bottom:10px;"></div>
+    <div id="wardFpPanel" style="display:none;">
+      <label style="margin-bottom:4px;">Tag / Reparto da sintetizzare <span style="color:var(--dim);font-size:9px;text-transform:none;letter-spacing:0;">(filtra i casi per nome — lascia vuoto per tutti)</span></label>
+      <input type="text" id="wardFpTag" placeholder='Es: "Stroke Unit" — solo i casi che contengono questa stringa nel nome'>
+      <div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
+        <button class="btn btn-p" onclick="synthesizeWardFp()" style="font-size:10px;">
+          <span class="spin" id="wardFpSpin" style="display:none;"></span>
+          ✦ Sintetizza Ward Fingerprint
+        </button>
+        <span id="wardFpCaseCount" style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--dim);"></span>
+      </div>
+      <div id="wardFpStatus" style="margin-top:8px;font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--dim);display:none;"></div>
+    </div>
   </div>
   <div id="ragPreview" style="display:none;" class="card">
     <div class="ctitle">Casi Recuperati <span class="chip c-blue" style="margin-left:6px;">RAG</span></div>
@@ -625,51 +647,154 @@ const PRICING = {
 // ═══════════════════════════════════════════════════
 // STATE
 // ═══════════════════════════════════════════════════
-const S    = { rawText:'', cleanText:'', anonText:'', letter:'', strippedBlocks:[], activeTemplateId:null };
+const S    = { rawText:'', cleanText:'', anonText:'', letter:'', strippedBlocks:[], activeTemplateId:null, activeWardId:null };
 const S_XLS = { text:'', filename:'' };
 let newTplSections = [];
 let newTplFingerprintJson = ''; // stores V2 JSON string when set
 
-const DEFAULT_SYS = `Sei un assistente esperto in documentazione medica ospedaliera italiana.
-Genera una lettera di dimissione strutturata in italiano formale clinico.
+const DEFAULT_SYS = `Sei il sistema di generazione delle lettere di dimissione ospedaliere italiane.
+Il reparto e il contesto clinico dipendono dal template e dal fingerprint selezionati.
+Scrivi in italiano formale clinico. Restituisci SOLO la lettera, senza preamboli, commenti o spiegazioni.
+I placeholder [PAZIENTE_NOME] e [DATA_NASCITA] rimarranno nella lettera generata e verranno sostituiti offline dal sistema locale dopo la generazione.
 
-REGOLE ASSOLUTE:
-- NON inventare, inferire o aggiungere dati clinici non presenti nell'input.
-- NON aggiungere diagnosi, valori di laboratorio, farmaci, dosi o date non esplicitamente forniti.
-- Se una sezione manca, scrivi: "Non documentato."
-- NON usare nomi di pazienti, medici, ospedali o qualsiasi identificativo personale.
-- USA ESCLUSIVAMENTE il passato prossimo per eventi durante il ricovero. MAI il passato remoto né l'imperfetto come tempo principale. Esempi corretti: "ha eseguito", "è stata avviata", "è stato ricoverato", "ha presentato", "è stato sottoposto", "si è mantenuto". Regola: usa sempre le forme con "ha/hanno/è/sono + participio passato".
-- Mantieni il registro formale della medicina clinica italiana.
-- Segui esattamente la struttura del template fornito.
-- Restituisci SOLO la lettera, senza preamboli o commenti.
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+REGOLE ASSOLUTE — inviolabili, nessun fingerprint le sovrascrive
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-ACCERTAMENTI STRUMENTALI:
-- Per ogni accertamento riporta la data tra parentesi nel formato (DD/MM/YYYY). Esempio: "ECG (22/02/2026): Fibrillazione atriale..."
-- Per esami ancora in corso di refertazione al momento della dimissione scrivi esattamente: "(referto in corso di completamento)"
-- Non omettere mai la data di un accertamento se presente nell'input.
+- Non inventare, inferire o aggiungere dati non esplicitamente presenti nell'input.
+- Non aggiungere diagnosi, valori di laboratorio, farmaci, dosi o date non forniti.
+- Se una sezione è prevista ma i dati mancano: "Non documentato."
+- Non usare nomi di pazienti, medici, ospedali o identificativi personali — usa i placeholder.
+- Usa il passato prossimo per tutti gli eventi del ricovero ("ha eseguito", "è stata avviata", "ha presentato"). Mai passato remoto come tempo principale.
+- Restituisci SOLO la lettera, senza testo prima o dopo.
 
-ESAME OBIETTIVO NEUROLOGICO (EON):
-- Trascrivi la formula neurologica verbatim dall'input senza riformulare. Non sintetizzare, non accorciare.
-- Includi sempre NIHSS e mRS se presenti.
-- Formula standard: "paziente vigile, orientato, collaborante. Esegue ordini semplici. Eloquio... nervi cranici... Mingazzini I e II... NIHSS:X. mRS X."
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+GERARCHIA DELLE ISTRUZIONI
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-TERAPIA DOMICILIARE:
-- Formato: lista inline separata da virgole con nome commerciale + dosaggio. Esempio: "Bisoprololo 2,5 mg, Ramipril 5 mg, ..."
-- Includi allergie immediatamente dopo la terapia domiciliare se presenti.
+1. REGOLE ASSOLUTE — sempre applicate, non sovrascrivibili
+2. override_rules del fingerprint — sovrascrivono le sezioni corrispondenti di questo documento
+3. Questo documento — default per tutto ciò che il fingerprint non specifica
+4. Template lettera — struttura e sequenza delle sezioni
+5. Dati clinici — contenuto effettivo
 
-TERAPIA ALLA DIMISSIONE — TABELLA MARKDOWN:
-Usa obbligatoriamente una tabella a 4 colonne:
-| Farmaco | Posologia | Orari | Note |
-|---------|-----------|-------|------|
-- Colonna "Farmaco": nome commerciale + formulazione (es. "Apixaban 2,5 mg cpr")
-- Colonna "Posologia": numero di unità e via (es. "1 cp os")
-- Colonna "Orari": orari di somministrazione (es. "8.00 - 20.00")
-- Colonna "Note": una tra — "terapia domiciliare" / "nuova terapia" / "dose modificata" / "fino al GG/MM poi stop" / "sospeso"
-- Ordina per orario di somministrazione mattutino.
+Se il fingerprint contiene override_rules, quelle istruzioni sostituiscono le sezioni corrispondenti qui sotto. Le sezioni non menzionate nell'override seguono questo documento.
 
-SWITCH TERAPEUTICI:
-- Se un farmaco è stato sostituito durante il ricovero, mantieni nel decorso la motivazione clinica esplicita (es. "in considerazione dell'eziologia cardioembolica...").
-- Nella tabella riporta solo la terapia attiva alla dimissione.`;
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+STRUTTURA
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+- Segui esattamente la sequenza di sezioni del template fornito nel prompt utente.
+- Non aggiungere sezioni non previste dal template.
+- Se una sezione è prevista ma i dati mancano: "Non documentato."
+- Gli esami strumentali eseguiti ma non elencati nel template vanno comunque inclusi nella sezione accertamenti, in coda alla lista prevista.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+CRITERI DI SELEZIONE
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Il destinatario è il medico curante territoriale. Includi solo ciò che è utile per la gestione del paziente dopo la dimissione.
+
+INCLUDI sempre:
+- La diagnosi principale con meccanismo eziopatogenetico se identificato nell'input.
+- Tutti gli esami di laboratorio eseguiti, secondo il formato della sezione ESAMI DI LABORATORIO.
+- Tutti gli accertamenti strumentali eseguiti con data e conclusione del referto.
+- Le decisioni terapeutiche con la motivazione clinica esplicita.
+- Il follow-up pianificato con data, ora e sede esatti se presenti nell'input.
+- Se i parametri vitali mostrano alterazioni significative: menziona l'evento nel decorso clinico con le conseguenze terapeutiche che ne sono derivate.
+
+OMETTI:
+- Dettagli procedurali di routine senza rilevanza per il curante.
+- Ripetizioni di informazioni già presenti in altre sezioni.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+ESAME OBIETTIVO NEUROLOGICO (EON)
+[sovrascrivibile da override_rules.eon_schema]
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+- Se l'EON alla dimissione è riportato esplicitamente nell'input: trascrivilo verbatim, senza riformulare né accorciare.
+- Se non è riportato esplicitamente: ricostruiscilo dall'ultima valutazione neurologica disponibile nei diari clinici, usando come base lo schema di normalità del fingerprint (override_rules.eon_schema) se presente, altrimenti lo schema default sotto.
+- Sostituisci le voci dello schema solo dove l'input documenta esplicitamente un deficit o un'anomalia.
+- Non inventare deficit non documentati. Non omettere deficit documentati.
+- Includi sempre NIHSS e mRS all'ultimo punteggio disponibile nell'input.
+
+SCHEMA DEFAULT (usato solo se override_rules.eon_schema non è presente nel fingerprint):
+"paziente vigile, orientato s/p/t, collaborante. Eloquio fluente, non disartria. Esegue ordini semplici. Capo e sguardo in asse. Marcia autonoma senza caratteri patologici, possibile su punte, talloni e in tandem. Non oscillazioni in Romberg. Raggiunge e mantiene la posizione di Mingazzini I e II senza slivellamenti. Forza conservata ai quattro arti. ROT normovivaci e simmetrici ai quattro arti. Sensibilità tattile integra, nega parestesie. Pallestesia nella norma. Manovre I/N e T/G correttamente eseguite. Non segni di eminegligenza. Ai nervi cranici: pupille isocoriche, isocicliche, normofotoreagenti. CV integro per confronto. MOE integra. Non deficit sensitivi in territorio trigeminale. Non deficit VII. Lingua normosporta, spinta validamente contro le guance bilateralmente. Velo palatino mobile e simmetrico. NIHSS: X. mRS: X."
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+ESAMI DI LABORATORIO
+[sovrascrivibile da override_rules.esami]
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Formato default per ogni categoria — tutto su una sola riga:
+[Nome categoria]: [esame1], [esame2], [esame3] nella norma; [EsameAnomalo] VALORE unità (v.n. range).
+
+Regole default:
+- Prima tutti gli esami nella norma separati da virgola + "nella norma".
+- Poi, separati da punto e virgola, gli esami anomali con valore esatto e range se presente nell'input.
+- Se tutti nella norma: "[Nome categoria]: nella norma."
+- Se una categoria non è stata eseguita: ometti la riga completamente.
+- Includi tutte le categorie presenti nell'input, anche quelle non elencate nel template.
+
+Esempio:
+Profilo coagulativo: fibrinogeno, proteina C, proteina S nella norma; D-Dimero 850 ug/L FEU (v.n. <700); AT 68% (v.n. 75-125).
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+ACCERTAMENTI STRUMENTALI
+[sovrascrivibile da override_rules.accertamenti]
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+- Formato: "**Nome esame (DD/MM):** conclusione sintetica del referto."
+- Riporta solo la parte conclusiva del referto, non la descrizione estesa.
+- Non omettere mai la data se presente nell'input.
+- Se il referto non è disponibile: "**Nome esame (DD/MM):** *in corso di refertazione*"
+- Includi tutti gli accertamenti eseguiti, anche quelli non elencati nel template.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+TERAPIA DOMICILIARE
+[sovrascrivibile da override_rules.terapia_domiciliare]
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+- Lista inline separata da virgole: nome commerciale + dosaggio + orario se disponibile in anamnesi.
+- Esempio: "Bisoprololo 2,5 mg ore 8.00, Ramipril 5 mg ore 8.00, Lansoprazolo 30 mg ore 7.00"
+- Le allergie vanno nella sezione allergie del template, non qui.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+TERAPIA ALLA DIMISSIONE
+[sovrascrivibile da override_rules.terapia_dimissione]
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Tabella markdown obbligatoria a 4 colonne:
+| Farmaco | Posologia | Orario | Note |
+|---------|-----------|--------|------|
+
+- Farmaco: nome commerciale + dosaggio (es. "Apixaban 5 mg")
+- Posologia: numero unità + forma (es. "1 compressa", "1 cp")
+- Orario: orario/i di somministrazione (es. "8.00" oppure "8.00 - 20.00")
+- Note: "terapia domiciliare" / "nuova terapia" / "dose modificata" / "fino al GG/MM poi stop" / "sospeso" — la scelta dipende dal contesto clinico e dalle convenzioni del fingerprint
+- Ordina per orario mattutino crescente.
+- Motivazioni di switch terapeutico: nel decorso clinico, non nella tabella.
+- Nella tabella solo la terapia attiva alla dimissione.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+GESTIONE DELL'INCERTEZZA
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+- Diagnosi non confermata: "quadro compatibile con...", "non è possibile escludere..."
+- Esame in corso: "*in corso di refertazione*"
+- Dato assente dall'input: "Non documentato."
+- Non lasciare mai una sezione vuota.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+REGISTRO E STILE
+[sovrascrivibile da override_rules.stile]
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+- Registro formale clinico italiano. Mai colloquiale.
+- Intestazioni di sezione in grassetto seguite da due punti: "**Decorso Clinico:**"
+- Connettori logici: "in considerazione di", "alla luce di", "pertanto", "si è deciso di", "in accordo con"
+- Chiusura fissa: "Rimaniamo a disposizione e porgiamo cordiali saluti."
+- Firme: due colonne — medici in formazione specialistica a sinistra, dirigente medico a destra.`;
 
 // ═══════════════════════════════════════════════════
 // NAVIGATION
@@ -1727,25 +1852,74 @@ function saveLibrary(lib){localStorage.setItem('letteraai_lib',JSON.stringify(li
 
 function renderLibrary(){
   const lib=loadLibrary();
+  const cases=lib.filter(t=>t.type!=='ward');
+  const wards=lib.filter(t=>t.type==='ward');
   const grid=document.getElementById('tplGrid'),noMsg=document.getElementById('noTplMsg'),stats=document.getElementById('libStats');
-  stats.textContent=`${lib.length} casi · lettere ~${lib.reduce((a,t)=>a+tok(t.letter||''),0)} tok`;
-  if(!lib.length){grid.innerHTML='';noMsg.style.display='block';updateRagPreview();return;}
-  noMsg.style.display='none';
-  grid.innerHTML=lib.map(t=>{
-    const isActive=S.activeTemplateId===t.id;
-    return `<div class="tpl-card${isActive?' active-tpl':''}" onclick="selectTemplate('${t.id}')">
-      <button class="tpl-del" onclick="event.stopPropagation();deleteTemplate('${t.id}')">✕</button>
-      <div class="tpl-name">${esc(t.name)}</div>
-      <div class="tpl-meta" style="margin-bottom:6px;">${new Date(t.createdAt).toLocaleDateString('it-IT')}</div>
-      <div style="display:flex;flex-wrap:wrap;gap:4px;">
-        ${t.folder?`<span class="chip c-w">📁 ~${tok(t.folder)}t</span>`:''}
-        ${t.letter?`<span class="chip c-ok">📄 ~${tok(t.letter)}t</span>`:''}
-        ${t.fingerprint?fpBadge(t.fingerprint):''}
-      </div>
-    </div>`;
-  }).join('');
+  stats.textContent=`${cases.length} casi · lettere ~${cases.reduce((a,t)=>a+tok(t.letter||''),0)} tok`;
+  if(!cases.length){grid.innerHTML='';noMsg.style.display='block';}
+  else{
+    noMsg.style.display='none';
+    grid.innerHTML=cases.map(t=>{
+      const isActive=S.activeTemplateId===t.id;
+      return `<div class="tpl-card${isActive?' active-tpl':''}" onclick="selectTemplate('${t.id}')">
+        <button class="tpl-del" onclick="event.stopPropagation();deleteTemplate('${t.id}')">✕</button>
+        <div class="tpl-name">${esc(t.name)}</div>
+        <div class="tpl-meta" style="margin-bottom:6px;">${new Date(t.createdAt).toLocaleDateString('it-IT')}</div>
+        <div style="display:flex;flex-wrap:wrap;gap:4px;">
+          ${t.folder?`<span class="chip c-w">📁 ~${tok(t.folder)}t</span>`:''}
+          ${t.letter?`<span class="chip c-ok">📄 ~${tok(t.letter)}t</span>`:''}
+          ${t.fingerprint?fpBadge(t.fingerprint):''}
+        </div>
+      </div>`;
+    }).join('');
+  }
+  // Ward entries
+  const wardGrid=document.getElementById('wardGrid');
+  if(wardGrid){
+    wardGrid.innerHTML=wards.length?wards.map(t=>{
+      const isActive=S.activeWardId===t.id;
+      return `<div class="tpl-card${isActive?' active-tpl':''}" onclick="selectWard('${t.id}')" style="border-color:${isActive?'var(--blue)':'var(--border)'};background:${isActive?'rgba(110,168,201,.08)':'var(--surface2)'};">
+        <button class="tpl-del" onclick="event.stopPropagation();deleteWard('${t.id}')">✕</button>
+        <div class="tpl-name" style="color:var(--blue);">🏥 ${esc(t.name)}</div>
+        <div class="tpl-meta" style="margin-bottom:6px;">${new Date(t.createdAt).toLocaleDateString('it-IT')} · ${t.sourceCount||0} casi</div>
+        <div style="display:flex;flex-wrap:wrap;gap:4px;">
+          ${t.fingerprint?fpBadge(t.fingerprint):''}
+          ${isActive?'<span class="chip c-blue">✓ attivo</span>':''}
+        </div>
+      </div>`;
+    }).join(''):'<div style="font-family:\'JetBrains Mono\',monospace;font-size:10px;color:var(--dim);">Nessun fingerprint reparto. Clicca "Sintetizza" per crearne uno.</div>';
+  }
   updateRagPreview();
 }
+function selectWard(id){
+  S.activeWardId=(S.activeWardId===id)?null:id;
+  renderLibrary();updateTokenPanel();
+  const w=loadLibrary().find(x=>x.id===id);
+  if(w&&S.activeWardId===id) document.getElementById('statusBadge').textContent='🏥 '+w.name;
+}
+function deleteWard(id){
+  if(!confirm('Eliminare questo fingerprint reparto?'))return;
+  if(S.activeWardId===id)S.activeWardId=null;
+  saveLibrary(loadLibrary().filter(t=>t.id!==id));renderLibrary();updateTokenPanel();
+}
+function toggleWardFpPanel(){
+  const panel=document.getElementById('wardFpPanel');
+  const btn=document.querySelector('#wardFpCard .btn-g');
+  const visible=panel.style.display!=='none';
+  panel.style.display=visible?'none':'block';
+  btn.textContent=visible?'▾ Sintetizza':'▴ Chiudi';
+  if(!visible) updateWardCaseCount();
+}
+function updateWardCaseCount(){
+  const tag=document.getElementById('wardFpTag').value.trim().toLowerCase();
+  const lib=loadLibrary().filter(t=>t.type!=='ward');
+  const filtered=tag?lib.filter(t=>t.name.toLowerCase().includes(tag)):lib;
+  document.getElementById('wardFpCaseCount').textContent=`${filtered.length} casi selezionati`;
+}
+document.addEventListener('DOMContentLoaded',()=>{
+  const tagInput=document.getElementById('wardFpTag');
+  if(tagInput) tagInput.addEventListener('input',updateWardCaseCount);
+});
 
 function selectTemplate(id){
   S.activeTemplateId=(S.activeTemplateId===id)?null:id;
@@ -1762,6 +1936,17 @@ function getActiveFingerprint(){
   if(!S.activeTemplateId)return'';
   const t=loadLibrary().find(x=>x.id===S.activeTemplateId);
   return t?(t.fingerprint||''):'';
+}
+// Returns {caseFp, wardFp} objects (parsed V2 JSON or null)
+function getActiveFpObjects(){
+  const lib=loadLibrary();
+  const active=S.activeTemplateId?lib.find(x=>x.id===S.activeTemplateId):null;
+  const caseFpObj=active?parseFpJson(active.fingerprint||''):null;
+  // Ward fingerprint: library entry with type='ward' whose tag matches active case name prefix
+  // Also allow manual selection — any library entry with type='ward' that user has selected
+  const wardEntry=lib.find(x=>x.type==='ward'&&x.id===S.activeWardId);
+  const wardFpObj=wardEntry?parseFpJson(wardEntry.fingerprint||''):null;
+  return{caseFpObj,wardFpObj};
 }
 
 // TF-IDF RAG
@@ -1841,6 +2026,76 @@ function buildFingerprintFromSections(sections){
   if(!active.length)return'';
   return active.map(s=>`[${s.label}]\n${s.text.trim()}`).join('\n\n');
 }
+// ═══════════════════════════════════════════════════
+// WARD FINGERPRINT SYNTHESIS
+// ═══════════════════════════════════════════════════
+async function synthesizeWardFp(){
+  const key=document.getElementById('apiKeyInput').value.trim();
+  if(!key){alert('Inserisci la API key nella sezione Generazione.');return;}
+  const tag=document.getElementById('wardFpTag').value.trim().toLowerCase();
+  const lib=loadLibrary().filter(t=>t.type!=='ward');
+  const cases=tag?lib.filter(t=>t.name.toLowerCase().includes(tag)):lib;
+  if(cases.length<2){alert('Servono almeno 2 casi per sintetizzare un fingerprint reparto.');return;}
+  const spin=document.getElementById('wardFpSpin'),status=document.getElementById('wardFpStatus');
+  spin.style.display='inline-block';status.style.display='block';
+  status.style.color='var(--mid)';status.textContent=`Sintetizzando fingerprint reparto da ${cases.length} casi con Sonnet (~60s)...`;
+  try{
+    // Build input: all letters + folders + individual fingerprints if present
+    let casesText='';
+    cases.forEach((c,i)=>{
+      casesText+=`\n\n===== CASO ${i+1}: ${c.name} =====\n`;
+      if(c.folder) casesText+=`--- CARTELLA CLINICA ---\n${c.folder.slice(0,3000)}\n`;
+      if(c.letter) casesText+=`--- LETTERA DI DIMISSIONE ---\n${c.letter.slice(0,3000)}\n`;
+      if(c.fingerprint){
+        const fpObj=parseFpJson(c.fingerprint);
+        if(fpObj?.ragionamento) casesText+=`--- FINGERPRINT INDIVIDUALE (ragionamento) ---\n${JSON.stringify(fpObj.ragionamento)}\n`;
+      }
+    });
+    const wardPrompt=FINGERPRINT_PROMPT_V2
+      .replace('Ti fornisco due documenti:\n1. Una cartella clinica anonimizzata (diari, esami, referti)\n2. La lettera di dimissione effettivamente scritta da un neurologo basandosi su quella cartella',
+        `Ti fornisco ${cases.length} casi clinici di uno stesso reparto: cartelle anonimizzate, lettere di dimissione, e fingerprint individuali se disponibili.`)
+      .replace('Il tuo compito è duplice: capire il RAGIONAMENTO CLINICO che ha guidato la scrittura della lettera, e estrarne un MODELLO SINTETICO riutilizzabile.',
+        'Il tuo compito è sintetizzare un fingerprint di REPARTO che catturi il ragionamento clinico condiviso, lo stile redazionale comune, e un modello sintetico rappresentativo dello standard del reparto — NON di un singolo caso.')
+      .replace('[INCOLLA QUI LA CARTELLA CLINICA ANONIMIZZATA]\n\n===== LETTERA DI DIMISSIONE =====\n[INCOLLA QUI LA LETTERA DI DIMISSIONE]', casesText);
+    const resp=await fetch('https://api.anthropic.com/v1/messages',{
+      method:'POST',
+      headers:{'Content-Type':'application/json','x-api-key':key,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
+      body:JSON.stringify({
+        model:'claude-sonnet-4-6',
+        max_tokens:4000,
+        system:'Sei un esperto di comunicazione clinica neurologica italiana. Sintetizza un fingerprint di reparto da più casi. Restituisci SOLO JSON valido, senza testo prima o dopo, senza backtick.',
+        messages:[{role:'user',content:wardPrompt}]
+      }),
+    });
+    if(!resp.ok){const e=await resp.json();throw new Error(e.error?.message||`HTTP ${resp.status}`);}
+    const rawText=(await resp.json()).content[0].text;
+    const parsed=JSON.parse(rawText.replace(/```json[\s\S]*?```|```/g,'').trim());
+    if(!parsed.lettera_modello) throw new Error('Risposta non contiene lettera_modello — riprova');
+    const wardName=(tag||'Reparto')+' — Ward Fingerprint';
+    const lib2=loadLibrary();
+    lib2.push({
+      id:'ward_'+Date.now(),
+      type:'ward',
+      name:wardName,
+      fingerprint:JSON.stringify(parsed),
+      sourceCount:cases.length,
+      sourceTag:tag||'(tutti)',
+      createdAt:new Date().toISOString()
+    });
+    saveLibrary(lib2);
+    renderLibrary();
+    status.style.color='var(--green)';
+    status.textContent=`✓ Ward fingerprint "${wardName}" salvato · ${cases.length} casi · ~${tok(JSON.stringify(parsed))} token`;
+    // Show quality flags if any field is low
+    const q=parsed.qualita||{};
+    const lowFields=Object.entries(q).filter(([,v])=>v?.livello==='bassa').map(([k,v])=>`${k}: ${v.nota}`);
+    const medFields=Object.entries(q).filter(([,v])=>v?.livello==='media').map(([k,v])=>`${k}: ${v.nota}`);
+    if(lowFields.length) status.textContent+=`\n⚠ Campi a bassa qualità: ${lowFields.join(' | ')}`;
+    if(medFields.length) status.textContent+=`\n~ Campi medi: ${medFields.join(' | ')}`;
+  }catch(err){status.style.color='var(--red)';status.textContent='✗ '+err.message;}
+  finally{spin.style.display='none';}
+}
+
 async function autoExtractTemplate(){
   const key=document.getElementById('apiKeyInput').value.trim();
   const letter=document.getElementById('newCaseLetter').value.trim();
@@ -1926,16 +2181,16 @@ function updateTokenPanel(){
   const model=document.getElementById('modelSelect').value;
   const price=PRICING[model]||PRICING['claude-sonnet-4-6'];
   const sysTxt=document.getElementById('systemPrompt').value||DEFAULT_SYS;
-  const fp=getActiveFingerprint();
-  const fpObj=parseFpJson(fp);
+  const{caseFpObj,wardFpObj}=getActiveFpObjects();
+  const legacyFp=(!caseFpObj&&!wardFpObj)?getActiveFingerprint():'';
   const ragOn=document.getElementById('ragToggle')?.checked;
   const ragMatches=(ragOn&&S.anonText)?findSimilarCases(S.anonText):[];
   const templateTxt=buildLetterTemplate();
-  // V2: system gets base + reasoning addendum; user turn gets lettera_modello
-  const fpSystemAddendum=fpObj?buildFpSystemAddendum(fpObj):'';
-  const fpUserBlock=fpObj?buildFpUserBlock(fpObj):(fp||'');
-  const tSys=tok(sysTxt+fpSystemAddendum);
-  const tFp=tok(fpUserBlock);
+  const wardAddendum=wardFpObj?buildWardFpSystemAddendum(wardFpObj):'';
+  const caseAddendum=caseFpObj?buildFpSystemAddendum(caseFpObj):'';
+  const tSys=tok(sysTxt+wardAddendum+caseAddendum);
+  const userFpObj=wardFpObj||caseFpObj;
+  const tFp=userFpObj?tok(userFpObj.lettera_modello||''):tok(legacyFp);
   const tRag=ragMatches.reduce((a,{t})=>a+tok(t.letter||''),0);
   const tTemplate=tok(templateTxt),tClinical=tok(S.anonText),tOut=1800;
   const tCacheable=tFp+tRag,tTotal=tSys+tFp+tRag+tTemplate+tClinical;
@@ -1946,9 +2201,10 @@ function updateTokenPanel(){
   const costNonCached=((tSys+tTemplate+tClinical)/1e6)*price.in;
   const costFirst=costCacheW+costNonCached,costSubseq=costCacheR+costNonCached;
   const costOut=(tOut/1e6)*price.out;
-  const fpLabel=fpObj?'Fingerprint V2 (lettera-modello)':'Fingerprint Stile';
+  const fpLabel=wardFpObj?'Ward Fingerprint (lettera-modello)':caseFpObj?'Fingerprint V2 (lettera-modello)':'Fingerprint Stile';
+  const syslabel='System'+(wardFpObj?' + Ward ragionamento':'')+(caseFpObj?' + Case ragionamento':'');
   const sections=[
-    {label:'System Prompt'+(fpObj?' + Ragionamento':''),tokens:tSys,color:'#7a6340',cached:false},
+    {label:syslabel,tokens:tSys,color:'#7a6340',cached:false},
     {label:fpLabel,tokens:tFp,color:'#6ea8c9',cached:cacheActive&&tFp>0},
     {label:`RAG (${ragMatches.length} casi)`,tokens:tRag,color:'#a96ec9',cached:cacheActive&&tRag>0},
     {label:'Template lettera',tokens:tTemplate,color:'#7a7570',cached:false},
@@ -1998,9 +2254,7 @@ function getLetterTemplateType(){
 }
 
 function buildLetterTemplate(){
-  const citta=(document.getElementById('cfg_citta').value||'Padova').trim();
-  const dott=(document.getElementById('cfg_dott').value||'Dott. [NOME]').trim();
-  const prof=(document.getElementById('cfg_prof').value||'Prof. [NOME]').trim();
+  const citta='Padova';
   const diagnosi=document.getElementById('inp_diagnosi').value.trim()||'[DIAGNOSI_PRINCIPALE]';
   const today=new Date().toLocaleDateString('it-IT',{day:'2-digit',month:'2-digit',year:'numeric'});
   const tipo=getLetterTemplateType();
@@ -2074,8 +2328,9 @@ Si raccomanda:
 
 Rimaniamo a disposizione e porgiamo cordiali saluti.
 
-${dott.padEnd(46)}${prof}
-(medici in formazione specialistica)${' '.repeat(12)}(Dirigente medico)
+[FIRMA_MEDICO_FORMAZIONE]                     [FIRMA_DIRIGENTE]
+(medici in formazione specialistica)            (Dirigente medico)
+
 ---`;
   }
 
@@ -2158,23 +2413,26 @@ Si raccomanda:
 
 Rimaniamo a disposizione e porgiamo cordiali saluti.
 
-${dott.padEnd(46)}${prof}
-(medici in formazione specialistica)${' '.repeat(12)}(Dirigente medico)
+[FIRMA_MEDICO_FORMAZIONE]                     [FIRMA_DIRIGENTE]
+(medici in formazione specialistica)            (Dirigente medico)
+
 ---`;
 }
 
 function buildMessages(){
-  const fp=getActiveFingerprint();
-  const fpObj=parseFpJson(fp);
+  const{caseFpObj,wardFpObj}=getActiveFpObjects();
+  // Fallback: legacy fingerprint string if no V2 parsed object
+  const legacyFp=(!caseFpObj&&!wardFpObj)?getActiveFingerprint():'';
   const ragOn=document.getElementById('ragToggle')?.checked;
   const ragMatches=(ragOn&&S.anonText)?findSimilarCases(S.anonText):[];
   const blocks=[];
-  if(fpObj?.lettera_modello){
-    // V2: lettera_modello (with → annotations) goes in user turn as structural scaffold
-    blocks.push({type:'text',text:buildFpUserBlock(fpObj),cache_control:{type:'ephemeral'}});
-  } else if(fp){
-    // Legacy: prose fingerprint in user turn
-    blocks.push({type:'text',text:`## RIFERIMENTO STILISTICO\n\n${fp}\n\n---\n\n`,cache_control:{type:'ephemeral'}});
+  // Ward lettera_modello OR case lettera_modello in user turn (ward takes priority if both present)
+  const userFpObj=wardFpObj||caseFpObj;
+  if(userFpObj?.lettera_modello){
+    const label=wardFpObj?'LETTERA-MODELLO REPARTO (sintetizzata da più casi)':'LETTERA-MODELLO DI RIFERIMENTO';
+    blocks.push({type:'text',text:`## ${label}\n\nQuesta lettera sintetica (con annotazioni →) mostra struttura, ragionamento e stile. Usala come guida strutturale — NON copiare i placeholder, adatta ogni sezione al caso corrente.\n\n${userFpObj.lettera_modello}\n\n---\n\n`,cache_control:{type:'ephemeral'}});
+  } else if(legacyFp){
+    blocks.push({type:'text',text:`## RIFERIMENTO STILISTICO\n\n${legacyFp}\n\n---\n\n`,cache_control:{type:'ephemeral'}});
   }
   if(ragMatches.length){
     let rb=`## ESEMPI DI RIFERIMENTO — casi simili\n\nUsa per stile e struttura. NON copiare dati clinici.\n\n`;
@@ -2183,18 +2441,23 @@ function buildMessages(){
   }
   const addendum=S_optAddendum?`\n\n[ISTRUZIONI AGGIUNTIVE PER QUESTO CASO]\n${S_optAddendum}`:'';
   blocks.push({type:'text',text:`## DATI CLINICI ANONIMIZZATI\n\n<clinical_input>\n${S.anonText}\n</clinical_input>\n\n---\n\n`+buildLetterTemplate()+addendum});
-  const useCache=fp||ragMatches.length;
+  const useCache=userFpObj||legacyFp||ragMatches.length;
   return[{role:'user',content:useCache?blocks:blocks.map(b=>b.text).join('')}];
 }
 
 function buildUserPromptStr(){
-  const fp=getActiveFingerprint();
-  const fpObj=parseFpJson(fp);
+  const{caseFpObj,wardFpObj}=getActiveFpObjects();
+  const legacyFp=(!caseFpObj&&!wardFpObj)?getActiveFingerprint():'';
   const ragOn=document.getElementById('ragToggle')?.checked;
   const ragMatches=(ragOn&&S.anonText)?findSimilarCases(S.anonText):[];
   let p='';
-  if(fpObj?.lettera_modello) p+=buildFpUserBlock(fpObj);
-  else if(fp) p+=`## RIFERIMENTO STILISTICO\n\n${fp}\n\n---\n\n`;
+  const userFpObj=wardFpObj||caseFpObj;
+  if(userFpObj?.lettera_modello){
+    const label=wardFpObj?'LETTERA-MODELLO REPARTO (sintetizzata da più casi)':'LETTERA-MODELLO DI RIFERIMENTO';
+    p+=`## ${label}\n\nQuesta lettera sintetica (con annotazioni →) mostra struttura, ragionamento e stile. Usala come guida strutturale — NON copiare i placeholder, adatta ogni sezione al caso corrente.\n\n${userFpObj.lettera_modello}\n\n---\n\n`;
+  } else if(legacyFp){
+    p+=`## RIFERIMENTO STILISTICO\n\n${legacyFp}\n\n---\n\n`;
+  }
   if(ragMatches.length){
     p+=`## ESEMPI DI RIFERIMENTO\n\n`;
     ragMatches.forEach(({t,score},i)=>{p+=`### Esempio ${i+1} — ${t.name} (${(score*100).toFixed(0)}%)\n\n${t.letter}\n\n---\n\n`;});
@@ -2224,16 +2487,19 @@ async function generateLetter(){
   btn.disabled=true;spin.style.display='inline-block';
   document.getElementById('genErr').style.display='none';
   document.getElementById('statusBadge').textContent='⟳ Generando...';
-  const fp=getActiveFingerprint();
-  const fpObj=parseFpJson(fp);
+  const{caseFpObj,wardFpObj}=getActiveFpObjects();
+  const legacyFp=(!caseFpObj&&!wardFpObj)?getActiveFingerprint():'';
   const ragOn=document.getElementById('ragToggle')?.checked;
   const ragMatches=(ragOn&&S.anonText)?findSimilarCases(S.anonText):[];
-  const useCache=fp||ragMatches.length>0;
+  const useCache=(caseFpObj||wardFpObj||legacyFp||ragMatches.length>0);
   const headers={'Content-Type':'application/json','x-api-key':key,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'};
   if(useCache)headers['anthropic-beta']='prompt-caching-2024-07-31';
-  // V2: append reasoning layer to system prompt (why things are included, style, key phrases)
   const baseSystem=document.getElementById('systemPrompt').value||DEFAULT_SYS;
-  const fullSystem=fpObj ? baseSystem+buildFpSystemAddendum(fpObj) : baseSystem;
+  // Ward reasoning → system prompt (base layer), case reasoning adds on top if both present
+  let fullSystem=baseSystem;
+  if(wardFpObj) fullSystem+=buildWardFpSystemAddendum(wardFpObj);
+  if(caseFpObj) fullSystem+=buildFpSystemAddendum(caseFpObj);
+  else if(!wardFpObj&&legacyFp) fullSystem+='\n\n---\n\n## RIFERIMENTO STILISTICO\n\n'+legacyFp;
   try{
     const resp=await fetch('https://api.anthropic.com/v1/messages',{
       method:'POST',headers,
@@ -2291,8 +2557,11 @@ function renderPromptView(){
 function refreshPrompt(){
   if(!S.anonText){document.getElementById('promptView').value='Completa gli Step 1–2.';return;}
   const baseSystem=document.getElementById('systemPrompt').value||DEFAULT_SYS;
-  const fpObj=parseFpJson(getActiveFingerprint());
-  pSys=fpObj ? baseSystem+buildFpSystemAddendum(fpObj) : baseSystem;
+  const{caseFpObj,wardFpObj}=getActiveFpObjects();
+  let pSysLocal=baseSystem;
+  if(wardFpObj) pSysLocal+=buildWardFpSystemAddendum(wardFpObj);
+  if(caseFpObj) pSysLocal+=buildFpSystemAddendum(caseFpObj);
+  pSys=pSysLocal;
   pUsr=buildUserPromptStr();
   renderPromptView();updateTokenPanel();
 }
@@ -2594,10 +2863,7 @@ function newLetter(){
 // ═══════════════════════════════════════════════════
 function saveBaseSettings(){
   localStorage.setItem('letteraai_cfg',JSON.stringify({
-    citta:document.getElementById('cfg_citta').value,
-    reparto:document.getElementById('cfg_reparto').value,
-    dott:document.getElementById('cfg_dott').value,
-    prof:document.getElementById('cfg_prof').value,
+    citta:'Padova',
     regex:document.getElementById('cfg_regex').value,
     surnamesUrl:document.getElementById('cfg_surnames_url').value,
     firstNamesUrl:document.getElementById('cfg_firstnames_url').value,
@@ -2609,10 +2875,7 @@ function saveBaseSettings(){
 function loadBaseSettings(){
   try{
     const c=JSON.parse(localStorage.getItem('letteraai_cfg')||'{}');
-    if(c.citta)document.getElementById('cfg_citta').value=c.citta;
-    if(c.reparto)document.getElementById('cfg_reparto').value=c.reparto;
-    if(c.dott)document.getElementById('cfg_dott').value=c.dott;
-    if(c.prof)document.getElementById('cfg_prof').value=c.prof;
+    // city/ward/signatures are no longer configurable
     if(c.regex)document.getElementById('cfg_regex').value=c.regex;
     if(c.surnamesUrl)document.getElementById('cfg_surnames_url').value=c.surnamesUrl;
     if(c.firstNamesUrl)document.getElementById('cfg_firstnames_url').value=c.firstNamesUrl;
@@ -3087,7 +3350,21 @@ Restituisci un oggetto JSON con questa struttura:
     "campi": ["Farmaco", "Dose", "Posologia", "Orario", "Note"],
     "note_speciali": "come vengono gestiti farmaci nuovi vs continuativi, sospesi, a scalare"
   },
-  "note_stilistiche": "registro, tempi verbali predominanti, uso del passivo, lunghezza media delle frasi, eventuali formule fisse ricorrenti"
+  "note_stilistiche": "registro, tempi verbali predominanti, uso del passivo, lunghezza media delle frasi, eventuali formule fisse ricorrenti",
+  "override_rules": {
+    "eon_schema": "schema EON di normalità specifico del reparto — usato quando EON non è esplicito nell'input",
+    "esami": "istruzioni specifiche del reparto per il formato degli esami di laboratorio — sovrascrive il default",
+    "accertamenti": "istruzioni specifiche per accertamenti strumentali — sovrascrive il default",
+    "terapia_domiciliare": "istruzioni specifiche per terapia domiciliare — sovrascrive il default",
+    "terapia_dimissione": "istruzioni specifiche per terapia alla dimissione — sovrascrive il default",
+    "stile": "istruzioni specifiche di registro e stile — sovrascrive il default"
+  },
+  "qualita": {
+    "lettera_modello": {"livello": "alta|media|bassa", "nota": "spiegazione se livello non è alta"},
+    "ragionamento": {"livello": "alta|media|bassa", "nota": "spiegazione se livello non è alta"},
+    "frasi_chiave": {"livello": "alta|media|bassa", "nota": "spiegazione se livello non è alta"},
+    "override_rules": {"livello": "alta|media|bassa", "nota": "spiegazione se livello non è alta"}
+  }
 }
 
 ---
@@ -3097,6 +3374,8 @@ REGOLE FERREE:
 - USA [PLACEHOLDER_TIPO] descrittivi come [DIAGNOSI_PRINCIPALE], [PROCEDURA_ESEGUITA], [ESITO_ESAME], [FARMACO_CLASSE]
 - La lettera-modello deve essere lunga abbastanza da coprire tutti i pattern strutturali, non una versione abbreviata
 - Le frasi_chiave devono essere frasi reali estratte o parafrasate dalla lettera originale, non inventate
+- override_rules.eon_schema: inserisci lo schema EON di normalità del reparto estratto dalla lettera o dai diari — se non identificabile lascia il campo vuoto
+- qualita: per ogni campo valuta onestamente il livello (alta/media/bassa) e spiega brevemente i limiti se non alta
 - Solo JSON valido, senza testo prima o dopo, senza backtick
 
 ===== CARTELLA CLINICA =====
@@ -3121,13 +3400,13 @@ function parseFpJson(fpStr){
 // (reasoning + frasi + stile → injected into system so Claude understands WHY)
 function buildFpSystemAddendum(fpObj){
   if(!fpObj) return '';
-  let out='\n\n---\n\n## MODELLO DI RAGIONAMENTO CLINICO (caso di riferimento)\n';
+  let out='\n\n---\n\n## MODELLO DI RAGIONAMENTO CLINICO (fingerprint di riferimento)\n';
   const r=fpObj.ragionamento||{};
-  if(r.criteri_selezione) out+=`\n**Criteri di selezione:** ${r.criteri_selezione}`;
-  if(r.struttura_logica)  out+=`\n**Struttura logica:** ${r.struttura_logica}`;
-  if(r.gestione_incertezza) out+=`\n**Gestione incertezza:** ${r.gestione_incertezza}`;
+  if(r.criteri_selezione)      out+=`\n**Criteri di selezione:** ${r.criteri_selezione}`;
+  if(r.struttura_logica)       out+=`\n**Struttura logica:** ${r.struttura_logica}`;
+  if(r.gestione_incertezza)    out+=`\n**Gestione incertezza:** ${r.gestione_incertezza}`;
   if(r.calibrazione_dettaglio) out+=`\n**Calibrazione dettaglio:** ${r.calibrazione_dettaglio}`;
-  if(fpObj.note_stilistiche) out+=`\n\n## REGISTRO STILISTICO\n${fpObj.note_stilistiche}`;
+  if(fpObj.note_stilistiche)   out+=`\n\n## REGISTRO STILISTICO\n${fpObj.note_stilistiche}`;
   const fk=fpObj.frasi_chiave||{};
   if(Object.keys(fk).length){
     out+='\n\n## FRASI E CONNETTORI CARATTERISTICI\n';
@@ -3139,7 +3418,34 @@ function buildFpSystemAddendum(fpObj){
   }
   const st=fpObj.struttura_terapia||{};
   if(st.note_speciali) out+=`\n**Farmaci nuovi vs continuativi:** ${st.note_speciali}`;
+  // ── Override rules — replace corresponding sections of global editorial logic ──
+  const ov=fpObj.override_rules||{};
+  const ovKeys=Object.entries(ov).filter(([,v])=>v&&v.trim());
+  if(ovKeys.length){
+    out+='\n\n## OVERRIDE REGOLE REPARTO\nLe seguenti istruzioni sovrascrivono le sezioni corrispondenti del global editorial logic:\n';
+    const labels={
+      eon_schema:    'ESAME OBIETTIVO NEUROLOGICO — Schema normalità reparto',
+      esami:         'ESAMI DI LABORATORIO — Formato reparto',
+      accertamenti:  'ACCERTAMENTI STRUMENTALI — Formato reparto',
+      terapia_domiciliare: 'TERAPIA DOMICILIARE — Convenzioni reparto',
+      terapia_dimissione:  'TERAPIA ALLA DIMISSIONE — Convenzioni reparto',
+      stile:         'REGISTRO E STILE — Convenzioni reparto',
+    };
+    for(const [k,v] of ovKeys){
+      const label=labels[k]||k;
+      out+=`\n### ${label}\n${v}\n`;
+    }
+  }
   return out;
+}
+
+// Build ward fingerprint addendum — same as case but labeled as ward-level
+function buildWardFpSystemAddendum(fpObj){
+  if(!fpObj) return '';
+  return buildFpSystemAddendum(fpObj).replace(
+    '## MODELLO DI RAGIONAMENTO CLINICO (fingerprint di riferimento)',
+    '## MODELLO DI RAGIONAMENTO CLINICO — REPARTO (sintetizzato da più casi)'
+  );
 }
 
 // Build user-turn block from V2 fp (lettera_modello with → annotations)
@@ -3211,31 +3517,119 @@ function renderFpV2Preview(fpObj){
   const container=document.getElementById('newTplSections');
   const r=fpObj.ragionamento||{};
   const fk=fpObj.frasi_chiave||{};
-  const st=fpObj.struttura_terapia||{};
+  const ov=fpObj.override_rules||{};
+  const q=fpObj.qualita||{};
   const lm=fpObj.lettera_modello||'';
-  const previewLines=lm.split('\n').slice(0,12).join('\n')+(lm.split('\n').length>12?'\n…':'');
+  const editorId='fpEditor_'+Date.now();
+  const mono="font-family:'JetBrains Mono',monospace";
 
-  container.innerHTML=`
-  <div style="border:1px solid var(--accent-d);border-radius:var(--r);overflow:hidden;margin-top:4px;">
-    <div style="background:var(--accent-g);padding:8px 12px;display:flex;align-items:center;gap:8px;">
-      <span style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--accent);font-weight:600;text-transform:uppercase;letter-spacing:.1em;">✦ Fingerprint V2</span>
-      <span style="font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--dim);">ragionamento · lettera-modello · frasi · stile</span>
-    </div>
-    <div style="padding:12px;display:grid;grid-template-columns:1fr 1fr;gap:10px;">
-      ${r.criteri_selezione?`<div><div style="font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--dim);margin-bottom:3px;text-transform:uppercase;">Criteri selezione</div><div style="font-size:12px;color:var(--mid);">${r.criteri_selezione.slice(0,120)}…</div></div>`:''}
-      ${r.struttura_logica?`<div><div style="font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--dim);margin-bottom:3px;text-transform:uppercase;">Struttura logica</div><div style="font-size:12px;color:var(--mid);">${r.struttura_logica.slice(0,120)}…</div></div>`:''}
-      ${fpObj.note_stilistiche?`<div style="grid-column:1/-1;"><div style="font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--dim);margin-bottom:3px;text-transform:uppercase;">Stile</div><div style="font-size:12px;color:var(--mid);">${fpObj.note_stilistiche.slice(0,160)}…</div></div>`:''}
-      ${fk.connettori?.length?`<div style="grid-column:1/-1;"><div style="font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--dim);margin-bottom:3px;text-transform:uppercase;">Connettori</div><div style="font-size:12px;color:var(--blue);">${fk.connettori.join(' · ')}</div></div>`:''}
-    </div>
-    <div style="border-top:1px solid var(--border);padding:10px 12px;">
-      <div style="font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--dim);margin-bottom:6px;text-transform:uppercase;">Lettera-modello (preview)</div>
-      <pre style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--mid);white-space:pre-wrap;margin:0;line-height:1.5;">${previewLines.replace(/</g,'&lt;')}</pre>
-    </div>
-    <div style="border-top:1px solid var(--border);padding:8px 12px;display:flex;align-items:center;justify-content:space-between;">
-      <span style="font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--dim);">~${tok(JSON.stringify(fpObj))} token · inietterà ragionamento nel system prompt + lettera-modello nel user turn</span>
-      <button class="btn btn-g" style="font-size:9px;padding:3px 8px;" onclick="clearFpV2()">✕ Rimuovi</button>
-    </div>
-  </div>`;
+  function qFlag(field){
+    const qf=q[field];
+    if(!qf||qf.livello==='alta') return '';
+    const col=qf.livello==='bassa'?'var(--red)':'var(--accent)';
+    const icon=qf.livello==='bassa'?'&#9888;':'~';
+    const nota=esc((qf.nota||'').slice(0,60));
+    return '<span style="'+mono+';font-size:9px;color:'+col+';margin-left:6px;" title="'+nota+'">'+icon+' '+qf.livello+(qf.nota?' &mdash; '+nota:'')+'</span>';
+  }
+
+  function field(id,label,val,rows,extraStyle){
+    rows=rows||3;extraStyle=extraStyle||'';
+    return '<div><div style="'+mono+';font-size:9px;color:var(--dim);margin-bottom:3px;">'+label+'</div>'+
+      '<textarea id="'+id+'" rows="'+rows+'" style="font-size:11px;'+extraStyle+'">'+esc(val||'')+'</textarea></div>';
+  }
+
+  const ragFields=['criteri_selezione','struttura_logica','gestione_incertezza','calibrazione_dettaglio']
+    .map(function(k){return field('fp_rag_'+k,k.replace(/_/g,' '),r[k]);}).join('');
+
+  const fkArrayFields=['apertura','connettori','incertezza','chiusura']
+    .map(function(k){return field('fp_fk_'+k,k+' (uno per riga)',(fk[k]||[]).join('\n'));}).join('');
+
+  const ovExtraFields=['esami','accertamenti','terapia_domiciliare','terapia_dimissione','stile']
+    .map(function(k){return '<div style="margin-top:8px;">'+field('fp_ov_'+k,k,ov[k],2)+'</div>';}).join('');
+
+  container.innerHTML=
+    '<div id="'+editorId+'" style="border:1px solid var(--accent-d);border-radius:var(--r);overflow:hidden;margin-top:4px;">'+
+    // header
+    '<div style="background:var(--accent-g);padding:8px 12px;display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;">'+
+      '<span style="'+mono+';font-size:10px;color:var(--accent);font-weight:600;text-transform:uppercase;letter-spacing:.1em;">&#10022; Fingerprint V2</span>'+
+      '<div style="display:flex;gap:6px;flex-wrap:wrap;">'+
+        '<span style="'+mono+';font-size:9px;color:var(--dim);">~'+tok(JSON.stringify(fpObj))+' token</span>'+
+        '<button class="btn btn-g" style="font-size:9px;padding:3px 8px;" onclick="saveFpEdits(\''+editorId+'\')">&#10003; Salva modifiche</button>'+
+        '<button class="btn btn-g" style="font-size:9px;padding:3px 8px;" onclick="clearFpV2()">&#10005; Rimuovi</button>'+
+      '</div>'+
+    '</div>'+
+    // lettera_modello
+    '<div style="padding:12px;border-bottom:1px solid var(--border);">'+
+      '<div style="'+mono+';font-size:9px;color:var(--dim);margin-bottom:4px;text-transform:uppercase;display:flex;align-items:center;">Lettera-modello (con annotazioni &#x2192;)'+qFlag('lettera_modello')+'</div>'+
+      '<textarea id="fp_lettera_modello" rows="14" style="font-size:11px;'+mono+';">'+esc(lm)+'</textarea>'+
+    '</div>'+
+    // ragionamento
+    '<div style="padding:12px;border-bottom:1px solid var(--border);">'+
+      '<div style="'+mono+';font-size:9px;color:var(--dim);margin-bottom:8px;text-transform:uppercase;display:flex;align-items:center;">Ragionamento'+qFlag('ragionamento')+'</div>'+
+      '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">'+ragFields+'</div>'+
+    '</div>'+
+    // frasi_chiave
+    '<div style="padding:12px;border-bottom:1px solid var(--border);">'+
+      '<div style="'+mono+';font-size:9px;color:var(--dim);margin-bottom:8px;text-transform:uppercase;display:flex;align-items:center;">Frasi chiave'+qFlag('frasi_chiave')+'</div>'+
+      '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">'+fkArrayFields+
+        '<div style="grid-column:1/-1;"><div style="'+mono+';font-size:9px;color:var(--dim);margin-bottom:3px;">terapia_intro</div>'+
+          '<input type="text" id="fp_fk_terapia_intro" value="'+esc(fk.terapia_intro||'')+'" style="font-size:11px;"></div>'+
+      '</div>'+
+    '</div>'+
+    // override_rules
+    '<div style="padding:12px;border-bottom:1px solid var(--border);">'+
+      '<div style="'+mono+';font-size:9px;color:var(--dim);margin-bottom:8px;text-transform:uppercase;display:flex;align-items:center;">Override Rules'+qFlag('override_rules')+'</div>'+
+      '<div><div style="'+mono+';font-size:9px;color:var(--blue);margin-bottom:3px;">eon_schema &mdash; schema normalit&#224; EON del reparto</div>'+
+        '<textarea id="fp_ov_eon_schema" rows="5" style="font-size:11px;">'+esc(ov.eon_schema||'')+'</textarea></div>'+
+      ovExtraFields+
+    '</div>'+
+    // note_stilistiche
+    '<div style="padding:12px;">'+
+      '<div style="'+mono+';font-size:9px;color:var(--dim);margin-bottom:4px;text-transform:uppercase;">Note stilistiche</div>'+
+      '<textarea id="fp_note_stilistiche" rows="3" style="font-size:11px;">'+esc(fpObj.note_stilistiche||'')+'</textarea>'+
+    '</div>'+
+    '</div>';
+
+  container._fpObj=fpObj;
+}
+
+function saveFpEdits(editorId){
+  const container=document.getElementById('newTplSections');
+  const orig=container._fpObj||{};
+  function val(id){const el=document.getElementById(id);return el?el.value:'';}
+  function lines(id){return val(id).split('\n').filter(Boolean);}
+  const updated={
+    ragionamento:{
+      criteri_selezione:val('fp_rag_criteri_selezione'),
+      struttura_logica:val('fp_rag_struttura_logica'),
+      gestione_incertezza:val('fp_rag_gestione_incertezza'),
+      calibrazione_dettaglio:val('fp_rag_calibrazione_dettaglio'),
+    },
+    lettera_modello:val('fp_lettera_modello'),
+    frasi_chiave:{
+      apertura:lines('fp_fk_apertura'),
+      connettori:lines('fp_fk_connettori'),
+      incertezza:lines('fp_fk_incertezza'),
+      chiusura:lines('fp_fk_chiusura'),
+      terapia_intro:val('fp_fk_terapia_intro'),
+    },
+    struttura_terapia:orig.struttura_terapia||{},
+    note_stilistiche:val('fp_note_stilistiche'),
+    override_rules:{
+      eon_schema:val('fp_ov_eon_schema'),
+      esami:val('fp_ov_esami'),
+      accertamenti:val('fp_ov_accertamenti'),
+      terapia_domiciliare:val('fp_ov_terapia_domiciliare'),
+      terapia_dimissione:val('fp_ov_terapia_dimissione'),
+      stile:val('fp_ov_stile'),
+    },
+    qualita:orig.qualita||{},
+  };
+  newTplFingerprintJson=JSON.stringify(updated);
+  container._fpObj=updated;
+  const btn=document.querySelector('#'+editorId+' .btn-g');
+  if(btn){const o=btn.textContent;btn.textContent='✓ Salvato!';btn.style.color='var(--green)';setTimeout(function(){btn.textContent=o;btn.style.color='';},1500);}
+  updateTokenPanel();
 }
 
 function clearFpV2(){
