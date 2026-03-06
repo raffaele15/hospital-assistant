@@ -825,18 +825,32 @@ ESAMI DI LABORATORIO
 [sovrascrivibile da override_rules.esami]
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-Formato default per ogni categoria — tutto su una sola riga:
+SELEZIONE DEL VALORE DA RIPORTARE:
+L'input può contenere misurazioni ripetute nel tempo in tre formati:
+  (a) valore singolo — usa quello.
+  (b) primo → ultimo (es. "Hb 9.2 → 10.8 g/dL") — usa SEMPRE l'ultimo valore (a destra della freccia).
+  (c) lista cronologica senza freccia — usa SEMPRE il valore più recente disponibile.
+  (d) solo valori patologici riportati — usa i valori forniti; non inventare valori normali.
+  Se il fingerprint o override_rules.esami specificano una convenzione diversa, quella ha priorità.
+
+FORMATO DEFAULT — una riga per categoria:
 [Nome categoria]: [esame1], [esame2], [esame3] nella norma; [EsameAnomalo] VALORE unità (v.n. range).
 
-Regole default:
-- Prima tutti gli esami nella norma separati da virgola + "nella norma".
-- Poi, separati da punto e virgola, gli esami anomali con valore esatto e range se presente nell'input.
+- Prima gli esami nella norma (ultimo valore) separati da virgola + "nella norma".
+- Poi, separati da punto e virgola, gli esami alterati con valore esatto e range di normalità se presente nell'input.
 - Se tutti nella norma: "[Nome categoria]: nella norma."
 - Se una categoria non è stata eseguita: ometti la riga completamente.
 - Includi tutte le categorie presenti nell'input, anche quelle non elencate nel template.
 
+ESAMI SEMPRE RIPORTATI CON VALORE ESATTO (anche se nella norma — non scrivere "nella norma"):
+Colesterolo totale, HDL, LDL, Trigliceridi, Emoglobina glicata (HbA1c), Creatinina.
+Per questi sei esami riporta sempre il valore numerico + unità + range se disponibile, indipendentemente da normalità o patologia.
+Se uno di questi non è presente nell'input, ometti la riga.
+
 Esempio:
+Profilo metabolico: glicemia nella norma; Colesterolo totale 198 mg/dL (v.n. <200); HDL 42 mg/dL (v.n. >40); LDL 130 mg/dL (v.n. <100); Trigliceridi 168 mg/dL (v.n. <150).
 Profilo coagulativo: fibrinogeno, proteina C, proteina S nella norma; D-Dimero 850 ug/L FEU (v.n. <700); AT 68% (v.n. 75-125).
+Funzionalità renale: Creatinina 1.02 mg/dL (v.n. 0.6-1.1); urea nella norma.
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 ACCERTAMENTI STRUMENTALI
@@ -1960,17 +1974,19 @@ function renderLibrary(){
     noMsg.style.display='none';
     grid.innerHTML=cases.map(t=>{
       const isActive=S.activeTemplateId===t.id;
-      return `<div class="tpl-card${isActive?' active-tpl':''}" onclick="selectTemplate('${t.id}')">
-        <div style="position:absolute;top:8px;right:8px;display:flex;gap:4px;">
-          <button class="tpl-del" style="color:var(--dim);" onclick="event.stopPropagation();openEditCase('${t.id}')">✎</button>
-          <button class="tpl-del" onclick="event.stopPropagation();deleteTemplate('${t.id}')">✕</button>
+      return `<div class="tpl-card${isActive?' active-tpl':''}" onclick="selectTemplate('${t.id}')" style="display:flex;flex-direction:column;justify-content:space-between;">
+        <div>
+          <div class="tpl-name">${esc(t.name)}</div>
+          <div class="tpl-meta" style="margin-bottom:6px;">${new Date(t.createdAt).toLocaleDateString('it-IT')}</div>
+          <div style="display:flex;flex-wrap:wrap;gap:4px;">
+            ${t.folder?`<span class="chip c-w">📁 ~${tok(t.folder)}t</span>`:''}
+            ${t.letter?`<span class="chip c-ok">📄 ~${tok(t.letter)}t</span>`:''}
+            ${t.fingerprint?fpBadge(t.fingerprint):''}
+          </div>
         </div>
-        <div class="tpl-name">${esc(t.name)}</div>
-        <div class="tpl-meta" style="margin-bottom:6px;">${new Date(t.createdAt).toLocaleDateString('it-IT')}</div>
-        <div style="display:flex;flex-wrap:wrap;gap:4px;">
-          ${t.folder?`<span class="chip c-w">📁 ~${tok(t.folder)}t</span>`:''}
-          ${t.letter?`<span class="chip c-ok">📄 ~${tok(t.letter)}t</span>`:''}
-          ${t.fingerprint?fpBadge(t.fingerprint):''}
+        <div style="display:flex;justify-content:flex-end;gap:4px;margin-top:10px;padding-top:8px;border-top:1px solid var(--border);">
+          <button class="tpl-del" style="position:static;color:var(--dim);font-size:10px;padding:3px 8px;" onclick="event.stopPropagation();openEditCase('${t.id}')">✎ Modifica</button>
+          <button class="tpl-del" style="position:static;font-size:10px;padding:3px 8px;" onclick="event.stopPropagation();deleteTemplate('${t.id}')">✕</button>
         </div>
       </div>`;
     }).join('');
@@ -3723,7 +3739,7 @@ Restituisci un oggetto JSON con questa struttura:
   "note_stilistiche": "registro, tempi verbali predominanti, uso del passivo, lunghezza media delle frasi, eventuali formule fisse ricorrenti",
   "override_rules": {
     "eon_schema": "schema EON di normalità specifico del reparto — usato quando EON non è esplicito nell'input",
-    "esami": "istruzioni specifiche del reparto per il formato degli esami di laboratorio — sovrascrive il default",
+    "esami": "istruzioni specifiche del reparto per gli esami di laboratorio — specifica: quale valore usare quando ci sono misurazioni ripetute (primo, ultimo, primo→ultimo), se riportare solo i patologici o tutti, eventuali esami sempre riportati con valore numerico oltre ai default (colesterolo, HDL, LDL, trigliceridi, HbA1c, creatinina), e qualsiasi altra convenzione locale — sovrascrive il default",
     "accertamenti": "istruzioni specifiche per accertamenti strumentali — sovrascrive il default",
     "terapia_domiciliare": "istruzioni specifiche per terapia domiciliare — sovrascrive il default",
     "terapia_dimissione": "istruzioni specifiche per terapia alla dimissione — sovrascrive il default",
