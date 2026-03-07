@@ -136,6 +136,8 @@ hr.div{border:none;border-top:1px solid var(--border);margin:18px 0}
   #mobileNavOverlay{display:none;position:fixed;inset:0;z-index:1000;background:rgba(0,0,0,.45)}
   #mobileNavOverlay.visible{display:block}
   #mobileNavTab{display:flex}
+  .panel.active{padding-bottom:80px}
+  #panel1.active{padding-bottom:80px}
 }
 </style>
 </head>
@@ -286,7 +288,7 @@ hr.div{border:none;border-top:1px solid var(--border);margin:18px 0}
     <div class="diff-col">
       <div class="dlabel">Testo anonimizzato ✏ modificabile</div>
       <div class="diff-scroll" id="anonScroll">
-        <textarea id="anonText" class="dtext" style="font-size:11px;resize:none;min-height:100%;"></textarea>
+        <textarea id="anonText" class="dtext" style="font-size:11px;resize:none;"></textarea>
       </div>
     </div>
   </div>
@@ -4419,22 +4421,35 @@ loadNameDictionary();
     const grid = document.getElementById('diffGrid');
     if(!grid) return;
 
-    const gridTop = grid.getBoundingClientRect().top; // distance from viewport top
-    const scrolled = Math.max(0, LOCK_TOP - gridTop); // how many px the grid has risen above LOCK_TOP
+    const gridTop = grid.getBoundingClientRect().top;
+    const scrolled = Math.max(0, LOCK_TOP - gridTop);
     const newH = INITIAL_H + scrolled;
     const maxH = window.innerHeight - LOCK_TOP - 20;
     const h = Math.min(newH, maxH);
+    const locked = newH >= maxH;
 
-    [document.getElementById('origScroll'), document.getElementById('anonScroll')].forEach(el => {
+    // Size both scroll containers equally
+    ['origScroll','anonScroll'].forEach(id => {
+      const el = document.getElementById(id);
       if(!el) return;
       el.style.height = h + 'px';
-      el.style.overflowY = newH >= maxH ? 'auto' : 'hidden';
+      el.style.overflowY = locked ? 'auto' : 'hidden';
     });
 
-    const ta = document.getElementById('anonText');
-    if(ta) ta.style.height = h + 'px';
+    // Left inner div: fixed height so it doesn't push the container open
     const orig = document.getElementById('origText');
-    if(orig) orig.style.minHeight = h + 'px';
+    if(orig){
+      orig.style.height = h + 'px';
+      orig.style.minHeight = '';
+      orig.style.overflowY = locked ? 'auto' : 'hidden';
+    }
+
+    // Right textarea: match container height exactly
+    const ta = document.getElementById('anonText');
+    if(ta){
+      ta.style.height = h + 'px';
+      ta.style.overflowY = locked ? 'auto' : 'hidden';
+    }
   }
 
   document.getElementById('panel1').addEventListener('scroll', updateDiffBoxes, {passive:true});
