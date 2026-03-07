@@ -70,7 +70,7 @@ select{width:100%;background:var(--surface2);border:1px solid var(--border);bord
 .diff-col{display:flex;flex-direction:column}
 .diff-scroll{height:60vh;min-height:300px;overflow-y:auto}
 .dlabel{font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--dim);letter-spacing:.12em;text-transform:uppercase;margin-bottom:6px;padding:2px 6px;background:var(--surface2);border-radius:3px;display:inline-block;flex-shrink:0}
-.dtext{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:12px 13px;font-family:'JetBrains Mono',monospace;font-size:11px;line-height:1.8;white-space:pre-wrap;width:100%;box-sizing:border-box;height:100%}
+.dtext{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:12px 13px;font-family:'JetBrains Mono',monospace;font-size:11px;line-height:1.8;white-space:pre-wrap;word-break:break-word;overflow-x:hidden;width:100%;box-sizing:border-box;height:100%}
 .collapsible-section{margin-bottom:11px}
 .collapsible-toggle{display:flex;align-items:center;gap:8px;width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:var(--r);padding:8px 12px;cursor:pointer;font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--mid);text-align:left;transition:border-color .14s}
 .collapsible-toggle:hover{border-color:var(--border-hi);color:var(--text)}
@@ -4428,28 +4428,24 @@ loadNameDictionary();
     const h = Math.min(newH, maxH);
     const locked = newH >= maxH;
 
-    // Size both scroll containers equally
-    ['origScroll','anonScroll'].forEach(id => {
-      const el = document.getElementById(id);
-      if(!el) return;
-      el.style.height = h + 'px';
-      el.style.overflowY = locked ? 'auto' : 'hidden';
-    });
-
-    // Left inner div: fixed height so it doesn't push the container open
+    // Left: size the scroll wrapper, let the inner div be as tall as content
+    const origScroll = document.getElementById('origScroll');
+    if(origScroll){
+      origScroll.style.height = h + 'px';
+      origScroll.style.overflowY = locked ? 'auto' : 'hidden';
+      origScroll.style.overflowX = 'hidden';
+    }
     const orig = document.getElementById('origText');
-    if(orig){
-      orig.style.height = h + 'px';
-      orig.style.minHeight = '';
-      orig.style.overflowY = locked ? 'auto' : 'hidden';
-    }
+    if(orig){ orig.style.height = 'auto'; orig.style.minHeight = h + 'px'; orig.style.overflowX = 'hidden'; }
 
-    // Right textarea: match container height exactly
-    const ta = document.getElementById('anonText');
-    if(ta){
-      ta.style.height = h + 'px';
-      ta.style.overflowY = locked ? 'auto' : 'hidden';
+    // Right: size both the scroll wrapper and the textarea
+    const anonScroll = document.getElementById('anonScroll');
+    if(anonScroll){
+      anonScroll.style.height = h + 'px';
+      anonScroll.style.overflowY = locked ? 'auto' : 'hidden';
     }
+    const ta = document.getElementById('anonText');
+    if(ta){ ta.style.height = h + 'px'; }
   }
 
   document.getElementById('panel1').addEventListener('scroll', updateDiffBoxes, {passive:true});
