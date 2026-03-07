@@ -1994,9 +1994,9 @@ function renderLibrary(){
             ${t.fingerprint?fpBadge(t.fingerprint):''}
           </div>
         </div>
-        <div style="display:flex;justify-content:flex-end;gap:4px;margin-top:10px;padding-top:8px;border-top:1px solid var(--border);">
+        <div style="display:flex;justify-content:flex-start;gap:4px;margin-top:10px;padding-top:8px;border-top:1px solid var(--border);">
           <button class="tpl-del" style="position:static;color:var(--dim);font-size:10px;padding:3px 8px;" onclick="event.stopPropagation();openEditCase('${t.id}')">✎ Modifica</button>
-          <button class="tpl-del" style="position:static;font-size:10px;padding:3px 8px;" onclick="event.stopPropagation();deleteTemplate('${t.id}')">✕</button>
+          <button class="tpl-del" style="position:static;font-size:10px;padding:3px 8px;" onclick="event.stopPropagation();deleteTemplate('${t.id}')">✕ Elimina</button>
         </div>
       </div>`;
     }).join('');
