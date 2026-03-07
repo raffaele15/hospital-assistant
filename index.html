@@ -6,7 +6,7 @@
 <title>Lettera.AI — Dimissione</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/docx@8.5.0/build/index.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/docx@8.5.0/build/index.js"></script>
 <link href="https://fonts.googleapis.com/css2?family=Crimson+Pro:ital,wght@0,300;0,400;0,600;1,300;1,400&family=JetBrains+Mono:wght@300;400;500&display=swap" rel="stylesheet">
 
 <style>
@@ -2986,10 +2986,14 @@ function printLetter(){
 // ═══════════════════════════════════════════════════
 async function exportWord(){
   if(!S.letter||S.letter==='—'){alert('Nessuna lettera da esportare.');return;}
+  if(typeof docx==='undefined'){
+    alert('Libreria Word non caricata. Verifica la connessione internet e ricarica la pagina.');return;
+  }
+  try{
   const {
     Document,Packer,Paragraph,TextRun,Table,TableRow,TableCell,
     AlignmentType,BorderStyle,WidthType,ShadingType,
-    LevelFormat,VerticalAlign,TabStopType,TabStopPosition
+    VerticalAlign
   }=docx;
 
   // ── Page constants (A4, margins 2.5cm top, 2cm sides) ──────────────
@@ -3078,7 +3082,7 @@ async function exportWord(){
       const l=dottArr[i]||'';
       const r=profArr[i]||'';
       paras.push(new Paragraph({
-        tabStops:[{type:TabStopType.LEFT,position:TAB_POS}],
+        tabStops:[{type:'left',position:TAB_POS}],
         children:[
           run(l,{size:19}),
           new TextRun({text:'\t',font:FONT,size:19}),
@@ -3089,7 +3093,7 @@ async function exportWord(){
     }
     // Label row
     paras.push(new Paragraph({
-      tabStops:[{type:TabStopType.LEFT,position:TAB_POS}],
+      tabStops:[{type:'left',position:TAB_POS}],
       children:[
         run('('+leftLabel+')',{size:17,italics:true}),
         new TextRun({text:'\t',font:FONT,size:17}),
@@ -3217,35 +3221,34 @@ async function exportWord(){
     return children;
   }
 
-  try{
-    const tipo=getLetterTemplateType();
-    const today=new Date();
-    const dd=String(today.getDate()).padStart(2,'0');
-    const mm=String(today.getMonth()+1).padStart(2,'0');
-    const yyyy=today.getFullYear();
-    const filename=`Lettera_${tipo}_${dd}${mm}${yyyy}.docx`;
+  const tipo=getLetterTemplateType();
+  const today=new Date();
+  const dd=String(today.getDate()).padStart(2,'0');
+  const mm=String(today.getMonth()+1).padStart(2,'0');
+  const yyyy=today.getFullYear();
+  const filename=`Lettera_${tipo}_${dd}${mm}${yyyy}.docx`;
 
-    const children=letterToDocx(S.letter);
-    const doc=new Document({
-      styles:{
-        default:{document:{run:{font:FONT,size:FONT_SIZE}}},
+  const children=letterToDocx(S.letter);
+  const doc=new Document({
+    styles:{
+      default:{document:{run:{font:FONT,size:FONT_SIZE}}},
+    },
+    sections:[{
+      properties:{
+        page:{
+          size:{width:PAGE_W,height:PAGE_H},
+          margin:{top:M_TOP,right:M_SIDE,bottom:M_SIDE,left:M_SIDE},
+        }
       },
-      sections:[{
-        properties:{
-          page:{
-            size:{width:PAGE_W,height:PAGE_H},
-            margin:{top:M_TOP,right:M_SIDE,bottom:M_SIDE,left:M_SIDE},
-          }
-        },
-        children,
-      }]
-    });
+      children,
+    }]
+  });
 
-    const blob=await Packer.toBlob(doc);
-    const url=URL.createObjectURL(blob);
-    const a=document.createElement('a');
-    a.href=url;a.download=filename;a.click();
-    URL.revokeObjectURL(url);
+  const blob=await Packer.toBlob(doc);
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');
+  a.href=url;a.download=filename;a.click();
+  URL.revokeObjectURL(url);
   }catch(e){
     console.error('Word export error:',e);
     alert('Errore esportazione Word: '+e.message);
