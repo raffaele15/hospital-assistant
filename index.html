@@ -68,7 +68,7 @@ select{width:100%;background:var(--surface2);border:1px solid var(--border);bord
 @keyframes sp{to{transform:rotate(360deg)}}
 .diff-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:16px}
 .diff-col{display:flex;flex-direction:column}
-.diff-scroll{height:60vh;min-height:300px;overflow-y:auto}
+.diff-scroll{height:60vh;overflow-y:auto;overflow-x:hidden}
 .dlabel{font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--dim);letter-spacing:.12em;text-transform:uppercase;margin-bottom:6px;padding:2px 6px;background:var(--surface2);border-radius:3px;display:inline-block;flex-shrink:0}
 .dtext{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:12px 13px;font-family:'JetBrains Mono',monospace;font-size:11px;line-height:1.8;white-space:pre-wrap;word-break:break-word;overflow-x:hidden;width:100%;box-sizing:border-box}
 .collapsible-section{margin-bottom:11px}
@@ -4426,24 +4426,18 @@ loadNameDictionary();
     const newH = INITIAL_H + scrolled;
     const maxH = window.innerHeight - LOCK_TOP - 20;
     const h = Math.min(newH, maxH);
-    const locked = newH >= maxH;
 
-    // Left: size the scroll wrapper, let the inner div be as tall as content
+    // Both wrappers: always scrollable, just grow in height
     const origScroll = document.getElementById('origScroll');
-    if(origScroll){
-      origScroll.style.height = h + 'px';
-      origScroll.style.overflowY = locked ? 'auto' : 'hidden';
-      origScroll.style.overflowX = 'hidden';
-    }
-    const orig = document.getElementById('origText');
-    if(orig){ orig.style.minHeight = h + 'px'; orig.style.overflowX = 'hidden'; }
+    if(origScroll){ origScroll.style.height = h + 'px'; origScroll.style.overflowY = 'auto'; origScroll.style.overflowX = 'hidden'; }
 
-    // Right: size both the scroll wrapper and the textarea
+    // Left inner div: natural height — DO NOT constrain it, scroll happens on wrapper
+    const orig = document.getElementById('origText');
+    if(orig){ orig.style.height = 'auto'; orig.style.minHeight = ''; orig.style.overflowX = 'hidden'; }
+
+    // Right wrapper + textarea
     const anonScroll = document.getElementById('anonScroll');
-    if(anonScroll){
-      anonScroll.style.height = h + 'px';
-      anonScroll.style.overflowY = locked ? 'auto' : 'hidden';
-    }
+    if(anonScroll){ anonScroll.style.height = h + 'px'; anonScroll.style.overflowY = 'auto'; }
     const ta = document.getElementById('anonText');
     if(ta){ ta.style.height = h + 'px'; }
   }
