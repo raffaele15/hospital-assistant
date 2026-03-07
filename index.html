@@ -756,7 +756,7 @@ const PRICING = {
 // ═══════════════════════════════════════════════════
 // STATE
 // ═══════════════════════════════════════════════════
-const S    = { rawText:'', cleanText:'', anonText:'', letter:'', strippedBlocks:[], activeTemplateId:null, activeWardId:null };
+const S    = { rawText:'', cleanText:'', anonText:'', letter:'', strippedBlocks:[], activeTemplateId:null, activeWardId:null, patientData:{nome:'',cognome:'',dataNascita:''} };
 const S_XLS = { text:'', filename:'' };
 let newTplSections = [];
 let newTplFingerprintJson = ''; // stores V2 JSON string when set
@@ -850,6 +850,16 @@ L'input può contenere misurazioni ripetute nel tempo in tre formati:
   (c) lista cronologica senza freccia — usa SEMPRE il valore più recente disponibile.
   (d) solo valori patologici riportati — usa i valori forniti; non inventare valori normali.
   Se il fingerprint o override_rules.esami specificano una convenzione diversa, quella ha priorità.
+
+RISULTATO PRECEDENTE — REGOLA CRITICA:
+Nei referti di laboratorio AOUP il formato tipico è:
+  [Esame] [Risultato attuale] [Unità] [Range] [Risultato precedente] [Data precedente]
+Esempio: "B-PIASTRINE *139 10^9/L 150-450 155 22/02/26"
+→ "139" è il valore ATTUALE del ricovero corrente.
+→ "155 22/02/26" è il RISULTATO PRECEDENTE (misura di un ricovero o prelievo precedente, anche di mesi fa).
+REGOLA: usa SEMPRE il valore attuale del ricovero corrente. NON usare mai il risultato precedente.
+Se il formato "primo → ultimo" contiene una data lontana dal periodo di ricovero accanto al primo valore, trattalo come risultato precedente e usa solo il secondo.
+In caso di dubbio su quale sia il valore attuale, preferisci il valore associato alla data più recente o più vicina alle date di ricovero.
 
 FORMATO DEFAULT — una riga per categoria:
 [Nome categoria]: [esame1], [esame2], [esame3] nella norma; [EsameAnomalo] VALORE unità (v.n. range).
@@ -1753,6 +1763,62 @@ function applyNameDict(text) {
 
 
 // ═══════════════════════════════════════════════════
+// PATIENT DATA EXTRACTION (from raw text, before anonymization)
+// ═══════════════════════════════════════════════════
+function extractPatientData(rawText) {
+  const pd = { nome: '', cognome: '', dataNascita: '' };
+  const lines = rawText.split('\n');
+
+  // Pattern 1 — "Cognome: ROSSI  Nome: MARIO  Data nascita: 01/01/1940"
+  for (const line of lines) {
+    const cogM = line.match(/Cognome\s*[:\s]+([A-ZÀ-Ü][A-Za-zÀ-ü\s'\-]{1,40}?)(?:\s{2,}|\t|$)/i);
+    const nomM = line.match(/\bNome\s*[:\s]+([A-ZÀ-Ü][A-Za-zÀ-ü\s'\-]{1,40}?)(?:\s{2,}|\t|$)/i);
+    const dnM  = line.match(/[Nn]ato\/a\s+il\s+(\d{2}[\/\-]\d{2}[\/\-]\d{4})|[Dd]ata\s+(?:di\s+)?[Nn]ascita\s*[:\s]+(\d{2}[\/\-]\d{2}[\/\-]\d{4})/);
+    if (cogM) pd.cognome = cogM[1].trim();
+    if (nomM) pd.nome    = nomM[1].trim();
+    if (dnM)  pd.dataNascita = (dnM[1]||dnM[2]).replace(/-/g,'/');
+  }
+
+  // Pattern 2 — "Episodio RIC_AO_XXXXX ROSSI MARIO nato/a il 01/01/1940"
+  if (!pd.cognome || !pd.nome) {
+    const epM = rawText.match(/Episodio\s+\S+\s+([A-ZÀÈÉÌÒÙ][A-ZÀÈÉÌÒÙ\s]{1,25}?)\s+([A-ZÀÈÉÌÒÙ][A-ZÀÈÉÌÒÙ\s]{1,25}?)\s+nato\/a\s+il\s+(\d{2}[\/\-]\d{2}[\/\-]\d{4})/);
+    if (epM) {
+      if (!pd.cognome) pd.cognome = epM[1].trim();
+      if (!pd.nome)    pd.nome    = epM[2].trim();
+      if (!pd.dataNascita) pd.dataNascita = epM[3].replace(/-/g,'/');
+    }
+  }
+
+  // Pattern 3 — "ROSSI MARIO  01/01/1940" style header lines
+  if (!pd.dataNascita) {
+    const dnM2 = rawText.match(/\b(\d{2}\/\d{2}\/\d{4})\b/);
+    // Only use if it looks like a birthdate (year 1900-2010 range)
+    if (dnM2) {
+      const yr = parseInt(dnM2[1].slice(6));
+      if (yr >= 1900 && yr <= 2010) pd.dataNascita = dnM2[1];
+    }
+  }
+
+  // Capitalize properly: "ROSSI" → "Rossi", "MARIO" → "Mario"
+  function cap(s){ return s.replace(/\b\w+/g, w => w.charAt(0).toUpperCase()+w.slice(1).toLowerCase()); }
+  if (pd.cognome) pd.cognome = cap(pd.cognome);
+  if (pd.nome)    pd.nome    = cap(pd.nome);
+
+  return pd;
+}
+
+function applyPatientData(text, pd) {
+  if (!pd) return text;
+  let out = text;
+  // Full name placeholder
+  const fullName = [pd.cognome, pd.nome].filter(Boolean).join(' ');
+  if (fullName) out = out.replace(/\[PAZIENTE_NOME\]/g, fullName);
+  // Date of birth
+  if (pd.dataNascita) out = out.replace(/\[DATA_NASCITA\]/g, pd.dataNascita);
+  return out;
+}
+
+// ═══════════════════════════════════════════════════
 // PIPELINE — with freeze/restore
 // ═══════════════════════════════════════════════════
 function goToAnon() {
@@ -1772,6 +1838,9 @@ function runPipeline() {
 
   setTimeout(async()=>{
     try{
+      // Extract patient data from raw text BEFORE anonymization
+      S.patientData = extractPatientData(S.rawText);
+
       // Stage 1 — boilerplate
       const{clean,strippedBlocks}=stripBoilerplate(S.rawText);
       S.cleanText=clean; S.strippedBlocks=strippedBlocks;
@@ -2995,6 +3064,8 @@ ${tick3}`;
 function finalizzaLettera(){
   const edited = document.getElementById('verifLetterEdit').value.trim();
   if(edited) S.letter = edited;
+  // Replace patient placeholders with real data extracted from raw text
+  S.letter = applyPatientData(S.letter, S.patientData);
   document.getElementById('letterOut').textContent = S.letter;
   document.getElementById('nav4').classList.add('done');
   goTo(4);
@@ -3088,6 +3159,40 @@ function exportWord(){
     }).join('\n');
   }
 
+  // ── Signature block table ─────────────────────────────────────────────
+  // Two-column borderless table: names left/right, label row at bottom with top border
+  const SIG_HALF = 4600; // half page width in twips
+
+  function buildSigTable(leftNames, rightNames){
+    // Name rows — one row per max(left,right) name pair
+    const rows = Math.max(leftNames.length, rightNames.length, 1);
+    let out = '';
+
+    function sigRow(l, r, topBorder){
+      const bTop = topBorder ? '\\clbrdrt\\brdrs\\brdrw10' : '\\clbrdrt\\brdrnone';
+      return `{\\trowd\\trgaph108\\trleft0\n` +
+        `${bTop}\\clbrdrb\\brdrnone\\clbrdrl\\brdrnone\\clbrdrr\\brdrnone\\cellx${SIG_HALF}\n` +
+        `${bTop}\\clbrdrb\\brdrnone\\clbrdrl\\brdrnone\\clbrdrr\\brdrnone\\cellx${SIG_HALF*2}\n` +
+        `\\pard\\intbl\\ql\\sb80\\sa80 ${rtfLine(l||'')}\\cell\n` +
+        `\\pard\\intbl\\ql\\sb80\\sa80 ${rtfLine(r||'')}\\cell\n` +
+        `\\row}`;
+    }
+
+    for(let i=0; i<rows; i++){
+      out += sigRow(leftNames[i]||'', rightNames[i]||'') + '\n';
+    }
+
+    // Label row — top border, bold italic
+    out += `{\\trowd\\trgaph108\\trleft0\n` +
+      `\\clbrdrt\\brdrs\\brdrw10\\clbrdrb\\brdrnone\\clbrdrl\\brdrnone\\clbrdrr\\brdrnone\\cellx${SIG_HALF}\n` +
+      `\\clbrdrt\\brdrs\\brdrw10\\clbrdrb\\brdrnone\\clbrdrl\\brdrnone\\clbrdrr\\brdrnone\\cellx${SIG_HALF*2}\n` +
+      `\\pard\\intbl\\ql\\sb60\\sa60 {\\i (Medici in formazione specialistica)}\\cell\n` +
+      `\\pard\\intbl\\ql\\sb60\\sa60 {\\i (Dirigenti medici)}\\cell\n` +
+      `\\row}`;
+
+    return out;
+  }
+
   // ── Convert letter text → RTF paragraphs ──────────────────────────────
   function letterToRtf(text){
     const lines = text.split('\n');
@@ -3114,6 +3219,42 @@ function exportWord(){
         while(i < lines.length && /^\|/.test(lines[i].trim())){ tLines.push(lines[i]); i++; }
         const tbl = buildRtfTable(tLines);
         if(tbl){ parts.push(tbl); parts.push('\\par'); }
+        continue;
+      }
+
+      // ── Signature block detection ───────────────────────────────────
+      // Triggered by [FIRMA_MEDICO_FORMAZIONE] line OR (medici in formazione specialistica)
+      // Collect Dott. lines above, then render two-column table
+      if(/\[FIRMA_MEDICO_FORMAZIONE\]|\(medici in formazione specialistica\)/i.test(t)){
+        // Walk back to collect Dott. name lines already pushed as plain paragraphs
+        // Instead: look ahead — collect Dott. lines from current position
+        // The AI outputs them in different ways; collect all Dott lines within next 10 lines
+        const leftNames = [], rightNames = [];
+        // Remove last pushed \par if blank
+        if(parts[parts.length-1] === '\\par') parts.pop();
+        // Walk backwards removing already-pushed name paragraphs
+        while(parts.length && /\\pard.*Dott/.test(parts[parts.length-1])){
+          const popped = parts.pop().match(/Dott[^\\{]*/g)||[];
+          // We can't easily split left/right from already-rendered RTF, so just re-parse
+        }
+        // Re-collect from raw lines: look back for Dott. lines
+        let j = i - 1;
+        while(j >= 0 && !lines[j].trim()) j--;
+        const nameLines = [];
+        while(j >= 0 && /dott/i.test(lines[j].trim())) { nameLines.unshift(lines[j].trim()); j--; }
+        // Split names into left (odd index) and right (even index) columns
+        nameLines.forEach((n, idx) => {
+          if(idx % 2 === 0) leftNames.push(n);
+          else rightNames.push(n);
+        });
+        // Skip the [FIRMA_MEDICO_FORMAZIONE]/label line
+        i++;
+        // Skip (Dirigente medico) or (Dirigenti medici) line if present
+        if(i < lines.length && /\(dirigent/i.test(lines[i].trim())) i++;
+        // Skip [FIRMA_DIRIGENTE] if present
+        if(i < lines.length && /\[FIRMA_DIRIGENTE\]/i.test(lines[i].trim())) i++;
+        parts.push('\\par');
+        parts.push(buildSigTable(leftNames, rightNames));
         continue;
       }
 
@@ -3182,7 +3323,7 @@ function exportWord(){
 
 function newLetter(){
   if(!confirm('Nuova lettera? I dati correnti andranno persi.'))return;
-  S.rawText=S.cleanText=S.anonText=S.letter='';S.strippedBlocks=[];
+  S.rawText=S.cleanText=S.anonText=S.letter='';S.strippedBlocks=[];S.patientData={nome:'',cognome:'',dataNascita:''};
   document.getElementById('inp_raw').value='';document.getElementById('inp_diagnosi').value='';
   document.getElementById('letterOut').textContent='—';document.getElementById('usageInfo').style.display='none';
   document.getElementById('statusBadge').textContent=S.activeTemplateId?'📚 Template attivo':'● Pronto';
@@ -3225,7 +3366,7 @@ function escR(s){return s.replace(/[.*+?^${}()|[\]\\]/g,'\\$&');}
 function clearAll(){
   if(!confirm('Cancellare tutto?'))return;
   document.getElementById('inp_raw').value='';document.getElementById('inp_diagnosi').value='';
-  S.rawText=S.cleanText=S.anonText=S.letter='';S.strippedBlocks=[];
+  S.rawText=S.cleanText=S.anonText=S.letter='';S.strippedBlocks=[];S.patientData={nome:'',cognome:'',dataNascita:''};
 }
 
 function updateDiffHeight(){
