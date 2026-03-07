@@ -716,6 +716,7 @@ hr.div{border:none;border-top:1px solid var(--border);margin:18px 0}
 
     <div class="btn-row" style="margin-top:14px;">
       <button class="btn btn-p" onclick="saveNewTemplate()">✓ Salva Caso</button>
+      <button class="btn btn-g" onclick="resetNewCaseForm()">↺ Reset</button>
     </div>
     <div id="tplExtStatus" style="margin-top:8px;font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--dim);display:none;"></div>
     <div id="newTplSections" style="margin-top:10px;"></div>
@@ -2294,6 +2295,27 @@ function saveNewTemplate(){
   document.getElementById('tplExtStatus').style.display='none';
   document.getElementById('newTplSections').innerHTML='';
   renderLibrary();alert(`Caso "${name}" salvato.`);
+}
+
+function resetNewCaseForm(){
+  ['newTplName','newCaseFolder','newCaseLetter'].forEach(id=>document.getElementById(id).value='');
+  newTplSections=[];newTplFingerprintJson='';
+  renderNewTplSections();
+  document.getElementById('newTplSections').innerHTML='';
+  document.getElementById('tplExtStatus').style.display='none';
+  document.getElementById('manualFingerprintJson').value='';
+  document.getElementById('manualFpStatus').style.display='none';
+  document.getElementById('manualFpImportBtn').style.display='none';
+  document.getElementById('caseImportPdfName').textContent='clicca o trascina';
+  document.getElementById('caseImportXlsName').textContent='opzionale';
+  document.getElementById('caseImportStatus').style.display='none';
+  document.getElementById('caseImportBar').style.width='0%';
+  document.getElementById('letterDetectedBadge').style.display='none';
+  document.getElementById('caseImportPdfInput').value='';
+  document.getElementById('caseImportXlsInput').value='';
+  // Reset drop zone borders
+  document.getElementById('caseImportDropPdf').style.borderColor='var(--border)';
+  document.getElementById('caseImportDropXls').style.borderColor='var(--border)';
 }
 
 // ═══════════════════════════════════════════════════
