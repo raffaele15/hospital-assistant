@@ -1059,6 +1059,8 @@ const ANON_CONFIG = {
       label: '[OPERATORE]', type: 'name' },
     { pattern: /\b[A-Za-z\u00C0-\u00FF][a-zA-Z\u00C0-\u00FF]{1,}(?:\s+[A-Za-z\u00C0-\u00FF][a-zA-Z\u00C0-\u00FF]{1,}){0,2}(?=\s+(?:Coniuge|Figlio|Figlia|Fratello|Sorella|Genitore|Amico|Convivente|Nipote))/g,
       label: '[CONTATTO]', type: 'name' },
+    { pattern: /Rete\s+sociale\s[\s\S]*?(?=\n{2,}|\n[A-Z][a-zA-Z\s]{3,}:|$)/gim,
+      label: '[RETE_SOCIALE]', type: 'boiler' },
     { pattern: /(?:Coniuge|Figlio|Figlia|Fratello|Sorella|Genitore|Convivente|Nipote)\s+Sconosciuto[^\n]*/gi,
       label: '[RELAZIONE_FAMILIARE]', type: 'boiler' },
     { pattern: /(?:Certificato\s+n\.|SGQ\s+UNI.*?Certiquality)[^\n]*/gi,
