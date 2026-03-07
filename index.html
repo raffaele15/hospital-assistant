@@ -430,7 +430,7 @@ hr.div{border:none;border-top:1px solid var(--border);margin:18px 0}
     <button class="btn btn-g" onclick="goTo(3)">← Verifica</button>
     <button class="btn btn-g" onclick="copyLetter()">⎘ Copia testo</button>
     <button class="btn btn-g" onclick="printLetter()">⎙ Stampa / PDF</button>
-    <button class="btn btn-b" onclick="exportWord()" style="background:var(--blue);color:#fff;">⬇ Esporta Word</button>
+    <button class="btn btn-b" onclick="exportWord()" style="background:var(--blue);color:#fff;">⬇ Esporta RTF</button>
     <button class="btn btn-g" onclick="newLetter()">↺ Nuova lettera</button>
   </div>
 </div>
@@ -2983,299 +2983,146 @@ function printLetter(){
 // ═══════════════════════════════════════════════════
 // WORD EXPORT — replicates ODT formatting exactly
 // ═══════════════════════════════════════════════════
-async function exportWord(){
+function exportWord(){
   if(!S.letter||S.letter==='—'){alert('Nessuna lettera da esportare.');return;}
 
-  // ── Lazy-load docx library if not yet present ──────────────────────
-  if(typeof docx==='undefined'){
-    const CDNS=[
-      'https://unpkg.com/docx@8.5.0/build/index.js',
-      'https://cdn.jsdelivr.net/npm/docx@8.5.0/build/index.js',
-    ];
-    let loaded=false;
-    for(const src of CDNS){
-      try{
-        await new Promise((res,rej)=>{
-          const s=document.createElement('script');
-          s.src=src;
-          s.onload=()=>res();
-          s.onerror=()=>rej(new Error('fetch fail'));
-          document.head.appendChild(s);
-        });
-        if(typeof docx!=='undefined'){loaded=true;break;}
-      }catch(_){}
+  // ── RTF helpers ─────────────────────────────────────────────────────────
+  // RTF needs: non-ASCII → \uN?, backslash/braces escaped, \n → \par
+  function rtfEsc(str){
+    return str
+      .replace(/\\/g,'\\\\')
+      .replace(/\{/g,'\\{')
+      .replace(/\}/g,'\\}')
+      .split('').map(ch=>{
+        const c=ch.charCodeAt(0);
+        if(c<128) return ch;
+        // RTF unicode: \uN? where ? is the fallback ASCII char
+        return `\\u${c}?`;
+      }).join('');
+  }
+
+  // Parse **bold** and *italic* inline spans → RTF runs
+  function rtfInline(text){
+    // Replace **text** → {\b text}  and  *text* → {\i text}
+    return rtfEsc(text)
+      .replace(/\\\*\\\*(.+?)\\\*\\\*/g, '{\\b $1}')   // escaped ** already
+      .replace(/\\\*(.+?)\\\*/g, '{\\i $1}');
+  }
+
+  // Actually we escape first then regex won't work on ** — do it the other way
+  function rtfLine(raw){
+    // Bold+italic inline — process BEFORE escaping special chars
+    // Split on ** markers
+    let out = '';
+    let str = raw;
+    // Process **bold**
+    str = str.replace(/\*\*(.+?)\*\*/g, '\x02BOLD\x01$1\x02ENDBOLD\x01');
+    // Escape RTF special chars
+    str = str
+      .replace(/\\/g,'\\\\')
+      .replace(/\{/g,'\\{')
+      .replace(/\}/g,'\\}')
+      .split('').map(ch=>{
+        const c=ch.charCodeAt(0);
+        if(c>127) return `\\u${c}?`;
+        return ch;
+      }).join('');
+    // Restore bold markers
+    str = str.replace(/\x02BOLD\x01(.+?)\x02ENDBOLD\x01/g,'{\\b $1}');
+    return str;
+  }
+
+  // ── Convert letter text → RTF paragraphs ──────────────────────────────
+  function letterToRtf(text){
+    const lines = text.split('\n');
+    const parts = [];
+
+    for(const line of lines){
+      const t = line.trim();
+
+      if(t===''){
+        parts.push('\\par');
+        continue;
+      }
+
+      // Horizontal rule (--- or ***)
+      if(/^[-*_]{3,}\s*$/.test(t)){
+        parts.push('{\\pard\\brdrb\\brdrs\\brdrw10\\brsp20 \\par}');
+        continue;
+      }
+
+      // Table line | ... | — render as tab-separated plain text
+      if(/^\|/.test(t)){
+        const cells = t.split('|').map(c=>c.trim()).filter(Boolean);
+        // Skip separator rows like |---|---|
+        if(cells.every(c=>/^[-:]+$/.test(c))) continue;
+        const row = cells.map(c=>rtfLine(c)).join('\\tab ');
+        parts.push(`{\\pard\\keep ${row}\\par}`);
+        continue;
+      }
+
+      // "– " or "- " bullet
+      if(/^[–\-]\s/.test(t)){
+        const content = rtfLine(t.replace(/^[–\-]\s/,''));
+        parts.push(`{\\pard\\li360\\fi-360\\jc3 \\endash\\tab ${content}\\par}`);
+        continue;
+      }
+
+      // "> " indented line
+      if(/^>\s/.test(t)){
+        const content = rtfLine(t.replace(/^>\s*/,''));
+        parts.push(`{\\pard\\li400\\jc3 ${content}\\par}`);
+        continue;
+      }
+
+      // Date/city line — right aligned
+      if(/^(Padova|Milano|Roma|Verona|Venezia|Torino|Firenze|Bologna|Napoli|Genova|Trento|Brescia|Vicenza|Treviso|Udine|Trieste),\s+\d/.test(t)){
+        parts.push(`{\\pard\\qr ${rtfLine(t)}\\par}`);
+        continue;
+      }
+
+      // Default — justified paragraph
+      parts.push(`{\\pard\\jc3 ${rtfLine(t)}\\par}`);
     }
-    if(!loaded){
-      alert('Impossibile caricare la libreria Word. Verifica la connessione e riprova.');
-      return;
-    }
+
+    return parts.join('\n');
   }
 
   try{
-  const {
-    Document,Packer,Paragraph,TextRun,Table,TableRow,TableCell,
-    AlignmentType,BorderStyle,WidthType,ShadingType,
-    VerticalAlign
-  }=docx;
+    const today=new Date();
+    const dd=String(today.getDate()).padStart(2,'0');
+    const mm=String(today.getMonth()+1).padStart(2,'0');
+    const yyyy=today.getFullYear();
+    const tipo=getLetterTemplateType();
+    const filename=`Lettera_${tipo}_${dd}${mm}${yyyy}.rtf`;
 
-  // ── Page constants (A4, margins 2.5cm top, 2cm sides) ──────────────
-  const PAGE_W   = 11906;  // A4
-  const PAGE_H   = 16838;
-  const M_TOP    = 1418;   // ~2.5 cm
-  const M_SIDE   = 1134;   // ~2 cm
-  const CONT_W   = PAGE_W - 2*M_SIDE;  // 9638 DXA
+    const body = letterToRtf(S.letter);
 
-  // ── Shared styles ───────────────────────────────────────────────────
-  const FONT      = 'Times New Roman';
-  const FONT_SIZE = 21; // 10.5pt in half-points
-  const SP_NORM   = { before:0, after:120 };
-  const SP_PARA   = { before:0, after:200 };
+    // RTF document — A4, Times New Roman 11pt, margins 2.5cm top/bottom 2cm sides
+    // 1 twip = 1/1440 inch; 1cm ≈ 567 twips
+    const rtf = [
+      '{\\rtf1\\ansi\\ansicpg1252\\deff0',
+      '{\\fonttbl{\\f0\\froman\\fcharset0 Times New Roman;}}',
+      '{\\colortbl ;}',
+      '\\deflang1040\\widowctrl\\hyphauto0',
+      '\\paperw11906\\paperh16838',   // A4
+      '\\margt1418\\margb1418\\margl1134\\margr1134',  // 2.5cm top/bot, 2cm sides
+      '\\f0\\fs22',  // Times New Roman 11pt (fs = half-points)
+      body,
+      '}'
+    ].join('\n');
 
-  function run(text, opts={}){
-    return new TextRun({ text, font:FONT, size:FONT_SIZE, ...opts });
-  }
-
-  // Parse inline bold (**text**), italic (*text*), and plain text
-  // Also handles [PLACEHOLDER] tokens in red
-  function parseInline(raw, baseOpts={}){
-    const parts=[];
-    // Pattern: **bold** | *italic* | [PLACEHOLDER] | plain
-    const re=/\*\*(.+?)\*\*|\*(.+?)\*|(\[[A-Z_À-Ö0-9 /]+\])|([^*\[]+)/g;
-    let m;
-    while((m=re.exec(raw))!==null){
-      if(m[1]!==undefined) parts.push(run(m[1],{...baseOpts,bold:true}));
-      else if(m[2]!==undefined) parts.push(run(m[2],{...baseOpts,italics:true}));
-      else if(m[3]!==undefined) parts.push(run(m[3],{...baseOpts,bold:true,color:'C0392B'}));
-      else if(m[4]!==undefined && m[4]) parts.push(run(m[4],{...baseOpts}));
-    }
-    return parts.length?parts:[run('',baseOpts)];
-  }
-
-  // A bold-label paragraph: "**Label:** content" → bold label + normal content
-  function boldLabelPara(line, spacing=SP_NORM){
-    // Match "**Label:**" or "**Label**:" at start
-    const m=line.match(/^\*\*(.+?)\*\*:?\s*(.*)/s);
-    if(!m) return new Paragraph({children:parseInline(line),spacing,alignment:AlignmentType.JUSTIFIED});
-    const labelColon = m[1].endsWith(':') ? m[1] : m[1]+':';
-    const rest = m[2]||'';
-    const children=[run(labelColon,{bold:true})];
-    if(rest) children.push(run(' '),run(rest));
-    return new Paragraph({children,spacing,alignment:AlignmentType.JUSTIFIED});
-  }
-
-  // Therapy table from markdown
-  function buildTherapyTable(lines){
-    const rowLines=lines.filter(l=>/^\|/.test(l)&&!/^\|\s*[-:]+/.test(l));
-    if(!rowLines.length)return null;
-    const parseRow=l=>l.replace(/^\||\|$/g,'').split('|').map(c=>c.trim());
-    const allRows=rowLines.map(parseRow);
-    // 4 columns: Farmaco(wide), Posologia, Orario, Note
-    const cols=[4500,1600,1200,2338]; // sum = 9638
-    const borderDef={style:BorderStyle.SINGLE,size:4,color:'999999'};
-    const borders={top:borderDef,bottom:borderDef,left:borderDef,right:borderDef};
-    const mkCell=(text,isHdr,ci)=>new TableCell({
-      borders,
-      width:{size:cols[ci]||1500,type:WidthType.DXA},
-      margins:{top:60,bottom:60,left:100,right:100},
-      shading:isHdr?{fill:'D9D9D9',type:ShadingType.CLEAR}:undefined,
-      verticalAlign:VerticalAlign.CENTER,
-      children:[new Paragraph({
-        children:[run(text,{bold:isHdr,size:19})],
-        spacing:{before:0,after:0},
-        alignment:AlignmentType.LEFT,
-      })]
-    });
-    return new Table({
-      width:{size:CONT_W,type:WidthType.DXA},
-      columnWidths:cols,
-      rows:allRows.map((cells,ri)=>new TableRow({
-        tableHeader:ri===0,
-        children:cells.slice(0,4).map((c,ci)=>mkCell(c,ri===0,ci))
-      }))
-    });
-  }
-
-  // Signature block — two columns via tab stops (exactly like ODT)
-  function sigBlock(dottArr, profArr, leftLabel, rightLabel){
-    const TAB_POS=4800;
-    const rows=Math.max(dottArr.length,profArr.length);
-    const paras=[];
-    for(let i=0;i<rows;i++){
-      const l=dottArr[i]||'';
-      const r=profArr[i]||'';
-      paras.push(new Paragraph({
-        tabStops:[{type:'left',position:TAB_POS}],
-        children:[
-          run(l,{size:19}),
-          new TextRun({text:'\t',font:FONT,size:19}),
-          run(r,{size:19}),
-        ],
-        spacing:{before:0,after:60},
-      }));
-    }
-    // Label row
-    paras.push(new Paragraph({
-      tabStops:[{type:'left',position:TAB_POS}],
-      children:[
-        run('('+leftLabel+')',{size:17,italics:true}),
-        new TextRun({text:'\t',font:FONT,size:17}),
-        run('('+rightLabel+')',{size:17,italics:true}),
-      ],
-      spacing:{before:60,after:0},
-    }));
-    return paras;
-  }
-
-  // ── Main converter ──────────────────────────────────────────────────
-  function letterToDocx(text){
-    const children=[];
-    const lines=text.split('\n');
-    let i=0;
-
-    // Detect signature section at end
-    const sigStartIdx=lines.findIndex(l=>/^\(medici in formazione/i.test(l.trim()));
-
-    while(i<lines.length){
-      const line=lines[i];
-
-      // ── Therapy table (markdown) ──────────────────────────────────
-      if(/^\|/.test(line)){
-        const tLines=[];
-        while(i<lines.length&&/^\|/.test(lines[i])){tLines.push(lines[i]);i++;}
-        const tbl=buildTherapyTable(tLines);
-        if(tbl){children.push(tbl);children.push(new Paragraph({children:[run('')],spacing:{before:0,after:120}}));}
-        continue;
-      }
-
-      // ── Signature block — collect from the line before label ─────
-      if(/^\(medici in formazione/i.test(line.trim())){
-        // Collect Dott lines just above — walk back
-        const leftNames=[], rightNames=[];
-        let j=i-1;
-        // Skip blanks
-        while(j>=0&&!lines[j].trim())j--;
-        // Collect name pairs (lines with Dott.)
-        const nameLines=[];
-        while(j>=0&&/dott/i.test(lines[j])){nameLines.unshift(lines[j]);j--;}
-        // Split into left/right halves
-        const half=Math.ceil(nameLines.length/2);
-        nameLines.slice(0,half).forEach(l=>leftNames.push(l.trim()));
-        nameLines.slice(half).forEach(l=>rightNames.push(l.trim()));
-        // Remove the name paragraphs we just consumed (they were already pushed as plain text)
-        // Just push the signature block instead of the label line
-        children.push(...sigBlock(leftNames,rightNames,'medici in formazione specialistica','Dirigente medico'));
-        i++;
-        // Skip matching "(Dirigente medico)" line if present
-        if(i<lines.length&&/^\(dirigente/i.test(lines[i].trim()))i++;
-        continue;
-      }
-
-      // ── Horizontal rule ──────────────────────────────────────────
-      if(/^[-*_]{3,}\s*$/.test(line)){
-        children.push(new Paragraph({
-          border:{bottom:{style:BorderStyle.SINGLE,size:6,color:'CCCCCC',space:1}},
-          spacing:{before:120,after:120},children:[run('')]
-        }));i++;continue;
-      }
-
-      // ── Empty line ────────────────────────────────────────────────
-      if(line.trim()===''){
-        children.push(new Paragraph({children:[run('')],spacing:{before:0,after:80}}));
-        i++;continue;
-      }
-
-      // ── ">" bullet lines (accertamenti) ──────────────────────────
-      if(/^[>]\s/.test(line.trim())||/^\*\*>\s/.test(line)){
-        const txt=line.replace(/^\*\*>\s*/,'> ').trim();
-        children.push(new Paragraph({
-          children:parseInline(txt),
-          spacing:SP_NORM,
-          indent:{left:360},
-          alignment:AlignmentType.JUSTIFIED,
-        }));i++;continue;
-      }
-
-      // ── Bold-label line (**Label:** content) ─────────────────────
-      if(/^\*\*/.test(line)){
-        children.push(boldLabelPara(line,SP_NORM));
-        i++;continue;
-      }
-
-      // ── "– " or "- " recommendation list ─────────────────────────
-      if(/^[–-]\s/.test(line)){
-        children.push(new Paragraph({
-          children:parseInline(line.replace(/^[–-]\s/,'')),
-          spacing:SP_NORM,
-          indent:{left:360,hanging:360},
-          alignment:AlignmentType.JUSTIFIED,
-        }));i++;continue;
-      }
-
-      // ── First line (date+city) — right-aligned ────────────────────
-      if(i===0||/^(Padova|Milano|Roma|Verona|Venezia|Torino|Firenze|Bologna|Napoli|Genova|Trento|Brescia|Vicenza|Treviso|Udine|Trieste),\s+\d/.test(line)){
-        children.push(new Paragraph({
-          children:parseInline(line),
-          spacing:SP_NORM,
-          alignment:AlignmentType.RIGHT,
-        }));i++;continue;
-      }
-
-      // ── Opening salutation ────────────────────────────────────────
-      if(/^Egregi Colleghi/.test(line)||/^Egregio Collega/.test(line)){
-        children.push(new Paragraph({children:parseInline(line),spacing:SP_NORM,alignment:AlignmentType.LEFT}));
-        i++;continue;
-      }
-
-      // ── Closing salutation ────────────────────────────────────────
-      if(/^Rimaniamo a disposizione/.test(line)||/^Ringraziando/.test(line)){
-        children.push(new Paragraph({children:parseInline(line),spacing:{before:160,after:160},alignment:AlignmentType.LEFT}));
-        i++;continue;
-      }
-
-      // ── Default: body paragraph, justified ───────────────────────
-      children.push(new Paragraph({
-        children:parseInline(line),
-        spacing:SP_NORM,
-        alignment:AlignmentType.JUSTIFIED,
-      }));
-      i++;
-    }
-    return children;
-  }
-
-  const tipo=getLetterTemplateType();
-  const today=new Date();
-  const dd=String(today.getDate()).padStart(2,'0');
-  const mm=String(today.getMonth()+1).padStart(2,'0');
-  const yyyy=today.getFullYear();
-  const filename=`Lettera_${tipo}_${dd}${mm}${yyyy}.docx`;
-
-  const children=letterToDocx(S.letter);
-  const doc=new Document({
-    styles:{
-      default:{document:{run:{font:FONT,size:FONT_SIZE}}},
-    },
-    sections:[{
-      properties:{
-        page:{
-          size:{width:PAGE_W,height:PAGE_H},
-          margin:{top:M_TOP,right:M_SIDE,bottom:M_SIDE,left:M_SIDE},
-        }
-      },
-      children,
-    }]
-  });
-
-  const blob=await Packer.toBlob(doc);
-  const url=URL.createObjectURL(blob);
-  const a=document.createElement('a');
-  a.href=url;a.download=filename;a.click();
-  URL.revokeObjectURL(url);
+    const blob = new Blob([rtf], {type:'application/rtf'});
+    const url  = URL.createObjectURL(blob);
+    const a    = document.createElement('a');
+    a.href=url; a.download=filename; a.click();
+    URL.revokeObjectURL(url);
   }catch(e){
-    console.error('Word export error:',e);
-    alert('Errore esportazione Word: '+e.message);
+    console.error('RTF export error:',e);
+    alert('Errore esportazione: '+e.message);
   }
 }
+
 function newLetter(){
   if(!confirm('Nuova lettera? I dati correnti andranno persi.'))return;
   S.rawText=S.cleanText=S.anonText=S.letter='';S.strippedBlocks=[];
