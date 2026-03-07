@@ -318,6 +318,16 @@ hr.div{border:none;border-top:1px solid var(--border);margin:18px 0}
         </select>
       </div>
       <div>
+        <label>Token output massimi</label>
+        <select id="maxTokensSelect" style="margin-top:6px;">
+          <option value="4000">4 000 — lettera breve</option>
+          <option value="8000" selected>8 000 — standard</option>
+          <option value="12000">12 000 — lettera lunga</option>
+          <option value="16000">16 000 — massimo</option>
+        </select>
+        <div style="font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--dim);margin-top:4px;">aumenta se la lettera viene troncata</div>
+      </div>
+      <div>
         <label>Temperatura — <span id="tempLabel">0.1</span></label>
         <input type="range" id="tempSlider" min="0" max="5" value="1" step="1" style="width:100%;accent-color:var(--accent);margin-top:10px;">
         <div style="font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--dim);display:flex;justify-content:space-between;margin-top:2px;"><span>preciso</span><span>creativo</span></div>
@@ -2346,7 +2356,7 @@ function updateTokenPanel(){
   const tSys=tok(sysTxt+wardAddendum+caseAddendum);
   const tFp=refFpObj?tok(refFpObj.lettera_modello||''):0;
   const tFullCase=(refCase&&(injectMode==='full'||injectMode==='both'))?tok((refCase.folder||'')+(refCase.letter||'')):0;
-  const tTemplate=tok(buildLetterTemplate()),tClinical=tok(S.anonText),tOut=1800;
+  const tTemplate=tok(buildLetterTemplate()),tClinical=tok(S.anonText),tOut=parseInt(document.getElementById('maxTokensSelect')?.value)||8000;
   const fpLabel=refFpObj?`Fingerprint (${refCase?.name||'ref'})`:'—';
   const fullLabel=refCase&&(injectMode==='full'||injectMode==='both')?`Cartella+Lettera (${refCase.name})`:'—';
   const syslabel='System'+(wardFpObj?' + Ward':'')+(refFpObj?' + Fingerprint':'');
@@ -2684,7 +2694,7 @@ async function generateLetter(){
       method:'POST',headers,
       body:JSON.stringify({
         model:document.getElementById('modelSelect').value,
-        max_tokens:6000,
+        max_tokens:parseInt(document.getElementById('maxTokensSelect').value)||8000,
         temperature:parseInt(document.getElementById('tempSlider').value)/10,
         system:fullSystem,
         messages:buildMessages(),
@@ -3301,67 +3311,83 @@ function copyPreConfigured(withToken){
 // Start: "Alla C. A. del Medico Curante" or "dimettiamo in data odierna"
 // End:   "(Medici in formazione specialistica)" or first [INFO_DELIBERAZIONE]/[FIRMA_DIMISSIONE] line
 // ═══════════════════════════════════════════════════
+// Returns { letter: string|null, blocks: [{from,to}] }
+// letter = text of the most recently signed letter (or last if no timestamps found)
+// blocks = line-index ranges [from, to] (inclusive) of ALL letter blocks found
 function extractDischargeLetter(anonText) {
   const lines = anonText.split('\n');
 
-  // Patterns that mark the START of a discharge letter
   const START_RE = [
     /Alla\s+C\.\s*A\.\s+del\s+Medico\s+Curante/i,
     /dimettiamo\s+in\s+data\s+odierna/i,
   ];
-  // Patterns that mark the END of a discharge letter (inclusive — keep this line)
   const END_RE = [
     /^\s*\(Medici\s+in\s+formazione\s+specialistica\)/i,
     /^\s*\(Dirigenti\s+medici\)\s*$/i,
   ];
-  // Hard-stop patterns (exclusive — stop before this line)
   const HARD_STOP_RE = [
     /^\s*\[INFO_DELIBERAZIONE\]/,
     /^\s*\[FIRMA_DIMISSIONE\]/,
     /^\s*\[INFO_COSTO\]/,
   ];
 
-  // Find ALL start positions
+  // ── Parse "firmata da X il DD/MM/YYYY HH.MM.SS" → Date|null ────────────
+  function parseFirmaDate(block) {
+    const m = block.match(/firmata\s+da\s+.+?\s+il\s+(\d{2})\/(\d{2})\/(\d{4})\s+(\d{2})\.(\d{2})\.(\d{2})/i);
+    if (!m) return null;
+    const [,dd,mo,yy,hh,mm,ss] = m;
+    return new Date(+yy, +mo-1, +dd, +hh, +mm, +ss);
+  }
+
+  // ── Find ALL start lines ────────────────────────────────────────────────
   const starts = [];
   for (let i = 0; i < lines.length; i++) {
     if (START_RE.some(re => re.test(lines[i]))) {
-      // Avoid duplicate starts too close together (within 5 lines)
-      if (!starts.length || i - starts[starts.length - 1] > 5) {
-        starts.push(i);
-      }
+      if (!starts.length || i - starts[starts.length-1] > 5) starts.push(i);
     }
   }
-  if (!starts.length) return null;
+  if (!starts.length) return { letter: null, blocks: [] };
 
-  // Use the LAST start (last discharge letter = most final/definitive copy)
-  const startIdx = starts[starts.length - 1];
-
-  // Include 2 lines before the start line to capture the "Regione Veneto" header if present
-  const captureFrom = Math.max(0, startIdx - 2);
-
-  // Find end
-  let endIdx = lines.length - 1;
-  for (let i = startIdx; i < lines.length; i++) {
-    if (HARD_STOP_RE.some(re => re.test(lines[i]))) {
-      endIdx = i - 1;
-      break;
+  // ── For each start find its end ─────────────────────────────────────────
+  const blocks = [];
+  for (const startIdx of starts) {
+    const captureFrom = Math.max(0, startIdx - 2);
+    let endIdx = lines.length - 1;
+    for (let i = startIdx; i < lines.length; i++) {
+      if (HARD_STOP_RE.some(re => re.test(lines[i]))) { endIdx = i - 1; break; }
+      if (END_RE.some(re => re.test(lines[i])))        { endIdx = i;     break; }
     }
-    if (END_RE.some(re => re.test(lines[i]))) {
-      endIdx = i;
-      break;
-    }
+    const raw = lines.slice(captureFrom, endIdx + 1).join('\n');
+    const cleaned = raw
+      .replace(/^\s*(\[(?:INTESTAZIONE|PAGINA|DATA_STAMPA|TELEFONO|NUM_DOCUMENTO|INDIRIZZO)[^\]]*\]\s*\n)+/gm, '')
+      .replace(/\n{3,}/g, '\n\n')
+      .trim();
+    blocks.push({ from: captureFrom, to: endIdx, text: cleaned, date: parseFirmaDate(raw) });
   }
 
-  const letterLines = lines.slice(captureFrom, endIdx + 1);
+  // ── Pick the block with the latest signature date ───────────────────────
+  let best = blocks[blocks.length - 1]; // default: last block
+  for (const b of blocks) {
+    if (b.date && (!best.date || b.date > best.date)) best = b;
+  }
 
-  // Clean up: remove placeholder-only lines at start/end, collapse runs of blank lines
-  const cleaned = letterLines
-    .join('\n')
-    .replace(/^\s*(\[(?:INTESTAZIONE|PAGINA|DATA_STAMPA|TELEFONO|NUM_DOCUMENTO|INDIRIZZO)[^\]]*\]\s*\n)+/gm, '')
-    .replace(/\n{3,}/g, '\n\n')
-    .trim();
+  return {
+    letter: best.text || null,
+    blocks: blocks.map(b => ({ from: b.from, to: b.to })),
+  };
+}
 
-  return cleaned || null;
+// Strip given line-ranges from text (all removed, remainder rejoined)
+function stripLetterBlocks(anonText, blocks) {
+  if (!blocks.length) return anonText;
+  const lines = anonText.split('\n');
+  // Build a set of line indices to remove
+  const remove = new Set();
+  for (const { from, to } of blocks) {
+    for (let i = from; i <= to; i++) remove.add(i);
+  }
+  const kept = lines.filter((_, i) => !remove.has(i));
+  return kept.join('\n').replace(/\n{3,}/g, '\n\n').trim();
 }
 
 // ═══════════════════════════════════════════════════
@@ -3483,10 +3509,14 @@ async function processCasePdf(file) {
     }
 
     setCaseImportStatus('Rilevamento lettera di dimissione...', 80);
-    CASE_IMPORT.pdfText = anonText;
 
-    // Stage 3: letter extraction
-    const letter = extractDischargeLetter(anonText);
+    // Stage 3: letter extraction — find all blocks, pick latest by signature date
+    const { letter, blocks } = extractDischargeLetter(anonText);
+
+    // Strip ALL letter blocks from the folder text
+    const folderText = blocks.length ? stripLetterBlocks(anonText, blocks) : anonText;
+    CASE_IMPORT.pdfText = folderText;
+
     if (letter) {
       document.getElementById('newCaseLetter').value = letter;
       badge.style.display = 'inline-flex';
