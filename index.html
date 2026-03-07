@@ -35,7 +35,7 @@ aside{background:var(--surface);border-right:1px solid var(--border);padding:14p
 main{overflow:hidden;background:var(--bg);display:flex;flex-direction:column}
 .panel{display:none;padding:28px 32px;width:100%;flex:1}
 .panel.active{display:block;overflow-y:auto}
-#panel1.active{display:block;overflow-y:auto;padding:20px 28px 120px 28px}
+#panel1.active{display:block;overflow-y:auto;padding:20px 28px 20px 28px}
 .ptitle{font-size:24px;font-weight:300;margin-bottom:3px;letter-spacing:-.01em}
 .psub{font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--dim);margin-bottom:22px;letter-spacing:.06em}
 label{display:block;font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--dim);letter-spacing:.1em;text-transform:uppercase;margin-bottom:5px;margin-top:16px}
@@ -67,11 +67,10 @@ select{width:100%;background:var(--surface2);border:1px solid var(--border);bord
 .spin{display:inline-block;width:13px;height:13px;border:2px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:sp .7s linear infinite}
 @keyframes sp{to{transform:rotate(360deg)}}
 .diff-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:16px}
-.diff-grid>div{display:flex;flex-direction:column}
 .diff-col{display:flex;flex-direction:column}
-.diff-scroll{overflow-y:auto}
+.diff-scroll{height:60vh;min-height:300px;overflow-y:auto}
 .dlabel{font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--dim);letter-spacing:.12em;text-transform:uppercase;margin-bottom:6px;padding:2px 6px;background:var(--surface2);border-radius:3px;display:inline-block;flex-shrink:0}
-.dtext{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:12px 13px;font-family:'JetBrains Mono',monospace;font-size:11px;line-height:1.8;white-space:pre-wrap;min-height:200px;width:100%;box-sizing:border-box}
+.dtext{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:12px 13px;font-family:'JetBrains Mono',monospace;font-size:11px;line-height:1.8;white-space:pre-wrap;width:100%;box-sizing:border-box;height:100%}
 .collapsible-section{margin-bottom:11px}
 .collapsible-toggle{display:flex;align-items:center;gap:8px;width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:var(--r);padding:8px 12px;cursor:pointer;font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--mid);text-align:left;transition:border-color .14s}
 .collapsible-toggle:hover{border-color:var(--border-hi);color:var(--text)}
@@ -141,6 +140,12 @@ hr.div{border:none;border-top:1px solid var(--border);margin:18px 0}
   <div style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--dim);">Generatore Lettera di Dimissione</div>
   <div class="badge" id="statusBadge">● Pronto</div>
 </header>
+
+<button id="scrollDownBtn" onclick="scrollToBottom()" title="Vai in fondo" style="display:none;position:fixed;bottom:28px;right:28px;z-index:999;width:44px;height:44px;border-radius:50%;background:var(--accent);border:none;cursor:pointer;box-shadow:0 2px 12px rgba(0,0,0,.4);display:flex;align-items:center;justify-content:center;transition:opacity .2s;">
+  <svg width="18" height="18" viewBox="0 0 18 18" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <path d="M9 3v10M4.5 8.5L9 13l4.5-4.5" stroke="#000" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+  </svg>
+</button>
 
 <aside>
   <div class="ns">Flusso</div>
@@ -254,17 +259,17 @@ hr.div{border:none;border-top:1px solid var(--border);margin:18px 0}
       <div id="repList"></div>
     </div>
   </div>
-  <div class="diff-grid">
+  <div class="diff-grid" id="diffGrid">
     <div class="diff-col">
       <div class="dlabel">Testo originale — locale, non inviato</div>
-      <div class="diff-scroll">
+      <div class="diff-scroll" id="origScroll">
         <div class="dtext" id="origText">—</div>
       </div>
     </div>
     <div class="diff-col">
       <div class="dlabel">Testo anonimizzato ✏ modificabile</div>
       <div class="diff-scroll" id="anonScroll">
-        <textarea id="anonText" class="dtext" style="font-size:11px;resize:none;height:100%;"></textarea>
+        <textarea id="anonText" class="dtext" style="font-size:11px;resize:none;min-height:100%;"></textarea>
       </div>
     </div>
   </div>
@@ -954,7 +959,7 @@ function goTo(i) {
   document.querySelectorAll('.ni').forEach(n => n.classList.remove('active'));
   document.getElementById('panel'+i).classList.add('active');
   document.getElementById('nav'+i).classList.add('active');
-  if (i === 1) requestAnimationFrame(updateDiffHeight);
+  
   if (i === 2) updateTokenPanel();
   if (i === 6) renderLibrary();
 }
@@ -1933,7 +1938,7 @@ function renderAnonResult(anonText,reps){
     origScrollEl.addEventListener('scroll',()=>{if(syncing)return;syncing=true;anonScrollEl.scrollTop=origScrollEl.scrollTop;syncing=false;});
     anonScrollEl.addEventListener('scroll',()=>{if(syncing)return;syncing=true;origScrollEl.scrollTop=anonScrollEl.scrollTop;syncing=false;});
   }
-  updateDiffHeight();
+
 }
 
 // ═══════════════════════════════════════════════════
@@ -3369,21 +3374,6 @@ function clearAll(){
   S.rawText=S.cleanText=S.anonText=S.letter='';S.strippedBlocks=[];S.patientData={nome:'',cognome:'',dataNascita:''};
 }
 
-function updateDiffHeight(){
-  const panel=document.getElementById('panel1');
-  if(!panel.classList.contains('active'))return;
-  const grid=panel.querySelector('.diff-grid');
-  if(!grid)return;
-  const HEADER_H=52,VIEWPORT_H=window.innerHeight,MAX_H=VIEWPORT_H-HEADER_H;
-  const scrolled=panel.scrollTop,aboveH=grid.offsetTop;
-  const scrolledIntoAbove=Math.min(scrolled,aboveH);
-  const targetH=Math.min(MAX_H,(VIEWPORT_H-HEADER_H-aboveH)+scrolledIntoAbove);
-  const clampedH=Math.max(300,targetH);
-  grid.style.height=clampedH+'px';
-  const cols=grid.querySelectorAll('.diff-scroll');
-  cols.forEach(c=>{c.style.height=(clampedH-28)+'px';});
-}
-
 // ═══════════════════════════════════════════════════
 // GITHUB LIBRARY SYNC
 // ═══════════════════════════════════════════════════
@@ -4374,8 +4364,6 @@ document.getElementById('systemPrompt').value=DEFAULT_SYS;
 renderLibrary();
 updateWardBadge();
 loadNameDictionary();
-document.getElementById('panel1').addEventListener('scroll',updateDiffHeight);
-window.addEventListener('resize',updateDiffHeight);
 
 // ── Silent auto-pull from GitHub on startup ──────────────────────────
 (async function autoPullOnStartup(){
@@ -4401,6 +4389,66 @@ window.addEventListener('resize',updateDiffHeight);
   }catch(e){
     console.warn('Auto-pull GitHub failed:',e.message);
   }
+})();
+
+// ── Diff boxes: fixed height → grow on scroll → internal scroll ──────────
+(function(){
+  const INITIAL_H = 360;   // starting box height in px
+  const LOCK_TOP  = 60;    // px from viewport top where boxes lock and start scrolling internally
+
+  function updateDiffBoxes(){
+    const panel = document.getElementById('panel1');
+    if(!panel || !panel.classList.contains('active')) return;
+    const grid = document.getElementById('diffGrid');
+    if(!grid) return;
+
+    const gridTop = grid.getBoundingClientRect().top; // distance from viewport top
+    const scrolled = Math.max(0, LOCK_TOP - gridTop); // how many px the grid has risen above LOCK_TOP
+    const newH = INITIAL_H + scrolled;
+    const maxH = window.innerHeight - LOCK_TOP - 20;
+    const h = Math.min(newH, maxH);
+
+    [document.getElementById('origScroll'), document.getElementById('anonScroll')].forEach(el => {
+      if(!el) return;
+      el.style.height = h + 'px';
+      el.style.overflowY = newH >= maxH ? 'auto' : 'hidden';
+    });
+
+    const ta = document.getElementById('anonText');
+    if(ta) ta.style.height = h + 'px';
+    const orig = document.getElementById('origText');
+    if(orig) orig.style.minHeight = h + 'px';
+  }
+
+  document.getElementById('panel1').addEventListener('scroll', updateDiffBoxes, {passive:true});
+  window.addEventListener('resize', updateDiffBoxes, {passive:true});
+
+  // Trigger on panel activation
+  const _goTo = window.goTo;
+  window.goTo = function(i){ _goTo(i); if(i===1) requestAnimationFrame(updateDiffBoxes); };
+})();
+
+// ── Floating scroll-down button ──────────────────────────────────────────
+function scrollToBottom(){
+  const panel = document.querySelector('.panel.active');
+  if(panel) panel.scrollTo({top: panel.scrollHeight, behavior:'smooth'});
+}
+(function(){
+  const btn = document.getElementById('scrollDownBtn');
+  function updateBtn(){
+    const panel = document.querySelector('.panel.active');
+    if(!panel){ btn.style.display='none'; return; }
+    const atBottom = panel.scrollTop + panel.clientHeight >= panel.scrollHeight - 40;
+    btn.style.display = atBottom ? 'none' : 'flex';
+  }
+  document.querySelectorAll('.panel').forEach(p =>
+    p.addEventListener('scroll', updateBtn, {passive:true})
+  );
+  const _goTo2 = window.goTo;
+  window.goTo = function(i){
+    _goTo2(i);
+    requestAnimationFrame(updateBtn);
+  };
 })();
 
 </script>
