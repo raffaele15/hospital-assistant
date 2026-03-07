@@ -813,6 +813,13 @@ INCLUDI sempre:
 - Il follow-up pianificato con data, ora e sede esatti se presenti nell'input.
 - Se i parametri vitali mostrano alterazioni significative: menziona l'evento nel decorso clinico con le conseguenze terapeutiche che ne sono derivate.
 
+DIAGNOSI PRINCIPALE:
+- Riporta SOLO la diagnosi principale del ricovero attuale (diagnosi di dimissione), ovvero il motivo per cui il paziente è stato ricoverato e il quadro clinico principale identificato durante la degenza.
+- NON includere nella diagnosi le comorbilità croniche, la storia patologica remota, o condizioni pre-esistenti — queste vanno in "In anamnesi".
+- Se il campo diagnosi non è specificato dall'utente ([DIAGNOSI_PRINCIPALE]), costruiscila leggendo solo la diagnosi di dimissione nell'input, non l'APR.
+- Esempio corretto: "Minor stroke ischemico in territorio ACM sinistra con lesione subacuta postcentrale, in paziente con fibrillazione atriale permanente."
+- Esempio SBAGLIATO: includere CABG pregresso, bioprotesi mitralica, anemia, ipertensione, dislipidemia nella diagnosi principale.
+
 OMETTI:
 - Dettagli procedurali di routine senza rilevanza per il curante.
 - Ripetizioni di informazioni già presenti in altre sezioni.
@@ -852,6 +859,8 @@ FORMATO DEFAULT — una riga per categoria:
 - Se tutti nella norma: "[Nome categoria]: nella norma."
 - Se una categoria non è stata eseguita: ometti la riga completamente.
 - Includi tutte le categorie presenti nell'input, anche quelle non elencate nel template.
+- NESSUNA riga vuota tra le categorie degli esami ematochimici: tutte le righe sono consecutive, senza blank lines tra di esse.
+- Lo stesso vale per gli accertamenti strumentali: nessuna riga vuota tra i singoli accertamenti (nessuna blank line tra le righe "> Esame:").
 
 ESAMI SEMPRE RIPORTATI CON VALORE ESATTO (anche se nella norma — non scrivere "nella norma"):
 Colesterolo totale, HDL, LDL, Trigliceridi, Emoglobina glicata (HbA1c), Creatinina.
@@ -908,6 +917,13 @@ GESTIONE DELL'INCERTEZZA
 - Esame in corso: "*in corso di refertazione*"
 - Dato assente dall'input: "Non documentato."
 - Non lasciare mai una sezione vuota.
+- Data di ricovero assente o "Non documentato": usa il placeholder letterale **[DATA_RICOVERO]** (non scrivere "Non documentato" per le date nei template di apertura lettera).
+- Ora assente o "Non documentato": usa il placeholder letterale **[HH:MM]**.
+
+DECORSO CLINICO:
+- Il decorso clinico è un paragrafo unico continuo (150-300 parole), senza righe vuote interne.
+- Non spezzare il decorso in sotto-paragrafi separati da righe vuote.
+- È ammessa una sola riga di testo continua con a capo normali (senza blank lines) per scorrimento naturale della prosa.
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 REGISTRO E STILE
@@ -2487,7 +2503,7 @@ Si concludeva per [diagnosi PS]. Il paziente veniva ricoverato in ${ward} per la
 > [accertamento (DD/MM)]: [referto dall'input]
 > [accertamento (DD/MM)]: [referto dall'input]
 
-**Decorso in ${ward}:** [sintesi dall'input]
+**Decorso in ${ward}:** [sintesi dall'input — prosa unica senza righe vuote interne]
 
 **Parametri vitali all'arrivo in [REPARTO]:** FC XX bpm, PA XXX/XX mmHg, SpO2 XX% in aa, apiretico.
 
@@ -2587,7 +2603,7 @@ e alle seguenti **indagini diagnostico-strumentali e valutazioni specialistiche:
 [altri accertamenti se presenti nell'input]
 
 **Decorso Clinico:**
-[Prosa clinica 150-300 parole, passato prossimo, MAI passato remoto — sintesi decisioni terapeutiche e andamento]
+[Prosa clinica unica 150-300 parole, passato prossimo, MAI passato remoto, NESSUNA riga vuota interna — sintesi decisioni terapeutiche e andamento]
 
 **L'obiettività alla dimissione mostra:**
 [condizioni neurologiche e generali alla dimissione. NIHSS: XX. mRS: XX.]
@@ -3042,32 +3058,62 @@ function exportWord(){
     return str;
   }
 
+  // ── RTF table builder ─────────────────────────────────────────────────
+  // col widths in twips (9638 usable, 4 cols: 3200 + 1500 + 1500 + 2200 = 8400 + padding)
+  const COL_W = [3400, 1500, 1500, 2400]; // Farmaco | Posologia | Orario | Note
+  const COL_POS = COL_W.reduce((acc, w, i) => {
+    acc.push((acc[i-1]||0) + w); return acc;
+  }, []);
+
+  function rtfTableRow(cells, isHeader){
+    const cellDefs = COL_POS.map(pos =>
+      `\\clbrdrt\\brdrs\\brdrw10\\clbrdrb\\brdrs\\brdrw10\\clbrdrl\\brdrs\\brdrw10\\clbrdrr\\brdrs\\brdrw10\\cellx${pos}`
+    ).join('');
+    const cellContents = cells.map((c, i) => {
+      const txt = isHeader ? `{\\b ${rtfLine(c)}}` : rtfLine(c);
+      return `\\pard\\intbl\\qc\\sb60\\sa60 ${txt}\\cell`;
+    }).join('\n');
+    return `{\\trowd\\trgaph108\\trleft0\n${cellDefs}\n${cellContents}\n\\row}`;
+  }
+
+  function buildRtfTable(tableLines){
+    const rows = tableLines
+      .map(l => l.split('|').map(c => c.trim()).filter(Boolean))
+      .filter(cells => !cells.every(c => /^[-:]+$/.test(c))); // skip separator
+    if(!rows.length) return '';
+    return rows.map((cells, i) => {
+      // Pad to 4 cells
+      while(cells.length < 4) cells.push('');
+      return rtfTableRow(cells.slice(0,4), i===0);
+    }).join('\n');
+  }
+
   // ── Convert letter text → RTF paragraphs ──────────────────────────────
   function letterToRtf(text){
     const lines = text.split('\n');
     const parts = [];
+    let i = 0;
 
-    for(const line of lines){
-      const t = line.trim();
+    while(i < lines.length){
+      const t = lines[i].trim();
 
       if(t===''){
         parts.push('\\par');
-        continue;
+        i++; continue;
       }
 
       // Horizontal rule (--- or ***)
       if(/^[-*_]{3,}\s*$/.test(t)){
         parts.push('{\\pard\\brdrb\\brdrs\\brdrw10\\brsp20 \\par}');
-        continue;
+        i++; continue;
       }
 
-      // Table line | ... | — render as tab-separated plain text
+      // Table block — collect all consecutive | lines
       if(/^\|/.test(t)){
-        const cells = t.split('|').map(c=>c.trim()).filter(Boolean);
-        // Skip separator rows like |---|---|
-        if(cells.every(c=>/^[-:]+$/.test(c))) continue;
-        const row = cells.map(c=>rtfLine(c)).join('\\tab ');
-        parts.push(`{\\pard\\keep ${row}\\par}`);
+        const tLines = [];
+        while(i < lines.length && /^\|/.test(lines[i].trim())){ tLines.push(lines[i]); i++; }
+        const tbl = buildRtfTable(tLines);
+        if(tbl){ parts.push(tbl); parts.push('\\par'); }
         continue;
       }
 
@@ -3075,24 +3121,25 @@ function exportWord(){
       if(/^[–\-]\s/.test(t)){
         const content = rtfLine(t.replace(/^[–\-]\s/,''));
         parts.push(`{\\pard\\li360\\fi-360\\jc3 \\endash\\tab ${content}\\par}`);
-        continue;
+        i++; continue;
       }
 
       // "> " indented line
       if(/^>\s/.test(t)){
         const content = rtfLine(t.replace(/^>\s*/,''));
         parts.push(`{\\pard\\li400\\jc3 ${content}\\par}`);
-        continue;
+        i++; continue;
       }
 
       // Date/city line — right aligned
       if(/^(Padova|Milano|Roma|Verona|Venezia|Torino|Firenze|Bologna|Napoli|Genova|Trento|Brescia|Vicenza|Treviso|Udine|Trieste),\s+\d/.test(t)){
         parts.push(`{\\pard\\qr ${rtfLine(t)}\\par}`);
-        continue;
+        i++; continue;
       }
 
       // Default — justified paragraph
       parts.push(`{\\pard\\jc3 ${rtfLine(t)}\\par}`);
+      i++;
     }
 
     return parts.join('\n');
