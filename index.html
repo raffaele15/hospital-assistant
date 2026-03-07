@@ -928,6 +928,15 @@ function goTo(i) {
 // ═══════════════════════════════════════════════════
 const ANON_CONFIG = {
   regexRules: [
+    // ── Intestazioni istituzionali AOUP / Regione Veneto ────────────────────
+    { pattern: /Regione\s+Veneto\s+AZIENDA\s+OSPEDALE\s*[-–]\s*UNIVERSIT[AÀ]['']?\s*PADOV[AO]/gi,
+      label: '[INTESTAZIONE_AOUP]', type: 'boiler' },
+    { pattern: /REGIONE\s+VENETO\s+AZIENDA\s+OSPEDALE\s*[-–]\s*UNIVERSIT[AÀ]['']?\s*PADOV[AO]/g,
+      label: '[INTESTAZIONE_AOUP]', type: 'boiler' },
+    { pattern: /^Regione\s+VENETO\s*$/gim,
+      label: '[INTESTAZIONE_REGIONE]', type: 'boiler' },
+    { pattern: /^REGIONE\s+VENETO\s*$/gim,
+      label: '[INTESTAZIONE_REGIONE]', type: 'boiler' },
     // ── Episodio headers MUST run before ID/date patterns ───────────────────
     { pattern: /Episodio\s+RIC_AO_\S+\s+[A-Z]+\s+[A-Z]+\s+nato\/a\s+il\s+[\d\/]+/gi,
       label: '[INTESTAZIONE_EPISODIO]', type: 'boiler' },
