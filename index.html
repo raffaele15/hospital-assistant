@@ -6,7 +6,6 @@
 <title>Lettera.AI — Dimissione</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/docx@8.5.0/build/index.js"></script>
 <link href="https://fonts.googleapis.com/css2?family=Crimson+Pro:ital,wght@0,300;0,400;0,600;1,300;1,400&family=JetBrains+Mono:wght@300;400;500&display=swap" rel="stylesheet">
 
 <style>
@@ -2986,9 +2985,32 @@ function printLetter(){
 // ═══════════════════════════════════════════════════
 async function exportWord(){
   if(!S.letter||S.letter==='—'){alert('Nessuna lettera da esportare.');return;}
+
+  // ── Lazy-load docx library if not yet present ──────────────────────
   if(typeof docx==='undefined'){
-    alert('Libreria Word non caricata. Verifica la connessione internet e ricarica la pagina.');return;
+    const CDNS=[
+      'https://unpkg.com/docx@8.5.0/build/index.js',
+      'https://cdn.jsdelivr.net/npm/docx@8.5.0/build/index.js',
+    ];
+    let loaded=false;
+    for(const src of CDNS){
+      try{
+        await new Promise((res,rej)=>{
+          const s=document.createElement('script');
+          s.src=src;
+          s.onload=()=>res();
+          s.onerror=()=>rej(new Error('fetch fail'));
+          document.head.appendChild(s);
+        });
+        if(typeof docx!=='undefined'){loaded=true;break;}
+      }catch(_){}
+    }
+    if(!loaded){
+      alert('Impossibile caricare la libreria Word. Verifica la connessione e riprova.');
+      return;
+    }
   }
+
   try{
   const {
     Document,Packer,Paragraph,TextRun,Table,TableRow,TableCell,
