@@ -579,7 +579,18 @@ hr.div{border:none;border-top:1px solid var(--border);margin:18px 0}
         </label>
       </div>
     </div>
-    <div id="tplGrid" class="tpl-grid"></div>
+
+    <!-- Ward filter dropdown -->
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;flex-wrap:wrap;">
+      <label style="margin:0;flex-shrink:0;">🏥 Reparto</label>
+      <select id="wardFilterSelect" onchange="renderLibrary()" style="flex:1;min-width:160px;background:var(--surface2);border:1px solid var(--border);border-radius:var(--r);color:var(--text);font-family:'JetBrains Mono',monospace;font-size:11px;padding:6px 10px;">
+        <option value="__all__">Tutti i reparti</option>
+        <option value="__none__">— Senza reparto</option>
+      </select>
+    </div>
+
+    <!-- Scrollable case list -->
+    <div id="tplGrid" style="max-height:420px;overflow-y:auto;display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:10px;padding-right:4px;"></div>
     <div id="noTplMsg" class="ib" style="margin:0;">Nessun caso ancora. Aggiungine uno qui sotto.</div>
   </div>
   <!-- ── Edit Case Panel ──────────────────────────────────────────── -->
@@ -594,6 +605,10 @@ hr.div{border:none;border-top:1px solid var(--border);margin:18px 0}
     <input type="hidden" id="caseEditId">
     <label>Nome / Etichetta Caso</label>
     <input type="text" id="caseEditName" placeholder='Es: "Neurologia — Stroke ischemico"'>
+    <label style="margin-top:12px;">Reparto <span style="color:var(--dim);font-size:9px;text-transform:none;letter-spacing:0;">(opzionale)</span></label>
+    <select id="caseEditWardId" style="background:var(--surface2);border:1px solid var(--border);border-radius:var(--r);color:var(--text);font-family:'JetBrains Mono',monospace;font-size:11px;padding:6px 10px;width:100%;">
+      <option value="">— Nessun reparto</option>
+    </select>
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:5px;margin-top:16px;">
       <label style="margin:0;">Cartella Clinica Anonimizzata <span style="color:var(--dim);font-size:9px;text-transform:none;letter-spacing:0;">(solo locale per RAG)</span></label>
       <span id="caseEditFolderTok" style="font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--dim);"></span>
@@ -708,7 +723,11 @@ hr.div{border:none;border-top:1px solid var(--border);margin:18px 0}
     </div>
 
     <label>Nome / Etichetta Caso</label>
-    <input type="text" id="newTplName" placeholder='Es: "Neurologia — Stroke ischemico"'>
+    <input type="text" id="newTplName" placeholder='Es: "Stroke ischemico ACM dx"'>
+    <label style="margin-top:12px;">Reparto <span style="color:var(--dim);font-size:9px;text-transform:none;letter-spacing:0;">(opzionale — per organizzare la libreria)</span></label>
+    <select id="newCaseWardId" style="background:var(--surface2);border:1px solid var(--border);border-radius:var(--r);color:var(--text);font-family:'JetBrains Mono',monospace;font-size:11px;padding:6px 10px;width:100%;">
+      <option value="">— Nessun reparto</option>
+    </select>
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:5px;margin-top:16px;">
       <label style="margin:0;">Cartella Clinica Anonimizzata <span style="color:var(--dim);font-size:9px;text-transform:none;letter-spacing:0;">(solo locale per RAG)</span></label>
       <button class="btn btn-g" style="font-size:9px;padding:3px 9px;" onclick="autoFillCaseFolder()">⟳ Da sessione</button>
@@ -2094,15 +2113,45 @@ function renderLibrary(){
   const cases=lib.filter(t=>t.type!=='ward');
   const wards=lib.filter(t=>t.type==='ward');
   const grid=document.getElementById('tplGrid'),noMsg=document.getElementById('noTplMsg'),stats=document.getElementById('libStats');
-  stats.textContent=`${cases.length} casi · lettere ~${cases.reduce((a,t)=>a+tok(t.letter||''),0)} tok`;
-  if(!cases.length){grid.innerHTML='';noMsg.style.display='block';}
-  else{
+  stats.textContent=`${cases.length} casi · ~${cases.reduce((a,t)=>a+tok(t.letter||''),0)} tok`;
+
+  // ── Populate ward dropdowns ─────────────────────────────────────────
+  function populateWardSelect(selId, currentVal){
+    const sel=document.getElementById(selId);
+    if(!sel) return;
+    // Preserve non-ward options (first two for filter, first for new/edit)
+    const firstOpts=[...sel.options].filter(o=>o.value===''||o.value==='__all__'||o.value==='__none__');
+    sel.innerHTML='';
+    firstOpts.forEach(o=>sel.appendChild(o));
+    wards.forEach(w=>{
+      const o=document.createElement('option');
+      o.value=w.id; o.textContent='🏥 '+w.name;
+      sel.appendChild(o);
+    });
+    if(currentVal!==undefined) sel.value=currentVal||'';
+  }
+  const filterSel=document.getElementById('wardFilterSelect');
+  const currentFilter=filterSel?filterSel.value:'__all__';
+  populateWardSelect('wardFilterSelect', currentFilter);
+  populateWardSelect('newCaseWardId');
+  populateWardSelect('caseEditWardId');
+
+  // ── Filter cases by selected ward ──────────────────────────────────
+  let filtered=cases;
+  if(currentFilter==='__none__') filtered=cases.filter(t=>!t.wardId);
+  else if(currentFilter!=='__all__') filtered=cases.filter(t=>t.wardId===currentFilter);
+
+  if(!filtered.length){
+    grid.innerHTML=''; noMsg.style.display='block';
+  } else {
     noMsg.style.display='none';
-    grid.innerHTML=cases.map(t=>{
+    grid.innerHTML=filtered.map(t=>{
       const isActive=S.activeTemplateId===t.id;
+      const w=wards.find(x=>x.id===t.wardId);
       return `<div class="tpl-card${isActive?' active-tpl':''}" onclick="selectTemplate('${t.id}')" style="display:flex;flex-direction:column;justify-content:space-between;">
         <div>
           <div class="tpl-name">${esc(t.name)}</div>
+          ${w?`<div style="font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--blue);margin-bottom:3px;">🏥 ${esc(w.name)}</div>`:''}
           <div class="tpl-meta" style="margin-bottom:6px;">${new Date(t.createdAt).toLocaleDateString('it-IT')}</div>
           <div style="display:flex;flex-wrap:wrap;gap:4px;">
             ${t.folder?`<span class="chip c-w">📁 ~${tok(t.folder)}t</span>`:''}
@@ -2117,7 +2166,8 @@ function renderLibrary(){
       </div>`;
     }).join('');
   }
-  // Ward entries
+
+  // Ward fingerprint entries
   const wardGrid=document.getElementById('wardGrid');
   if(wardGrid){
     wardGrid.innerHTML=wards.length?wards.map(t=>{
@@ -2393,12 +2443,13 @@ function saveNewTemplate(){
   const name=document.getElementById('newTplName').value.trim();
   const folder=document.getElementById('newCaseFolder').value.trim();
   const letter=document.getElementById('newCaseLetter').value.trim();
+  const wardId=document.getElementById('newCaseWardId')?.value||'';
   if(!name){alert('Inserisci un nome.');return;}
   if(!letter){alert('La lettera è obbligatoria.');return;}
   // Use V2 JSON if available, else build from legacy sections
   const fp=newTplFingerprintJson||buildFingerprintFromSections(newTplSections);
   const lib=loadLibrary();
-  lib.push({id:'tpl_'+Date.now(),name,folder,letter,fingerprint:fp,createdAt:new Date().toISOString()});
+  lib.push({id:'tpl_'+Date.now(),name,folder,letter,fingerprint:fp,wardId:wardId||undefined,createdAt:new Date().toISOString()});
   saveLibrary(lib);
   newTplSections=[];newTplFingerprintJson='';
   renderNewTplSections();
@@ -4146,6 +4197,9 @@ function openEditCase(id){
   document.getElementById('caseEditName').value=t.name||'';
   document.getElementById('caseEditFolder').value=t.folder||'';
   document.getElementById('caseEditLetter').value=t.letter||'';
+  // Pre-fill ward selector
+  const wardSel=document.getElementById('caseEditWardId');
+  if(wardSel) setTimeout(()=>{wardSel.value=t.wardId||'';},50);
   // Fingerprint — show raw JSON if V2, otherwise raw string
   const fp=t.fingerprint||'';
   document.getElementById('caseEditFingerprint').value=fp;
@@ -4202,10 +4256,11 @@ function saveEditedCase(){
   const folder=document.getElementById('caseEditFolder').value.trim();
   const letter=document.getElementById('caseEditLetter').value.trim();
   const fingerprint=document.getElementById('caseEditFingerprint').value.trim();
+  const wardId=document.getElementById('caseEditWardId')?.value||'';
   const lib=loadLibrary();
   const idx=lib.findIndex(x=>x.id===id);
   if(idx===-1){alert('Caso non trovato.');return;}
-  lib[idx]={...lib[idx], name, folder, letter, fingerprint, updatedAt:Date.now()};
+  lib[idx]={...lib[idx], name, folder, letter, fingerprint, wardId:wardId||undefined, updatedAt:Date.now()};
   saveLibrary(lib);
   renderLibrary();
   updateTokenPanel();
