@@ -1948,14 +1948,6 @@ function renderAnonResult(anonText,reps){
   let hi=esc(S.cleanText);
   for(const r of reps)hi=hi.replace(new RegExp(escR(esc(r.orig)),'g'),`<span class="redacted">${esc(r.orig)}</span>`);
   document.getElementById('origText').innerHTML=hi;
-  const origScrollEl=document.getElementById('origText').parentElement;
-  const anonScrollEl=document.getElementById('anonScroll');
-  if(!origScrollEl._syncBound){
-    origScrollEl._syncBound=true;
-    let syncing=false;
-    origScrollEl.addEventListener('scroll',()=>{if(syncing)return;syncing=true;anonScrollEl.scrollTop=origScrollEl.scrollTop;syncing=false;});
-    anonScrollEl.addEventListener('scroll',()=>{if(syncing)return;syncing=true;origScrollEl.scrollTop=anonScrollEl.scrollTop;syncing=false;});
-  }
 
 }
 
