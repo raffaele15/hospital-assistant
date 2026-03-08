@@ -641,33 +641,28 @@ hr.div{border:none;border-top:1px solid var(--border);margin:18px 0}
     </div>
     <div id="caseEditStatus" style="margin-top:8px;font-family:'JetBrains Mono',monospace;font-size:11px;display:none;"></div>
   </div>
-  <!-- ── Ward Fingerprint card ─────────────────────────────────────── -->
+  <!-- ── Ward Management card ─────────────────────────────────────── -->
   <div class="card" id="wardFpCard">
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;flex-wrap:wrap;gap:8px;">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;flex-wrap:wrap;gap:8px;">
       <div style="display:flex;align-items:center;gap:8px;">
-        <div class="ctitle" style="margin:0;">Fingerprint Reparto</div>
-        <span class="chip c-blue" style="font-size:9px;">Ward-level</span>
+        <div class="ctitle" style="margin:0;">Reparti</div>
       </div>
-      <div style="display:flex;gap:8px;flex-wrap:wrap;">
-        <button class="btn btn-g" style="font-size:9px;padding:4px 10px;" onclick="toggleWardFpPanel()">▾ Sintetizza</button>
+      <button class="btn btn-p" style="font-size:10px;padding:5px 12px;" onclick="openNewWardForm()">+ Nuovo Reparto</button>
+    </div>
+
+    <!-- New ward inline form -->
+    <div id="newWardForm" style="display:none;background:var(--surface2);border:1px solid var(--border);border-radius:var(--r);padding:12px 14px;margin-bottom:12px;">
+      <label style="margin-top:0;">Nome Reparto</label>
+      <input type="text" id="newWardName" placeholder='Es: "Stroke Unit", "Clinica Neurologica"'>
+      <div class="btn-row" style="margin-top:10px;">
+        <button class="btn btn-g" style="font-size:10px;" onclick="closeNewWardForm()">Annulla</button>
+        <button class="btn btn-p" style="font-size:10px;" onclick="createWard()">✓ Crea Reparto</button>
       </div>
     </div>
-    <div class="ib blue" style="font-size:10px;margin-bottom:10px;">
-      Sintetizza un fingerprint di reparto inviando a Claude tutte le lettere + cartelle della libreria. Il risultato viene salvato come voce speciale selezionabile accanto ai casi.
-    </div>
-    <div id="wardGrid" class="tpl-grid" style="margin-bottom:10px;"></div>
-    <div id="wardFpPanel" style="display:none;">
-      <label style="margin-bottom:4px;">Tag / Reparto da sintetizzare <span style="color:var(--dim);font-size:9px;text-transform:none;letter-spacing:0;">(filtra i casi per nome — lascia vuoto per tutti)</span></label>
-      <input type="text" id="wardFpTag" placeholder='Es: "Stroke Unit" — solo i casi che contengono questa stringa nel nome'>
-      <div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
-        <button class="btn btn-p" onclick="synthesizeWardFp()" style="font-size:10px;">
-          <span class="spin" id="wardFpSpin" style="display:none;"></span>
-          ✦ Sintetizza Ward Fingerprint
-        </button>
-        <span id="wardFpCaseCount" style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--dim);"></span>
-      </div>
-      <div id="wardFpStatus" style="margin-top:8px;font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--dim);display:none;"></div>
-    </div>
+
+    <!-- Ward list -->
+    <div id="wardGrid" style="display:flex;flex-direction:column;gap:8px;margin-bottom:4px;"></div>
+    <div id="noWardMsg" style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--dim);">Nessun reparto. Creane uno con il pulsante qui sopra.</div>
   </div>
   <div id="ragPreview" style="display:none;" class="card">
     <div class="ctitle">Casi Recuperati <span class="chip c-blue" style="margin-left:6px;">RAG</span></div>
@@ -2167,21 +2162,44 @@ function renderLibrary(){
     }).join('');
   }
 
-  // Ward fingerprint entries
+  // Ward list
   const wardGrid=document.getElementById('wardGrid');
+  const noWardMsg=document.getElementById('noWardMsg');
   if(wardGrid){
-    wardGrid.innerHTML=wards.length?wards.map(t=>{
-      const isActive=S.activeWardId===t.id;
-      return `<div class="tpl-card${isActive?' active-tpl':''}" onclick="selectWard('${t.id}')" style="border-color:${isActive?'var(--blue)':'var(--border)'};background:${isActive?'rgba(110,168,201,.08)':'var(--surface2)'};">
-        <button class="tpl-del" onclick="event.stopPropagation();deleteWard('${t.id}')">✕</button>
-        <div class="tpl-name" style="color:var(--blue);">🏥 ${esc(t.name)}</div>
-        <div class="tpl-meta" style="margin-bottom:6px;">${new Date(t.createdAt).toLocaleDateString('it-IT')} · ${t.sourceCount||0} casi</div>
-        <div style="display:flex;flex-wrap:wrap;gap:4px;">
-          ${t.fingerprint?fpBadge(t.fingerprint):''}
-          ${isActive?'<span class="chip c-blue">✓ attivo</span>':''}
+    if(!wards.length){
+      wardGrid.innerHTML='';
+      if(noWardMsg) noWardMsg.style.display='block';
+    } else {
+      if(noWardMsg) noWardMsg.style.display='none';
+      wardGrid.innerHTML=wards.map(w=>{
+        const isActive=S.activeWardId===w.id;
+        const wardCases=cases.filter(c=>c.wardId===w.id);
+        const hasFp=!!w.fingerprint;
+        return `<div style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:${isActive?'rgba(110,168,201,.10)':'var(--surface2)'};border:1px solid ${isActive?'var(--blue)':'var(--border)'};border-radius:var(--r);flex-wrap:wrap;">
+          <div style="flex:1;min-width:120px;">
+            <div style="font-family:'JetBrains Mono',monospace;font-size:12px;color:${isActive?'var(--blue)':'var(--text)'};font-weight:600;">🏥 ${esc(w.name)}</div>
+            <div style="font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--dim);margin-top:2px;">${wardCases.length} casi${hasFp?' · ✦ fingerprint':''}${isActive?' · <span style="color:var(--blue);">attivo</span>':''}</div>
+          </div>
+          <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;">
+            <button class="btn ${isActive?'btn-p':'btn-g'}" style="font-size:9px;padding:3px 9px;" onclick="selectWard('${w.id}')">${isActive?'✓ Attivo':'Attiva'}</button>
+            <button class="btn btn-g" style="font-size:9px;padding:3px 9px;" onclick="openWardSynthPanel('${w.id}')">✦ ${hasFp?'Ri-sintetizza':'Sintetizza FP'}</button>
+            <button class="btn btn-g" style="font-size:9px;padding:3px 9px;color:var(--red);" onclick="deleteWard('${w.id}')">✕ Elimina</button>
+          </div>
         </div>
-      </div>`;
-    }).join(''):'<div style="font-family:\'JetBrains Mono\',monospace;font-size:10px;color:var(--dim);">Nessun fingerprint reparto. Clicca "Sintetizza" per crearne uno.</div>';
+        <div id="wardSynthPanel_${w.id}" style="display:none;background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:12px 14px;margin-top:-4px;">
+          <div style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--dim);margin-bottom:8px;">${wardCases.length} casi in questo reparto verranno usati per la sintesi.</div>
+          ${wardCases.length<2?`<div class="ib red" style="font-size:10px;margin-bottom:8px;">⚠ Servono almeno 2 casi. Assegna più casi a "${esc(w.name)}" prima di sintetizzare.</div>`:''}
+          <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+            <button class="btn btn-p" style="font-size:10px;" onclick="synthesizeWardFp('${w.id}')" ${wardCases.length<2?'disabled':''}>
+              <span class="spin" id="wardFpSpin_${w.id}" style="display:none;"></span>
+              ✦ Sintetizza Ward Fingerprint
+            </button>
+            <button class="btn btn-g" style="font-size:10px;" onclick="closeWardSynthPanel('${w.id}')">Annulla</button>
+          </div>
+          <div id="wardFpStatus_${w.id}" style="margin-top:8px;font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--dim);display:none;"></div>
+        </div>`;
+      }).join('');
+    }
   }
   updateRagPreview();
   if(getRefMode()==='manual') populateRefCaseDropdown();
@@ -2191,29 +2209,43 @@ function selectWard(id){
   renderLibrary();updateTokenPanel();updateWardBadge();
   const w=loadLibrary().find(x=>x.id===id);
   if(w&&S.activeWardId===id) document.getElementById('statusBadge').textContent='🏥 '+w.name;
+  else document.getElementById('statusBadge').textContent='● Pronto';
 }
 function deleteWard(id){
-  if(!confirm('Eliminare questo fingerprint reparto?'))return;
+  if(!confirm('Eliminare questo reparto? I casi assegnati non verranno eliminati.'))return;
   if(S.activeWardId===id)S.activeWardId=null;
   saveLibrary(loadLibrary().filter(t=>t.id!==id));renderLibrary();updateTokenPanel();
 }
-function toggleWardFpPanel(){
-  const panel=document.getElementById('wardFpPanel');
-  const btn=document.querySelector('#wardFpCard .btn-g');
-  const visible=panel.style.display!=='none';
-  panel.style.display=visible?'none':'block';
-  btn.textContent=visible?'▾ Sintetizza':'▴ Chiudi';
-  if(!visible) updateWardCaseCount();
+function openNewWardForm(){
+  document.getElementById('newWardForm').style.display='block';
+  document.getElementById('newWardName').focus();
 }
-function updateWardCaseCount(){
-  const tag=document.getElementById('wardFpTag').value.trim().toLowerCase();
-  const lib=loadLibrary().filter(t=>t.type!=='ward');
-  const filtered=tag?lib.filter(t=>t.name.toLowerCase().includes(tag)):lib;
-  document.getElementById('wardFpCaseCount').textContent=`${filtered.length} casi selezionati`;
+function closeNewWardForm(){
+  document.getElementById('newWardForm').style.display='none';
+  document.getElementById('newWardName').value='';
 }
+function createWard(){
+  const name=document.getElementById('newWardName').value.trim();
+  if(!name){alert('Inserisci un nome per il reparto.');return;}
+  const lib=loadLibrary();
+  if(lib.find(x=>x.type==='ward'&&x.name.toLowerCase()===name.toLowerCase())){alert('Esiste già un reparto con questo nome.');return;}
+  lib.push({id:'ward_'+Date.now(),type:'ward',name,fingerprint:'',sourceCount:0,createdAt:new Date().toISOString()});
+  saveLibrary(lib);
+  closeNewWardForm();
+  renderLibrary();
+}
+function openWardSynthPanel(wardId){
+  // Close any other open synth panels first
+  document.querySelectorAll('[id^="wardSynthPanel_"]').forEach(el=>el.style.display='none');
+  const p=document.getElementById('wardSynthPanel_'+wardId);
+  if(p) p.style.display='block';
+}
+function closeWardSynthPanel(wardId){
+  const p=document.getElementById('wardSynthPanel_'+wardId);
+  if(p) p.style.display='none';
+}
+function toggleWardFpPanel(){ /* legacy no-op */ }
 document.addEventListener('DOMContentLoaded',()=>{
-  const tagInput=document.getElementById('wardFpTag');
-  if(tagInput) tagInput.addEventListener('input',updateWardCaseCount);
 });
 
 function selectTemplate(id){
@@ -2324,18 +2356,19 @@ function buildFingerprintFromSections(sections){
 // ═══════════════════════════════════════════════════
 // WARD FINGERPRINT SYNTHESIS
 // ═══════════════════════════════════════════════════
-async function synthesizeWardFp(){
+async function synthesizeWardFp(wardId){
   const key=document.getElementById('apiKeyInput').value.trim();
   if(!key){alert('Inserisci la API key nella sezione Generazione.');return;}
-  const tag=document.getElementById('wardFpTag').value.trim().toLowerCase();
-  const lib=loadLibrary().filter(t=>t.type!=='ward');
-  const cases=tag?lib.filter(t=>t.name.toLowerCase().includes(tag)):lib;
-  if(cases.length<2){alert('Servono almeno 2 casi per sintetizzare un fingerprint reparto.');return;}
-  const spin=document.getElementById('wardFpSpin'),status=document.getElementById('wardFpStatus');
-  spin.style.display='inline-block';status.style.display='block';
-  status.style.color='var(--mid)';status.textContent=`Sintetizzando fingerprint reparto da ${cases.length} casi con Sonnet (~60s)...`;
+  const lib=loadLibrary();
+  const ward=lib.find(x=>x.id===wardId&&x.type==='ward');
+  if(!ward){alert('Reparto non trovato.');return;}
+  const cases=lib.filter(t=>t.type!=='ward'&&t.wardId===wardId);
+  if(cases.length<2){alert(`Servono almeno 2 casi nel reparto "${ward.name}" per sintetizzare un fingerprint.`);return;}
+  const spin=document.getElementById('wardFpSpin_'+wardId);
+  const status=document.getElementById('wardFpStatus_'+wardId);
+  if(spin) spin.style.display='inline-block';
+  if(status){status.style.display='block';status.style.color='var(--mid)';status.textContent=`Sintetizzando fingerprint da ${cases.length} casi con Sonnet...`;}
   try{
-    // Build input: all letters + folders + individual fingerprints if present
     let casesText='';
     cases.forEach((c,i)=>{
       casesText+=`\n\n===== CASO ${i+1}: ${c.name} =====\n`;
@@ -2343,14 +2376,14 @@ async function synthesizeWardFp(){
       if(c.letter) casesText+=`--- LETTERA DI DIMISSIONE ---\n${c.letter.slice(0,3000)}\n`;
       if(c.fingerprint){
         const fpObj=parseFpJson(c.fingerprint);
-        if(fpObj?.ragionamento) casesText+=`--- FINGERPRINT INDIVIDUALE (ragionamento) ---\n${JSON.stringify(fpObj.ragionamento)}\n`;
+        if(fpObj?.ragionamento) casesText+=`--- FINGERPRINT INDIVIDUALE ---\n${JSON.stringify(fpObj.ragionamento)}\n`;
       }
     });
     const wardPrompt=FINGERPRINT_PROMPT_V2
       .replace('Ti fornisco due documenti:\n1. Una cartella clinica anonimizzata (diari, esami, referti)\n2. La lettera di dimissione effettivamente scritta da un neurologo basandosi su quella cartella',
-        `Ti fornisco ${cases.length} casi clinici di uno stesso reparto: cartelle anonimizzate, lettere di dimissione, e fingerprint individuali se disponibili.`)
+        `Ti fornisco ${cases.length} casi clinici del reparto "${ward.name}": cartelle anonimizzate, lettere di dimissione, e fingerprint individuali se disponibili.`)
       .replace('Il tuo compito è duplice: capire il RAGIONAMENTO CLINICO che ha guidato la scrittura della lettera, e estrarne un MODELLO SINTETICO riutilizzabile.',
-        'Il tuo compito è sintetizzare un fingerprint di REPARTO che catturi il ragionamento clinico condiviso, lo stile redazionale comune, e un modello sintetico rappresentativo dello standard del reparto — NON di un singolo caso.')
+        'Il tuo compito è sintetizzare un fingerprint di REPARTO che catturi il ragionamento clinico condiviso, lo stile redazionale comune, e un modello sintetico rappresentativo dello standard del reparto.')
       .replace('[INCOLLA QUI LA CARTELLA CLINICA ANONIMIZZATA]\n\n===== LETTERA DI DIMISSIONE =====\n[INCOLLA QUI LA LETTERA DI DIMISSIONE]', casesText);
     const resp=await fetch('https://api.anthropic.com/v1/messages',{
       method:'POST',
@@ -2366,29 +2399,22 @@ async function synthesizeWardFp(){
     const rawText=(await resp.json()).content[0].text;
     const parsed=JSON.parse(rawText.replace(/```json[\s\S]*?```|```/g,'').trim());
     if(!parsed.lettera_modello) throw new Error('Risposta non contiene lettera_modello — riprova');
-    const wardName=(tag||'Reparto')+' — Ward Fingerprint';
+    // Update the existing ward entry (don't create a new one)
     const lib2=loadLibrary();
-    lib2.push({
-      id:'ward_'+Date.now(),
-      type:'ward',
-      name:wardName,
-      fingerprint:JSON.stringify(parsed),
-      sourceCount:cases.length,
-      sourceTag:tag||'(tutti)',
-      createdAt:new Date().toISOString()
-    });
-    saveLibrary(lib2);
-    renderLibrary();
-    status.style.color='var(--green)';
-    status.textContent=`✓ Ward fingerprint "${wardName}" salvato · ${cases.length} casi · ~${tok(JSON.stringify(parsed))} token`;
-    // Show quality flags if any field is low
-    const q=parsed.qualita||{};
-    const lowFields=Object.entries(q).filter(([,v])=>v?.livello==='bassa').map(([k,v])=>`${k}: ${v.nota}`);
-    const medFields=Object.entries(q).filter(([,v])=>v?.livello==='media').map(([k,v])=>`${k}: ${v.nota}`);
-    if(lowFields.length) status.textContent+=`\n⚠ Campi a bassa qualità: ${lowFields.join(' | ')}`;
-    if(medFields.length) status.textContent+=`\n~ Campi medi: ${medFields.join(' | ')}`;
-  }catch(err){status.style.color='var(--red)';status.textContent='✗ '+err.message;}
-  finally{spin.style.display='none';}
+    const idx=lib2.findIndex(x=>x.id===wardId);
+    if(idx!==-1){
+      lib2[idx]={...lib2[idx],fingerprint:JSON.stringify(parsed),sourceCount:cases.length,updatedAt:new Date().toISOString()};
+      saveLibrary(lib2);
+    }
+    if(status){status.style.color='var(--green)';status.textContent=`✓ Fingerprint sintetizzato da ${cases.length} casi.`;}
+    renderLibrary();updateTokenPanel();updateWardBadge();
+    if(status){
+      const q=parsed.qualita||{};
+      const lowFields=Object.entries(q).filter(([,v])=>v?.livello==='bassa').map(([k])=>k);
+      status.textContent=`✓ Salvato · ${cases.length} casi · ~${tok(JSON.stringify(parsed))} tok${lowFields.length?' · ⚠ '+lowFields.join(', '):''}`;
+    }
+  }catch(err){if(status){status.style.color='var(--red)';status.textContent='✗ '+err.message;}}
+  finally{if(spin) spin.style.display='none';}
 }
 
 async function autoExtractTemplate(){
