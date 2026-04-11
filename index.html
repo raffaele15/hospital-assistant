@@ -3798,13 +3798,12 @@ function toggleAdvancedSettings(){
 }
 
 function saveBaseSettings(){
-  _ghOwnerCache=null; // invalida cache owner quando cambia il token
+  _ghOwnerCache=null;
   localStorage.setItem('letteraai_cfg',JSON.stringify({
     citta:'Padova',
     regex:document.getElementById('cfg_regex').value,
     surnamesUrl:document.getElementById('cfg_surnames_url').value,
     firstNamesUrl:document.getElementById('cfg_firstnames_url').value,
-    ghToken:document.getElementById('cfg_gh_token').value,
     ghRepo:document.getElementById('cfg_gh_repo').value,
     ghPath:document.getElementById('cfg_gh_path').value,
   }));showToast('Impostazioni salvate.');
@@ -3812,13 +3811,16 @@ function saveBaseSettings(){
 function loadBaseSettings(){
   try{
     const c=JSON.parse(localStorage.getItem('letteraai_cfg')||'{}');
-    // city/ward/signatures are no longer configurable
     if(c.regex)document.getElementById('cfg_regex').value=c.regex;
     if(c.surnamesUrl)document.getElementById('cfg_surnames_url').value=c.surnamesUrl;
     if(c.firstNamesUrl)document.getElementById('cfg_firstnames_url').value=c.firstNamesUrl;
-    if(c.ghToken)document.getElementById('cfg_gh_token').value=c.ghToken;
     if(c.ghRepo)document.getElementById('cfg_gh_repo').value=c.ghRepo;
     if(c.ghPath)document.getElementById('cfg_gh_path').value=c.ghPath||'cases.json';
+    // Pulisci eventuali token rimasti da versioni precedenti
+    if(c.ghToken){
+      delete c.ghToken;
+      localStorage.setItem('letteraai_cfg',JSON.stringify(c));
+    }
   }catch(e){}
 }
 
@@ -3863,10 +3865,8 @@ async function resolveGitHubOwner(token){
 
 function getGitHubCfgSync(){
   const c=JSON.parse(localStorage.getItem('letteraai_cfg')||'{}');
-  const token=c.ghToken || DEFAULT_GH_TOKEN;
+  const token=document.getElementById('cfg_gh_token')?.value?.trim() || DEFAULT_GH_TOKEN;
   let repo=c.ghRepo || DEFAULT_GH_REPO;
-  // Se il repo contiene già owner/repo (vecchio formato o default), usalo così
-  // Se è solo il nome, usa la cache dell'owner
   if(repo && !repo.includes('/') && _ghOwnerCache){
     repo=_ghOwnerCache+'/'+repo;
   }
@@ -3875,11 +3875,10 @@ function getGitHubCfgSync(){
 
 async function getGitHubCfg(){
   const c=JSON.parse(localStorage.getItem('letteraai_cfg')||'{}');
-  const token=c.ghToken || DEFAULT_GH_TOKEN;
+  const token=document.getElementById('cfg_gh_token')?.value?.trim() || DEFAULT_GH_TOKEN;
   let repo=c.ghRepo || DEFAULT_GH_REPO;
   const path=c.ghPath || DEFAULT_GH_PATH || 'cases.json';
   if(!token || !repo) return { token, repo, path };
-  // Se il repo non contiene '/', deriva l'owner dal token
   if(!repo.includes('/')){
     const owner=await resolveGitHubOwner(token);
     if(owner) repo=owner+'/'+repo;
