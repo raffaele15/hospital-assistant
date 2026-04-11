@@ -1243,11 +1243,12 @@ const TRAILING_SKIP = new Set([
   'spontanea','spontaneo','continua','continuo','libera','libero',
   'profonda','profondo','precedente','precedenti',
   'risposta','procedura','osservazioni','condizioni',
+  'quesito','multifibre','sostituto',
   // ── Nutritional products / brand drugs ──
   'nutrison','peptamen','isolyte','ensure','fresubin','cubitan',
   'fortimel','prosure','abound','resource','glucerna',
   // ── Foreign names that appear in clinical contexts ──
-  'montserrat','mercedes',
+  'mercedes',
   // ── Structural document words ──
   'data','tipo','pagina','page','fine','inizio','sezione',
   // ── Lab/radiology section headers (for ALLCAPS pattern) ──
@@ -1547,7 +1548,13 @@ const ANON_CONFIG = {
       replace: function(m, name) { return m.replace(name, '[OPERATORE]'); },
       label: '[OPERATORE]', type: 'name' },
     // Standalone CamelCase name pair or triple on its own line (e.g. "Francesca Chiapperini", "Lo Menzo Sara")
-    { pattern: /^([A-Z][a-z\u00C0-\u00FF]+(?:\s+[A-Z][a-z\u00C0-\u00FF]+){1,2})\s*$/gm,
+    { pattern: /^([A-Z][a-z\u00C0-\u00FF]+)((?:\s+[A-Z][a-z\u00C0-\u00FF]+){1,2})\s*$/gm,
+      replace: function(m, w1, rest) {
+        // Check each word against TRAILING_SKIP
+        const words = (w1 + rest).trim().split(/\s+/);
+        if (words.some(w => TRAILING_SKIP.has(w.toLowerCase()))) return m;
+        return '[OPERATORE]';
+      },
       label: '[OPERATORE]', type: 'name' },
     // Utente(ID): pattern
     { pattern: /Utente\([A-Z0-9]+\)\s*:/gi,
@@ -2072,6 +2079,11 @@ function applyNameDict(text) {
     'coagulativo','coagulativa','tiroideo','tiroidea',
     'eritrocitario','eritrocitaria','sierologico','microscopico',
     'ormonale','aptoglobina',
+    // ── Nutritional products / brand drugs ──
+    'nutrison','peptamen','isolyte','ensure','fresubin','cubitan',
+    'fortimel','prosure','abound','resource','glucerna','multifibre',
+    // ── Clinical terms that look like names ──
+    'quesito','sostituto','primario',
   ]);
   for(let i=0;i<tokens2.length-1;i++){
     const t1=tokens2[i],t2=tokens2[i+1];
@@ -2217,6 +2229,7 @@ function applyNameDict(text) {
     // ── Prodotti nutrizionali / brand farmaceutici spesso in cartella ──
     'nutrison','peptamen','isolyte','ensure','fresubin','cubitan',
     'fortimel','prosure','abound','resource','glucerna',
+    'quesito','multifibre','sostituto',
   ]);
   for(const name of allSurnames){
     if(name.length<4)continue;
