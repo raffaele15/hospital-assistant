@@ -36,7 +36,7 @@ main{overflow:hidden;background:var(--bg);display:flex;flex-direction:column}
 .panel{display:none;padding:28px 32px;width:100%;flex:1}
 .panel.active{display:block;overflow-y:auto}
 #panel1.active{display:block;overflow-y:auto;padding:20px 28px 20px 28px}
-.ptitle{font-size:24px;font-weight:300;margin-bottom:3px;letter-spacing:-.01em}
+.ptitle{font-size:24px;font-weight:300;margin-bottom:20px;letter-spacing:-.01em}
 .psub{font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--dim);margin-bottom:22px;letter-spacing:.06em}
 label{display:block;font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--dim);letter-spacing:.1em;text-transform:uppercase;margin-bottom:5px;margin-top:16px}
 label:first-child{margin-top:0}
@@ -173,8 +173,8 @@ hr.div{border:none;border-top:1px solid var(--border);margin:18px 0}
   <button class="ni" onclick="goTo(3)" id="nav3"><span class="sn">4</span>Verifica</button>
   <button class="ni" onclick="goTo(4)" id="nav4"><span class="sn">5</span>Esporta</button>
   <div class="ns" style="margin-top:14px;">Config</div>
-  <button class="ni" onclick="goTo(5)" id="nav5"><span class="sn">⚙</span>Impostazioni</button>
   <button class="ni" onclick="goTo(6)" id="nav6"><span class="sn">📚</span>Libreria Casi</button>
+  <button class="ni" onclick="goTo(5)" id="nav5"><span class="sn">⚙</span>Impostazioni</button>
 </aside>
 
 <main>
@@ -182,7 +182,6 @@ hr.div{border:none;border-top:1px solid var(--border);margin:18px 0}
 <!-- ═══ STEP 1 ═══ -->
 <div class="panel active" id="panel0">
   <div class="ptitle">Carica Cartella</div>
-  <div class="psub">// step 01 — carica PDF o incolla il testo</div>
   <div class="ib acc">
     Incolla il testo della cartella o carica il PDF. Le intestazioni (Regione, Azienda, Direttore, metadati paziente, numeri pagina) vengono rimosse automaticamente prima dell'invio al modello.
   </div>
@@ -247,7 +246,6 @@ hr.div{border:none;border-top:1px solid var(--border);margin:18px 0}
 <!-- ═══ STEP 2 ═══ -->
 <div class="panel" id="panel1">
   <div class="ptitle">Anonimizzazione</div>
-  <div class="psub">// step 02 — scegli modalità → boilerplate strip → anonimizza → revisiona</div>
   <div class="card">
     <div class="ctitle">Modalità Anonimizzazione</div>
   </div>
@@ -301,24 +299,21 @@ hr.div{border:none;border-top:1px solid var(--border);margin:18px 0}
 <!-- ═══ STEP 3 ═══ -->
 <div class="panel" id="panel2">
   <div class="ptitle">Generazione</div>
-  <div class="psub">// step 03 — stima costo → genera</div>
   <div class="card">
     <div class="ctitle">Modello di Lettera</div>
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:4px;" id="letterTemplateGrid">
-      <label id="ltTile_dimissione" style="cursor:pointer;border:2px solid var(--accent);border-radius:var(--r);padding:12px 14px;background:var(--accent-g);display:block;">
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:4px;align-items:stretch;" id="letterTemplateGrid">
+      <label id="ltTile_dimissione" style="cursor:pointer;border:2px solid var(--accent);border-radius:var(--r);padding:10px 14px;background:var(--accent-g);display:flex;align-items:center;justify-content:center;margin:0;">
         <input type="radio" name="letterTemplate" value="dimissione" checked style="display:none;" onchange="onLetterTemplateChange()">
-        <div style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--accent);font-weight:600;margin-bottom:4px;">📋 DIMISSIONE DIRETTA</div>
-        <div style="font-size:13px;color:var(--mid);line-height:1.4;">Ricovero diretto in Stroke Unit da PS. Struttura standard Padova.</div>
+        <span style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--accent);font-weight:600;">🏠 DIMISSIONE</span>
       </label>
-      <label id="ltTile_trasferimento" style="cursor:pointer;border:2px solid var(--border);border-radius:var(--r);padding:12px 14px;background:var(--surface2);display:block;">
+      <label id="ltTile_trasferimento" style="cursor:pointer;border:2px solid var(--border);border-radius:var(--r);padding:10px 14px;background:var(--surface2);display:flex;align-items:center;justify-content:center;margin:0;">
         <input type="radio" name="letterTemplate" value="trasferimento" style="display:none;" onchange="onLetterTemplateChange()">
-        <div style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--dim);font-weight:600;margin-bottom:4px;">🔄 TRASFERIMENTO</div>
-        <div style="font-size:13px;color:var(--mid);line-height:1.4;">Paziente proveniente da altro reparto, trasferito in Stroke Unit.</div>
+        <span style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--dim);font-weight:600;">🏥 TRASFERIMENTO</span>
       </label>
     </div>
     <div id="transferWardRow" style="display:none;margin-top:10px;">
-      <label>Reparto di provenienza</label>
-      <input type="text" id="transferWard" placeholder="es. Endocrinologia" oninput="updateTokenPanel();refreshPrompt()">
+      <label>Struttura / Reparto di destinazione</label>
+      <input type="text" id="transferWard" placeholder="es. Riabilitazione Neurologica, Ospedale di Vicenza" oninput="updateTokenPanel();refreshPrompt()">
     </div>
     <div style="margin-top:10px;display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
       <span style="font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--dim);text-transform:uppercase;letter-spacing:.08em;">Reparto in lettera:</span>
@@ -342,13 +337,13 @@ hr.div{border:none;border-top:1px solid var(--border);margin:18px 0}
       </div>
       <div>
         <label>Token output massimi</label>
-        <select id="maxTokensSelect" style="margin-top:6px;">
+        <select id="maxTokensSelect" onchange="updateTokenPanel()">
           <option value="4000">4 000 — lettera breve</option>
           <option value="8000" selected>8 000 — standard</option>
           <option value="12000">12 000 — lettera lunga</option>
           <option value="16000">16 000 — massimo</option>
         </select>
-        <div style="font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--dim);margin-top:4px;">aumenta se la lettera viene troncata</div>
+        <div id="maxTokensHint" style="font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--dim);margin-top:4px;">aumenta se la lettera viene troncata</div>
       </div>
       <div>
         <label>Temperatura — <span id="tempLabel">0.1</span></label>
@@ -427,9 +422,9 @@ hr.div{border:none;border-top:1px solid var(--border);margin:18px 0}
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;flex-wrap:wrap;gap:8px;">
       <div class="ctitle" style="margin:0;">Prompt Completo</div>
       <div style="display:flex;gap:7px;flex-wrap:wrap;">
-        <button class="btn btn-g" style="font-size:10px;padding:5px 11px;" onclick="refreshPrompt()">↺ Aggiorna</button>
-        <button class="btn btn-g" style="font-size:10px;padding:5px 11px;" onclick="copyFull()">⎘ Tutto</button>
-        <button class="btn btn-g" style="font-size:10px;padding:5px 11px;" onclick="copyUser()">⎘ Solo User</button>
+        <button class="btn btn-g" style="font-size:10px;padding:5px 11px;" onclick="refreshPrompt()" title="Ricostruisce il prompt con le impostazioni correnti (template, fingerprint, testo clinico)">↺ Aggiorna</button>
+        <button class="btn btn-g" style="font-size:10px;padding:5px 11px;" onclick="copyFull()" title="Copia negli appunti il prompt completo (system + user) — utile per incollarlo in Claude.ai o altra AI">⎘ Tutto</button>
+        <button class="btn btn-g" style="font-size:10px;padding:5px 11px;" onclick="copyUser()" title="Copia solo il messaggio utente (dati clinici + template) senza il system prompt">⎘ Solo User</button>
       </div>
     </div>
     <div class="tabs">
@@ -455,12 +450,11 @@ hr.div{border:none;border-top:1px solid var(--border);margin:18px 0}
 <!-- ═══ STEP 4 ═══ -->
 <div class="panel" id="panel4">
   <div class="ptitle">Esporta</div>
-  <div class="psub">// step 05 — esporta, stampa, copia</div>
   <div class="ib green">✓ Sostituisci i placeholder <code style="background:var(--surface3);padding:1px 5px;border-radius:3px;">[PAZIENTE_NOME]</code>, <code style="background:var(--surface3);padding:1px 5px;border-radius:3px;">[DATA_NASCITA]</code> ecc. con i dati reali prima di stampare.</div>
   <div id="usageInfo" style="display:none;" class="ib blue"></div>
   <div id="letterOut" class="paper">—</div>
   <div class="btn-row" style="margin-top:18px;">
-    <button class="btn btn-g" onclick="goTo(3)">← Verifica</button>
+    <button class="btn btn-g" onclick="goTo(3)">← Indietro</button>
     <button class="btn btn-g" onclick="copyLetter()">⎘ Copia testo</button>
     <button class="btn btn-g" onclick="printLetter()">⎙ Stampa / PDF</button>
     <button class="btn btn-b" onclick="exportWord()" style="background:var(--blue);color:#fff;">⬇ Esporta RTF</button>
@@ -471,7 +465,6 @@ hr.div{border:none;border-top:1px solid var(--border);margin:18px 0}
 <!-- ═══ STEP 5 — VERIFICA ═══ -->
 <div class="panel" id="panel3">
   <div class="ptitle">Verifica</div>
-  <div class="psub">// step 04 — controlla allucinazioni → finalizza</div>
   <div class="ib blue" style="margin-bottom:14px;">
     Modifica la lettera nel pannello sinistro. Il pannello destro mostra le frasi evidenziate dopo la verifica:
     <span style="display:inline-block;background:rgba(220,53,53,.25);border-radius:3px;padding:0 5px;margin:0 3px;font-size:11px;">rosso = contraddice la cartella</span>
@@ -479,14 +472,29 @@ hr.div{border:none;border-top:1px solid var(--border);margin:18px 0}
     <span style="display:inline-block;background:rgba(210,190,0,.25);border-radius:3px;padding:0 5px;margin:0 3px;font-size:11px;">giallo = inferenza non esplicita</span>
   </div>
   <!-- Action bar -->
-  <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px;align-items:center;">
-    <button class="btn btn-p" id="verifBtn" onclick="runVerifica()">
+  <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px;align-items:center;">
+    <button class="btn btn-p" id="verifBtn" onclick="runVerifica()" title="Invia la lettera e la cartella anonimizzata a Claude per verificare contraddizioni, dati assenti e inferenze non documentate">
       <span class="spin" id="verifSpin" style="display:none;"></span>
       ✦ Verifica con AI
     </button>
-    <button class="btn btn-g" onclick="copyVerificaPrompt()">⎘ Copia prompt verifica</button>
-    <button class="btn btn-g" onclick="goTo(2)">← Generazione</button>
+    <button class="btn btn-g" onclick="copyVerificaPrompt()" title="Copia il prompt di verifica negli appunti per incollarlo manualmente in Claude.ai o altra AI">⎘ Copia prompt verifica</button>
     <div id="verifStats" style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--dim);margin-left:4px;"></div>
+  </div>
+  <!-- Modello & Stima costi verifica -->
+  <div class="card" style="margin-bottom:14px;">
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;align-items:end;">
+      <div>
+        <div class="ctitle">Modello Verifica</div>
+        <select id="verifModelSelect" onchange="updateVerifTokenPanel()">
+          <option value="claude-haiku-4-5-20251001">claude-haiku-4-5 — economico, veloce</option>
+          <option value="claude-sonnet-4-6" selected>claude-sonnet-4-6 — migliore qualità</option>
+        </select>
+      </div>
+      <div id="verifTokPanel" style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--dim);line-height:1.7;">
+        Completa gli step precedenti per vedere la stima.
+      </div>
+    </div>
+    <div id="verifUsageInfo" style="display:none;margin-top:10px;" class="ib blue"></div>
   </div>
   <div id="verifErr" class="ib red" style="display:none;margin-bottom:10px;"></div>
   <!-- Two-column layout -->
@@ -511,60 +519,96 @@ hr.div{border:none;border-top:1px solid var(--border);margin:18px 0}
   </div>
   <!-- Finalizza -->
   <div class="btn-row" style="margin-top:20px;">
+    <button class="btn btn-g" onclick="goTo(2)">← Indietro</button>
     <button class="btn btn-p" onclick="finalizzaLettera()" style="font-size:13px;padding:10px 28px;">✓ Finalizza → Esporta</button>
   </div>
 </div>
 <div class="panel" id="panel5">
   <div class="ptitle">Impostazioni</div>
-  <div class="psub">// config — intestazione, firma, regex custom</div>
 
-  <div class="card">
-    <div class="ctitle">Pattern Regex Custom</div>
-    <div class="ib" style="margin-bottom:10px;">Pattern aggiuntivi in JSON. I pattern base sono già inclusi.</div>
-    <textarea id="cfg_regex" rows="5" placeholder='[
-  {"pattern": "NHI:\\s*[A-Z]{3}\\d{4}", "replace": "[ID_PAZIENTE]"},
-  {"pattern": "cartella\\s*n\\.?\\s*\\d+", "replace": "[CARTELLA]"}
-]'></textarea>
-  </div>
-  <div class="card">
-    <div class="ctitle">Sorgenti Dizionario Nomi</div>
-    <div class="ib" style="margin-bottom:10px;">URL raw GitHub o altro CDN per i file cognomi/nomi.</div>
-    <label>URL Cognomi (testo, uno per riga)</label>
-    <input type="text" id="cfg_surnames_url" placeholder="https://raw.githubusercontent.com/...">
-    <label>URL Nomi propri (CSV, prima colonna = nome)</label>
-    <input type="text" id="cfg_firstnames_url" placeholder="https://raw.githubusercontent.com/...">
-    <button class="btn btn-g" style="margin-top:12px;" onclick="reloadNameDictionary()">↺ Ricarica dizionario</button>
-    <div id="dictStatusSettings" style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--dim);margin-top:8px;"></div>
-  </div>
+  <!-- ── 1. Archiviazione Casi — GitHub ─────────────────────────── -->
   <div class="card">
     <div class="ctitle">Archiviazione Casi — GitHub</div>
     <div class="ib" style="margin-bottom:10px;">Salva la libreria casi come file JSON in un repository GitHub privato. Richiede un Personal Access Token con scope <code>repo</code>. <a href="https://github.com/settings/tokens/new" target="_blank" style="color:var(--accent);">Crea token →</a></div>
     <label>Personal Access Token (PAT)</label>
     <input type="password" id="cfg_gh_token" placeholder="ghp_xxxxxxxxxxxxxxxxxxxx">
-    <label>Repository (owner/repo)</label>
-    <input type="text" id="cfg_gh_repo" placeholder="Es: mariorossi/lettera-ai-cases">
+    <label>Nome Repository</label>
+    <input type="text" id="cfg_gh_repo" placeholder="Es: hospital-assistant" value="hospital-assistant">
     <label>Percorso file JSON nel repo</label>
     <input type="text" id="cfg_gh_path" placeholder="cases.json" value="cases.json">
     <div style="display:flex;gap:8px;margin-top:12px;flex-wrap:wrap;">
-      <button class="btn btn-g" style="font-size:10px;padding:6px 13px;" onclick="testGitHubConnection()">⚡ Testa Connessione</button>
-      <button class="btn btn-g" style="font-size:10px;padding:6px 13px;" onclick="syncLibraryToGitHub()">↑ Push Libreria</button>
-      <button class="btn btn-g" style="font-size:10px;padding:6px 13px;" onclick="pullLibraryFromGitHub()">↓ Pull Libreria</button>
-      <button class="btn btn-p" style="font-size:10px;padding:6px 13px;" onclick="downloadPreConfigured()" title="Scarica una copia del file con token e repo già incorporati — aprila su qualsiasi browser senza riconfigurare">⬇ Scarica pre-configurata</button>
-      <button class="btn btn-g" style="font-size:10px;padding:6px 13px;" onclick="copyPreConfigured(true)" title="Copia HTML completo con token incorporato">⎘ Copia con token</button>
-      <button class="btn btn-g" style="font-size:10px;padding:6px 13px;" onclick="copyPreConfigured(false)" title="Copia HTML senza token — per condividere o incollare in un'AI">⎘ Copia senza token</button>
+      <button class="btn btn-g" style="font-size:10px;padding:6px 13px;" onclick="testGitHubConnection()" title="Verifica che token, repository e percorso siano corretti">⚡ Testa Connessione</button>
+      <button class="btn btn-g" style="font-size:10px;padding:6px 13px;" onclick="syncLibraryToGitHub()" title="Carica la libreria locale su GitHub, sovrascrivendo il file remoto">↑ Push Libreria</button>
+      <button class="btn btn-g" style="font-size:10px;padding:6px 13px;" onclick="pullLibraryFromGitHub()" title="Scarica la libreria da GitHub e la unisce con quella locale">↓ Pull Libreria</button>
     </div>
     <div id="ghStatus" style="font-family:'JetBrains Mono',monospace;font-size:10px;margin-top:8px;color:var(--dim);"></div>
-    <div class="ib" style="margin-top:10px;font-size:10px;background:rgba(255,180,0,0.08);border-color:var(--accent);">⚠ La versione pre-configurata contiene il token in chiaro nel file HTML. Conservala come un file privato — non condividerla e non caricarla su repo pubblici.</div>
   </div>
+
+  <!-- ── 2. Gestione Dati Locali ────────────────────────────────── -->
+  <div class="card" style="border-color:var(--red);border-width:1px;">
+    <div class="ctitle">Gestione Dati Locali</div>
+    <div class="ib red" style="margin-bottom:12px;font-size:10px;line-height:1.6;">
+      ⚠ La libreria casi è salvata nel <strong>localStorage</strong> del browser. I dati persistono tra le sessioni ma possono essere persi cancellando i dati del browser. Usa le opzioni qui sotto per esportare un backup o cancellare i dati quando hai finito.
+    </div>
+    <div style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--dim);margin-bottom:12px;" id="localStorageStats"></div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;">
+      <button class="btn btn-g" style="font-size:10px;padding:6px 13px;" onclick="exportLibraryJson()" title="Scarica un file JSON con tutti i casi e reparti salvati nel browser">⬇ Esporta Libreria (JSON)</button>
+      <button class="btn btn-g" style="font-size:10px;padding:6px 13px;" onclick="document.getElementById('importLibInput').click()" title="Carica un file JSON esportato in precedenza — i duplicati vengono ignorati">⬆ Importa Libreria (JSON)</button>
+      <input type="file" id="importLibInput" accept=".json" style="display:none;" onchange="importLibraryJson(event)">
+      <button class="btn btn-g" style="font-size:10px;padding:6px 13px;color:var(--red);border-color:var(--red);" onclick="clearLocalData()" title="Elimina tutti i casi, reparti e configurazioni salvati nel browser">🗑 Cancella tutti i dati locali</button>
+    </div>
+    <div id="localDataStatus" style="font-family:'JetBrains Mono',monospace;font-size:10px;margin-top:8px;color:var(--dim);display:none;"></div>
+  </div>
+
   <div class="btn-row">
-    <button class="btn btn-p" onclick="saveBaseSettings()">✓ Salva</button>
+    <button class="btn btn-p" onclick="saveBaseSettings()" title="Salva le impostazioni correnti (regex custom, URL dizionari, configurazione GitHub)">✓ Salva</button>
+  </div>
+
+  <!-- ── 3. Impostazioni Avanzate (collassabile) ────────────────── -->
+  <div style="margin-top:18px;">
+    <button class="btn btn-g" onclick="toggleAdvancedSettings()" id="advSettingsToggle" style="width:100%;justify-content:center;" title="Mostra o nascondi le impostazioni avanzate (regex, dizionari, esportazione HTML)">
+      ▶ Impostazioni Avanzate
+    </button>
+    <div id="advSettingsBody" style="display:none;margin-top:14px;">
+
+      <div class="card">
+        <div class="ctitle">Pattern Regex Custom</div>
+        <div class="ib" style="margin-bottom:10px;">Pattern aggiuntivi in JSON. I pattern base sono già inclusi.</div>
+        <textarea id="cfg_regex" rows="5" placeholder='[
+  {"pattern": "NHI:\\s*[A-Z]{3}\\d{4}", "replace": "[ID_PAZIENTE]"},
+  {"pattern": "cartella\\s*n\\.?\\s*\\d+", "replace": "[CARTELLA]"}
+]'></textarea>
+      </div>
+
+      <div class="card">
+        <div class="ctitle">Sorgenti Dizionario Nomi</div>
+        <div class="ib" style="margin-bottom:10px;">URL raw GitHub o altro CDN per i file cognomi/nomi.</div>
+        <label>URL Cognomi (testo, uno per riga)</label>
+        <input type="text" id="cfg_surnames_url" placeholder="https://raw.githubusercontent.com/...">
+        <label>URL Nomi propri (CSV, prima colonna = nome)</label>
+        <input type="text" id="cfg_firstnames_url" placeholder="https://raw.githubusercontent.com/...">
+        <button class="btn btn-g" style="margin-top:12px;" onclick="reloadNameDictionary()" title="Scarica di nuovo i dizionari cognomi/nomi dalle URL configurate">↺ Ricarica dizionario</button>
+        <div id="dictStatusSettings" style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--dim);margin-top:8px;"></div>
+      </div>
+
+      <div class="card">
+        <div class="ctitle">Esportazione HTML</div>
+        <div class="ib" style="margin-bottom:10px;font-size:10px;">Scarica o copia il file HTML di Lettera.AI con le configurazioni GitHub incorporate. Utile per usare l'app su un altro browser senza riconfigurare.</div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;">
+          <button class="btn btn-p" style="font-size:10px;padding:6px 13px;" onclick="downloadPreConfigured()" title="Scarica una copia del file con token e repo già incorporati — aprila su qualsiasi browser senza riconfigurare">⬇ Scarica pre-configurata</button>
+          <button class="btn btn-g" style="font-size:10px;padding:6px 13px;" onclick="copyPreConfigured(true)" title="Copia HTML completo con token incorporato">⎘ Copia con token</button>
+          <button class="btn btn-g" style="font-size:10px;padding:6px 13px;" onclick="copyPreConfigured(false)" title="Copia HTML senza token — per condividere o incollare in un'AI">⎘ Copia senza token</button>
+        </div>
+        <div class="ib" style="margin-top:10px;font-size:10px;background:rgba(255,180,0,0.08);border-color:var(--accent);">⚠ La versione pre-configurata contiene il token in chiaro nel file HTML. Conservala come un file privato — non condividerla e non caricarla su repo pubblici.</div>
+      </div>
+
+    </div>
   </div>
 </div>
 
 <!-- ═══ STEP 6 — LIBRERIA ═══ -->
 <div class="panel" id="panel6">
   <div class="ptitle">Libreria Casi</div>
-  <div class="psub">// casi clinici precedenti — RAG + fingerprint</div>
   <div class="ib blue">
     <strong style="color:var(--text);">Come funziona:</strong> ogni caso memorizza la cartella anonimizzata (usata localmente per TF-IDF), la lettera generata (iniettata come few-shot), e un fingerprint stilistico compresso (cacheable). I 1–2 casi più simili vengono recuperati automaticamente. Solo le <em>lettere</em>, non le cartelle, vengono inviate al modello.
   </div>
@@ -779,7 +823,7 @@ hr.div{border:none;border-top:1px solid var(--border);margin:18px 0}
 // HARDCODED DEFAULTS (set by "Scarica versione pre-configurata")
 // ═══════════════════════════════════════════════════
 const DEFAULT_GH_TOKEN = '';
-const DEFAULT_GH_REPO  = '';
+const DEFAULT_GH_REPO  = 'hospital-assistant';
 const DEFAULT_GH_PATH  = 'cases.json';
 
 // ═══════════════════════════════════════════════════
@@ -797,6 +841,32 @@ const S    = { rawText:'', cleanText:'', anonText:'', letter:'', strippedBlocks:
 const S_XLS = { text:'', filename:'' };
 let newTplSections = [];
 let newTplFingerprintJson = ''; // stores V2 JSON string when set
+
+// ═══════════════════════════════════════════════════
+// API ERROR MAPPER
+// ═══════════════════════════════════════════════════
+function mapApiError(resp, errBody) {
+  const status = resp.status;
+  const msg = errBody?.error?.message || '';
+  switch(status) {
+    case 400: return `Richiesta non valida — ${msg || 'controlla il prompt o i parametri.'}`;
+    case 401: return 'API key non valida o scaduta. Verifica la chiave su console.anthropic.com.';
+    case 403: return 'Accesso negato — la tua API key non ha i permessi necessari.';
+    case 404: return `Modello non trovato — ${msg || 'controlla il nome del modello selezionato.'}`;
+    case 408: return 'Timeout della richiesta. Riprova.';
+    case 413: return 'Testo troppo lungo — riduci la cartella clinica o il numero di token di input.';
+    case 429: return 'Limite di velocità raggiunto. Riprova tra 30–60 secondi.';
+    case 500: return 'Errore interno del server Anthropic. Riprova tra qualche minuto.';
+    case 529: return 'API Anthropic sovraccarica. Riprova tra qualche minuto.';
+    default:  return msg || `Errore HTTP ${status} — riprova o contatta il supporto.`;
+  }
+}
+
+async function handleApiError(resp) {
+  let errBody = {};
+  try { errBody = await resp.json(); } catch(e) {}
+  throw new Error(mapApiError(resp, errBody));
+}
 
 const DEFAULT_SYS = `Sei il sistema di generazione delle lettere di dimissione ospedaliere italiane.
 Il reparto e il contesto clinico dipendono dal template e dal fingerprint selezionati.
@@ -835,6 +905,26 @@ STRUTTURA
 - Non aggiungere sezioni non previste dal template.
 - Se una sezione è prevista ma i dati mancano: "Non documentato."
 - Gli esami strumentali eseguiti ma non elencati nel template vanno comunque inclusi nella sezione accertamenti, in coda alla lista prevista.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+PROVENIENZA DA ALTRO REPARTO (riconoscimento automatico)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Se dalla cartella clinica emerge che il paziente è stato prima ricoverato in un altro reparto (es. Pronto Soccorso → altro reparto → il nostro reparto), devi riconoscerlo automaticamente e adattare la lettera:
+
+1. Nell'intestazione, menziona il trasferimento: "...trasferito presso il nostro Reparto in data [DATA_TRASF] u.s. dal [REPARTO_PROVENIENZA] dove era stato ricoverato dal [DATA_RIC_ORIGINALE] u.s."
+2. Dopo il motivo del ricovero e la sezione Pronto Soccorso, aggiungi una sezione dedicata al reparto di provenienza:
+   - "**In [REPARTO_PROVENIENZA] ha eseguito:**" con gli accertamenti eseguiti lì
+   - "**Decorso in [REPARTO_PROVENIENZA]:**" con sintesi del decorso in quel reparto
+3. Poi prosegui con l'ingresso nel nostro reparto: parametri vitali, EON, esami, decorso, ecc.
+
+Se NON ci sono evidenze di provenienza da altro reparto (il paziente è arrivato direttamente dal PS o è un ricovero diretto), NON aggiungere queste sezioni — segui il template standard.
+
+Indicatori tipici di provenienza da altro reparto nell'input:
+- Menzioni di "trasferito da", "proveniente da", "degenza presso", "in carico a"
+- Diari clinici con intestazione di un reparto diverso dal nostro
+- Date di accertamenti eseguiti prima dell'ingresso nel nostro reparto ma dopo il PS
+- Valutazioni specialistiche richieste da un altro reparto
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 CRITERI DI SELEZIONE
@@ -993,6 +1083,8 @@ function goTo(i) {
   document.getElementById('nav'+i).classList.add('active');
   
   if (i === 2) updateTokenPanel();
+  if (i === 3) updateVerifTokenPanel();
+  if (i === 5) updateLocalStorageStats();
   if (i === 6) renderLibrary();
 }
 
@@ -1752,8 +1844,6 @@ function applyNameDict(text) {
     'stato','grado','tipo','data','ora','firma','timbro',
     'mese','anno','giorno','settimana',
     'setto','atrio','mitrale','aortica','ventricolo','valvola',
-    'romano','ferrari','russo','esposito','bianchi',
-    'greco','lombardi','ricci','marino','gallo','conti','de',
     'glucosio','urea','creatinina','sodio','potassio','cloro',
     'calcio','fosfato','albumina','bilirubina','totale','coniugata',
     'inorganico','inorganica','urico','acido','ratio','tempo',
@@ -2103,6 +2193,77 @@ async function processPdf(file){
 function loadLibrary(){try{return JSON.parse(localStorage.getItem('letteraai_lib')||'[]');}catch(e){return[];}}
 function saveLibrary(lib){localStorage.setItem('letteraai_lib',JSON.stringify(lib));}
 
+// ═══════════════════════════════════════════════════
+// LOCAL DATA MANAGEMENT
+// ═══════════════════════════════════════════════════
+function updateLocalStorageStats(){
+  const el=document.getElementById('localStorageStats');
+  if(!el) return;
+  const lib=loadLibrary();
+  const cases=lib.filter(t=>t.type!=='ward');
+  const bytes=new Blob([JSON.stringify(lib)]).size;
+  const kb=(bytes/1024).toFixed(1);
+  el.textContent=`📦 ${cases.length} casi · ${kb} KB in localStorage`;
+}
+
+function exportLibraryJson(){
+  const lib=loadLibrary();
+  if(!lib.length){alert('Libreria vuota — nulla da esportare.');return;}
+  const blob=new Blob([JSON.stringify(lib,null,2)],{type:'application/json'});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');
+  a.href=url;
+  a.download=`letteraai_libreria_${new Date().toISOString().slice(0,10)}.json`;
+  document.body.appendChild(a);a.click();document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+  const st=document.getElementById('localDataStatus');
+  st.style.display='block';st.style.color='var(--green)';
+  st.textContent=`✓ Esportati ${lib.length} elementi.`;
+  setTimeout(()=>st.style.display='none',4000);
+}
+
+function importLibraryJson(event){
+  const file=event.target.files[0];
+  if(!file)return;
+  const reader=new FileReader();
+  reader.onload=function(e){
+    try{
+      const imported=JSON.parse(e.target.result);
+      if(!Array.isArray(imported))throw new Error('Il file non contiene un array JSON valido.');
+      const existing=loadLibrary();
+      const existingIds=new Set(existing.map(x=>x.id));
+      const newItems=imported.filter(x=>!existingIds.has(x.id));
+      const merged=[...existing,...newItems];
+      saveLibrary(merged);
+      renderLibrary();updateLocalStorageStats();
+      const st=document.getElementById('localDataStatus');
+      st.style.display='block';st.style.color='var(--green)';
+      st.textContent=`✓ Importati ${newItems.length} nuovi elementi (${imported.length-newItems.length} duplicati ignorati). Totale: ${merged.length}.`;
+      setTimeout(()=>st.style.display='none',6000);
+    }catch(err){
+      const st=document.getElementById('localDataStatus');
+      st.style.display='block';st.style.color='var(--red)';
+      st.textContent='✗ Errore: '+err.message;
+    }
+  };
+  reader.readAsText(file);
+  event.target.value=''; // reset input
+}
+
+function clearLocalData(){
+  const lib=loadLibrary();
+  if(!lib.length){alert('Nessun dato locale da cancellare.');return;}
+  if(!confirm('Sei sicuro di voler cancellare tutti i dati locali?\n\nQuesta azione è irreversibile.'))return;
+  localStorage.removeItem('letteraai_lib');
+  localStorage.removeItem('letteraai_settings');
+  S.activeTemplateId=null;S.activeWardId=null;
+  renderLibrary();updateLocalStorageStats();
+  const st=document.getElementById('localDataStatus');
+  st.style.display='block';st.style.color='var(--green)';
+  st.textContent='✓ Tutti i dati locali cancellati.';
+  setTimeout(()=>st.style.display='none',4000);
+}
+
 function renderLibrary(){
   const lib=loadLibrary();
   const cases=lib.filter(t=>t.type!=='ward');
@@ -2395,7 +2556,7 @@ async function synthesizeWardFp(wardId){
         messages:[{role:'user',content:wardPrompt}]
       }),
     });
-    if(!resp.ok){const e=await resp.json();throw new Error(e.error?.message||`HTTP ${resp.status}`);}
+    if(!resp.ok) await handleApiError(resp);
     const rawText=(await resp.json()).content[0].text;
     const parsed=JSON.parse(rawText.replace(/```json[\s\S]*?```|```/g,'').trim());
     if(!parsed.lettera_modello) throw new Error('Risposta non contiene lettera_modello — riprova');
@@ -2439,7 +2600,7 @@ async function autoExtractTemplate(){
         messages:[{role:'user',content:FINGERPRINT_PROMPT_V2.replace('[INCOLLA QUI LA CARTELLA CLINICA ANONIMIZZATA]', folder||'(non fornita)').replace('[INCOLLA QUI LA LETTERA DI DIMISSIONE]', letter)}]
       }),
     });
-    if(!resp.ok){const e=await resp.json();throw new Error(e.error?.message||`HTTP ${resp.status}`);}
+    if(!resp.ok) await handleApiError(resp);
     const rawText=(await resp.json()).content[0].text;
     const parsed=JSON.parse(rawText.replace(/```json[\s\S]*?```|```/g,'').trim());
 
@@ -2509,7 +2670,7 @@ function resetNewCaseForm(){
 // ═══════════════════════════════════════════════════
 // TOKEN PANEL
 // ═══════════════════════════════════════════════════
-function tok(str){return Math.round((str||'').length/4);}
+function tok(str){return Math.round((str||'').length/3.2);}
 function fpBadge(fp){
   if(!fp) return '';
   try{
@@ -2517,6 +2678,19 @@ function fpBadge(fp){
     if(o.lettera_modello) return '<span class="tpl-cached-badge" style="background:rgba(110,168,201,.15);border-color:var(--blue);color:var(--blue);">✦ fp V2 ~'+tok(fp)+'t</span>';
   }catch(e){}
   return '<span class="tpl-cached-badge">⚡ fp ~'+tok(fp)+'t</span>';
+}
+
+function estimateOutputTokens(){
+  if(!S.anonText) return 4000;
+  const inputTok = tok(S.anonText);
+  // Rapporto reale output/input misurato: ~27% (cartella 13k tok → lettera 3.5k tok)
+  // Margine di sicurezza del 25% per variabilità tra casi
+  const estimated = Math.round(inputTok * 0.27 * 1.25);
+  const options = [4000, 8000, 12000, 16000];
+  for (const opt of options) {
+    if (estimated <= opt) return opt;
+  }
+  return 16000;
 }
 
 function updateTokenPanel(){
@@ -2534,6 +2708,16 @@ function updateTokenPanel(){
   const tFp=refFpObj?tok(refFpObj.lettera_modello||''):0;
   const tFullCase=(refCase&&(injectMode==='full'||injectMode==='both'))?tok((refCase.folder||'')+(refCase.letter||'')):0;
   const tTemplate=tok(buildLetterTemplate()),tClinical=tok(S.anonText),tOut=parseInt(document.getElementById('maxTokensSelect')?.value)||8000;
+
+  // Suggerisci il valore ottimale
+  const suggested = estimateOutputTokens();
+  const sel = document.getElementById('maxTokensSelect');
+  for (const opt of sel.options) {
+    const val = parseInt(opt.value);
+    const base = val === 4000 ? 'lettera breve' : val === 8000 ? 'standard' : val === 12000 ? 'lettera lunga' : 'massimo';
+    opt.textContent = val.toLocaleString('it-IT').replace(/\./g,' ') + ' — ' + base + (val === suggested ? ' ✦ consigliato' : '');
+  }
+
   const fpLabel=refFpObj?`Fingerprint (${refCase?.name||'ref'})`:'—';
   const fullLabel=refCase&&(injectMode==='full'||injectMode==='both')?`Cartella+Lettera (${refCase.name})`:'—';
   const syslabel='System'+(wardFpObj?' + Ward':'')+(refFpObj?' + Fingerprint':'');
@@ -2575,7 +2759,7 @@ function onLetterTemplateChange(){
     const active=(t===val);
     tile.style.borderColor=active?'var(--accent)':'var(--border)';
     tile.style.background=active?'var(--accent-g)':'var(--surface2)';
-    tile.querySelector('div').style.color=active?'var(--accent)':'var(--dim)';
+    tile.querySelector('span').style.color=active?'var(--accent)':'var(--dim)';
   });
   document.getElementById('transferWardRow').style.display=(val==='trasferimento')?'block':'none';
   updateTokenPanel();refreshPrompt();
@@ -2630,16 +2814,16 @@ function buildLetterTemplate(){
   const ward=(document.getElementById('transferWard')?.value||'altro reparto').trim();
 
   if(tipo==='trasferimento'){
-    return `## TEMPLATE LETTERA — TRASFERIMENTO DA ALTRO REPARTO
+    return `## TEMPLATE LETTERA — TRASFERIMENTO PRESSO ALTRA STRUTTURA
 
-Genera la lettera seguendo ESATTAMENTE questa struttura. Per dati assenti: "Non documentato." — MAI inventare.
+Genera la lettera seguendo ESATTAMENTE questa struttura. Il paziente NON viene dimesso a domicilio ma trasferito presso ${ward}. Per dati assenti: "Non documentato." — MAI inventare.
 
 ---
 [CITTA], ${today}
 
 Egregi Colleghi,
 
-        dimettiamo in data odierna il Sig. [PAZIENTE_NOME], di anni [ETA'], nato il [DATA_NASCITA], trasferito presso il nostro Reparto in data [DATA_TRASF] u.s. dal ${ward} dove era stato ricoverato dal [DATA_RIC_ALTRO] u.s. con diagnosi di:
+        trasferiamo in data odierna il Sig. [PAZIENTE_NOME], di anni [ETA'], nato il [DATA_NASCITA], ricoverato presso il nostro Reparto in data [DATA_RICOVERO] u.s., presso ${ward} con diagnosi di:
 
 "${diagnosi}"
 
@@ -2647,50 +2831,59 @@ Egregi Colleghi,
 
 **Terapia domiciliare:** [farmaci pre-ricovero dall'input]
 
-**Motivo del ricovero:** [esordio sintomatologico — passato prossimo — dall'input]
-
-mRS pre-evento = [valore se presente].
+**Motivo del ricovero:**
+[esordio sintomatologico dall'input — passato prossimo — MAI passato remoto]
 
 [farmacoallergie se documentate, altrimenti: Non farmacoallergie note.]
 
-In **Pronto Soccorso** è stato sottoposto a:
-> Esami ematochimici: [dall'input]
-> TC cerebrale: [dall'input]
-> Valutazione neurologica: [EON verbatim — NIHSS — dall'input]
+mRS pre-evento = [valore se presente].
 
-Si concludeva per [diagnosi PS]. Il paziente veniva ricoverato in ${ward} per la prosecuzione dell'iter diagnostico-terapeutico.
+Presso il Pronto Soccorso AOUP è stato sottoposto a:
+**> Esami ematochimici:** [dall'input]
+**> TC encefalo:** [dall'input]
+**> AngioTC dei vasi intracranici:** [se eseguita — altrimenti ometti]
+**> Valutazione neurologica:** [EON verbatim — NIHSS — dall'input]
 
-**In ${ward} ha eseguito:**
-> [accertamento (DD/MM)]: [referto dall'input]
-> [accertamento (DD/MM)]: [referto dall'input]
+**Esame obiettivo neurologico all'ingresso in [REPARTO]:**
+[EON verbatim dall'input — NIHSS X]
 
-**Decorso in ${ward}:** [sintesi dall'input — prosa unica senza righe vuote interne]
+**Esame obiettivo generale all'ingresso in [REPARTO]:**
+[dall'input]
 
-**Parametri vitali all'arrivo in [REPARTO]:** FC XX bpm, PA XXX/XX mmHg, SpO2 XX% in aa, apiretico.
-
-**Esame obiettivo neurologico all'ingresso in [REPARTO]:** [EON verbatim dall'input]. NIHSS [X].
-
-**Esame obiettivo generale all'ingresso in [REPARTO]:** [dall'input]
-
-Durante la degenza in [REPARTO] il paziente è stato sottoposto ai seguenti **esami ematochimici:**
-[Lista sezioni: Emocromo con formula | Indici di flogosi | Funzionalità epatica | Funzionalità renale con ionemia | Profilo metabolico | Profilo proteico | Enzimi muscolari | Albumina | Profilo carenziale | Funzionalità tiroidea | Esame urine | Microbiologia — mantieni valori esatti dall'input]
+Durante la degenza il paziente è stato sottoposto ai seguenti **esami ematochimici:**
+**Emocromo con formula:** [valori o "nella norma"]
+**Profilo coagulativo:** [dall'input]
+**Indici di flogosi:** [dall'input]
+**Funzionalità epatica:** [dall'input]
+**Funzionalità renale con ionemia:** [dall'input]
+**Profilo metabolico:** [dall'input]
+**Profilo proteico:** [dall'input]
+**Enzimi muscolari:** [dall'input]
+**Albumina:** [dall'input]
+**Profilo carenziale:** [dall'input]
+**Funzionalità tiroidea:** [dall'input]
+**ntBNP:** [dall'input]
+**Esame urine:** [dall'input]
+**Microbiologia:** [dall'input]
 
 e alle seguenti **indagini diagnostico-strumentali e valutazioni specialistiche:**
-> [Nome esame (DD/MM)]: [referto sintetico dall'input — se in corso: "(referto in corso di completamento)"]
+**> ECG (DD/MM):** [dall'input]
+**> Rx torace (DD/MM):** [dall'input]
+**> TC encefalo (DD/MM):** [dall'input]
+**> Valutazione fisiatrica (DD/MM):** [se eseguita]
+[altri accertamenti se presenti nell'input]
 
-**Decorso Clinico presso la [REPARTO]:**
-[Prosa clinica 150-300 parole, passato prossimo, MAI passato remoto — sintesi decisioni terapeutiche e andamento]
+**Decorso Clinico:**
+[Prosa clinica unica 150-300 parole, passato prossimo, MAI passato remoto, NESSUNA riga vuota interna — sintesi decisioni terapeutiche e andamento. Includere il motivo del trasferimento presso ${ward}.]
 
-**L'obiettività alla dimissione mostra:**
-[condizioni neurologiche e generali alla dimissione. NIHSS: XX. mRS: XX.]
+**L'obiettività al trasferimento mostra:**
+[condizioni neurologiche e generali al trasferimento. NIHSS: XX. mRS: XX.]
 
-**Terapia alla dimissione:**
+**Terapia al trasferimento:**
 
 | Farmaco | Posologia | Orario | Note |
 |---------|-----------|--------|------|
 [Una riga per farmaco — nome+dosaggio | n cp per os | 8.00 o 8.00-20.00 | terapia domiciliare / nuova terapia / nuova terapia fino a rivalutazione]
-
-Il paziente è atteso in regime di post-degenza per eseguire **visita neurologica ed ecocolordoppler dei tronchi sovraortici e transcranico** di controllo in data **[DD/MM/YYYY]** alle ore **[HH:MM]** per l'Ambulatorio di Malattie Cerebrovascolari, al piano terra della Palazzina di Neuroscienze.
 
 Si raccomanda:
 [raccomandazioni specifiche dall'input — formato lista con trattino]
@@ -2877,7 +3070,7 @@ async function generateLetter(){
         messages:buildMessages(),
       }),
     });
-    if(!resp.ok){const e=await resp.json();throw new Error(e.error?.message||`HTTP ${resp.status}`);}
+    if(!resp.ok) await handleApiError(resp);
     const data=await resp.json();
     S.letter=data.content[0].text;
     // Replace [CITTA] and [REPARTO] with resolved values
@@ -2977,6 +3170,28 @@ Segnala solo contenuto clinico fattuale. Se la lettera è completamente fedele a
 
 let S_verifFlags = [];
 
+function updateVerifTokenPanel(){
+  const el = document.getElementById('verifTokPanel');
+  if(!el) return;
+  const letterText = document.getElementById('verifLetterEdit')?.value||'';
+  if(!S.anonText && !letterText){
+    el.innerHTML = 'Completa gli step precedenti per vedere la stima.';
+    return;
+  }
+  const verifModel = document.getElementById('verifModelSelect').value||'claude-sonnet-4-6';
+  const price = PRICING[verifModel]||PRICING['claude-sonnet-4-6'];
+  const tSys = tok(VERIFICA_SYSTEM);
+  const tCartella = tok(S.anonText);
+  const tLettera = tok(letterText);
+  const tOut = 2000;
+  const tIn = tSys + tCartella + tLettera;
+  const costIn = (tIn/1e6)*price.in;
+  const costOut = (tOut/1e6)*price.out;
+  const costTotal = costIn + costOut;
+  el.innerHTML = `System: ~${tSys.toLocaleString()} · Cartella: ~${tCartella.toLocaleString()} · Lettera: ~${tLettera.toLocaleString()} tok<br>`+
+    `<span style="color:var(--accent);">Stima: ~${tIn.toLocaleString()} input + ${tOut.toLocaleString()} output → <strong>$${costTotal.toFixed(4)}</strong></span>`;
+}
+
 function goToVerifica(){
   const el = document.getElementById('verifLetterEdit');
   if(el && S.letter && S.letter !== '—') el.value = S.letter;
@@ -2988,6 +3203,7 @@ function goToVerifica(){
   document.getElementById('verifStats').textContent = '';
   S_verifFlags = [];
   goTo(3);
+  updateVerifTokenPanel();
 }
 
 function onVerifLetterEdit(){
@@ -3000,6 +3216,7 @@ function onVerifLetterEdit(){
     document.getElementById('verifFlagsList').style.display = 'none';
     document.getElementById('verifStats').textContent = '';
   }
+  updateVerifTokenPanel();
 }
 
 async function runVerifica(){
@@ -3014,7 +3231,9 @@ async function runVerifica(){
   btn.disabled = true; spin.style.display = 'inline-block';
   document.getElementById('verifErr').style.display = 'none';
   document.getElementById('verifStats').textContent = 'Analisi in corso…';
+  document.getElementById('verifUsageInfo').style.display = 'none';
 
+  const verifModel = document.getElementById('verifModelSelect').value||'claude-sonnet-4-6';
   const tick3 = '```';
   const userMsg =
     `CARTELLA CLINICA ANONIMIZZATA:\n${tick3}\n${S.anonText}\n${tick3}\n\n` +
@@ -3025,15 +3244,26 @@ async function runVerifica(){
       method:'POST',
       headers:{'Content-Type':'application/json','x-api-key':key,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
       body: JSON.stringify({
-        model: document.getElementById('modelSelect').value||'claude-sonnet-4-6',
+        model: verifModel,
         max_tokens: 2000,
         temperature: 0,
         system: VERIFICA_SYSTEM,
         messages:[{role:'user',content:userMsg}]
       }),
     });
-    if(!resp.ok){const e=await resp.json();throw new Error(e.error?.message||`HTTP ${resp.status}`);}
+    if(!resp.ok) await handleApiError(resp);
     const data = await resp.json();
+
+    // Mostra costo reale
+    const u = data.usage||{};
+    const price = PRICING[verifModel]||PRICING['claude-sonnet-4-6'];
+    const inCost = ((u.input_tokens||0)/1e6)*price.in;
+    const outCost = ((u.output_tokens||0)/1e6)*price.out;
+    const total = inCost+outCost;
+    const usageEl = document.getElementById('verifUsageInfo');
+    usageEl.style.display = 'block';
+    usageEl.innerHTML = `✓ Costo verifica — input: ${u.input_tokens||0} tok ($${inCost.toFixed(4)}) · output: ${u.output_tokens||0} tok ($${outCost.toFixed(4)}) — <strong style="color:var(--text);">totale: $${total.toFixed(4)}</strong>`;
+
     const raw = data.content[0].text.trim().replace(/^```json\s*/,'').replace(/^```\s*/,'').replace(/\s*```$/,'');
     S_verifFlags = JSON.parse(raw);
     if(!Array.isArray(S_verifFlags)) throw new Error('Risposta non è un array JSON valido.');
@@ -3426,7 +3656,16 @@ function newLetter(){
 // ═══════════════════════════════════════════════════
 // SETTINGS
 // ═══════════════════════════════════════════════════
+function toggleAdvancedSettings(){
+  const body=document.getElementById('advSettingsBody');
+  const btn=document.getElementById('advSettingsToggle');
+  const open=body.style.display==='none';
+  body.style.display=open?'block':'none';
+  btn.textContent=open?'▼ Impostazioni Avanzate':'▶ Impostazioni Avanzate';
+}
+
 function saveBaseSettings(){
+  _ghOwnerCache=null; // invalida cache owner quando cambia il token
   localStorage.setItem('letteraai_cfg',JSON.stringify({
     citta:'Padova',
     regex:document.getElementById('cfg_regex').value,
@@ -3464,13 +3703,46 @@ function clearAll(){
 // ═══════════════════════════════════════════════════
 // GITHUB LIBRARY SYNC
 // ═══════════════════════════════════════════════════
-function getGitHubCfg(){
+let _ghOwnerCache = null;
+
+async function resolveGitHubOwner(token){
+  if(_ghOwnerCache) return _ghOwnerCache;
+  try{
+    const r=await fetch('https://api.github.com/user',{headers:{Authorization:`token ${token}`}});
+    if(!r.ok) throw new Error(`HTTP ${r.status}`);
+    const d=await r.json();
+    _ghOwnerCache=d.login;
+    return d.login;
+  }catch(e){
+    console.warn('Impossibile risolvere owner GitHub:',e.message);
+    return null;
+  }
+}
+
+function getGitHubCfgSync(){
   const c=JSON.parse(localStorage.getItem('letteraai_cfg')||'{}');
-  return{
-    token: c.ghToken || DEFAULT_GH_TOKEN,
-    repo:  c.ghRepo  || DEFAULT_GH_REPO,
-    path:  c.ghPath  || DEFAULT_GH_PATH || 'cases.json',
-  };
+  const token=c.ghToken || DEFAULT_GH_TOKEN;
+  let repo=c.ghRepo || DEFAULT_GH_REPO;
+  // Se il repo contiene già owner/repo (vecchio formato o default), usalo così
+  // Se è solo il nome, usa la cache dell'owner
+  if(repo && !repo.includes('/') && _ghOwnerCache){
+    repo=_ghOwnerCache+'/'+repo;
+  }
+  return{ token, repo, path: c.ghPath || DEFAULT_GH_PATH || 'cases.json' };
+}
+
+async function getGitHubCfg(){
+  const c=JSON.parse(localStorage.getItem('letteraai_cfg')||'{}');
+  const token=c.ghToken || DEFAULT_GH_TOKEN;
+  let repo=c.ghRepo || DEFAULT_GH_REPO;
+  const path=c.ghPath || DEFAULT_GH_PATH || 'cases.json';
+  if(!token || !repo) return { token, repo, path };
+  // Se il repo non contiene '/', deriva l'owner dal token
+  if(!repo.includes('/')){
+    const owner=await resolveGitHubOwner(token);
+    if(owner) repo=owner+'/'+repo;
+  }
+  return { token, repo, path };
 }
 function ghStatus(msg,color='var(--dim)'){
   const el=document.getElementById('ghStatus');
@@ -3492,7 +3764,7 @@ async function ghApiPut(cfg,content,sha){
   return r.json();
 }
 async function testGitHubConnection(){
-  const cfg=getGitHubCfg();
+  const cfg=await getGitHubCfg();
   if(!cfg.token||!cfg.repo){ghStatus('✗ Configura token e repo prima.','var(--red)');return;}
   ghStatus('⟳ Test in corso...','var(--dim)');
   try{
@@ -3503,7 +3775,7 @@ async function testGitHubConnection(){
   }catch(e){ghStatus('✗ '+e.message,'var(--red)');}
 }
 async function syncLibraryToGitHub(){
-  const cfg=getGitHubCfg();
+  const cfg=await getGitHubCfg();
   if(!cfg.token||!cfg.repo){ghStatus('✗ Configura token e repo prima.','var(--red)');return;}
   ghStatus('⟳ Upload in corso...','var(--dim)');
   try{
@@ -3515,7 +3787,7 @@ async function syncLibraryToGitHub(){
   }catch(e){ghStatus('✗ '+e.message,'var(--red)');}
 }
 async function pullLibraryFromGitHub(){
-  const cfg=getGitHubCfg();
+  const cfg=await getGitHubCfg();
   if(!cfg.token||!cfg.repo){ghStatus('✗ Configura token e repo prima.','var(--red)');return;}
   ghStatus('⟳ Download in corso...','var(--dim)');
   try{
@@ -4342,7 +4614,7 @@ async function autoExtractForEdit(){
           .replace('[INCOLLA QUI LA LETTERA DI DIMISSIONE]', letter)}]
       }),
     });
-    if(!resp.ok){ const e=await resp.json(); throw new Error(e.error?.message||`HTTP ${resp.status}`); }
+    if(!resp.ok) await handleApiError(resp);
     const rawText = (await resp.json()).content[0].text;
     const parsed = JSON.parse(rawText.replace(/```json[\s\S]*?```|```/g,'').trim());
     if(!parsed.lettera_modello) throw new Error('Risposta non contiene lettera_modello — schema non V2.');
@@ -4454,11 +4726,12 @@ loadBaseSettings();
 document.getElementById('systemPrompt').value=DEFAULT_SYS;
 renderLibrary();
 updateWardBadge();
+updateLocalStorageStats();
 loadNameDictionary();
 
 // ── Silent auto-pull from GitHub on startup ──────────────────────────
 (async function autoPullOnStartup(){
-  const cfg=getGitHubCfg();
+  const cfg=await getGitHubCfg();
   if(!cfg.token||!cfg.repo)return;
   try{
     const file=await ghApiGet(cfg);
