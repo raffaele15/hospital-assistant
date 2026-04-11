@@ -820,7 +820,7 @@ hr.div{border:none;border-top:1px solid var(--border);margin:18px 0}
 // HARDCODED DEFAULTS (set by "Scarica versione pre-configurata")
 // ═══════════════════════════════════════════════════
 const DEFAULT_GH_TOKEN = '';
-const DEFAULT_GH_REPO  = 'hospital-assistant';
+const DEFAULT_GH_REPO  = 'hospital-assistant-data';
 const DEFAULT_GH_PATH  = 'cases.json';
 
 // ═══════════════════════════════════════════════════
@@ -1760,7 +1760,7 @@ function applyRegex(text) {
 // ═══════════════════════════════════════════════════
 const NAME_SOURCES = {
   firstNames: 'https://raw.githubusercontent.com/mrblasco/genderNamesITA/master/gender_firstnames_ITA.csv',
-  surnames:   'https://raw.githubusercontent.com/PaoloSarti/lista_cognomi_italiani/main/cognomi.txt',
+  surnames:   'https://raw.githubusercontent.com/PaoloSarti/lista_cognomi_italiani/master/cognomi.txt',
 };
 const NAMES_DB = { firstNames:[], surnames:[], loaded:false, loading:false, error:null };
 
