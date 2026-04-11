@@ -1492,6 +1492,10 @@ const ANON_CONFIG = {
     // Trailing first name after placeholder
     { pattern: /(?<=\[(?:OPERATORE|PAZIENTE)\]\s+)([A-Z][a-z\u00C0-\u00FF]{3,})(?=[,\s.])/g,
       label: '[NOME]', type: 'name' },
+    // Leading first name before placeholder (e.g. "19:46Francesca [OPERATORE]")
+    { pattern: /([A-Z][a-z\u00C0-\u00FF]{3,})\s+\[(?:OPERATORE|NOME)\]/g,
+      replace: function(m, name) { return '[OPERATORE] [OPERATORE]'; },
+      label: '[OPERATORE]', type: 'name' },
     // Name after date in lab stamp headers
     { pattern: /(?<=\d{2}\/\d{2}\/\d{4}\s+)([A-Z][a-z\u00C0-\u00FF]{3,})(?=\s*$)/gm,
       label: '[NOME]', type: 'name' },
@@ -1503,8 +1507,8 @@ const ANON_CONFIG = {
     { pattern: /(?:Chirurgh?[oi]|Anestesist[aei]|Infermier[aei]\s+(?:di\s+)?(?:sala|Anestesia))\s+([A-Z][A-Z\u00C0-\u00FF\s']+)$/gim,
       replace: function(m, name) { return m.replace(name, '[OPERATORE]'); },
       label: '[OPERATORE]', type: 'name' },
-    // Standalone ALLCAPS first+last name on line after role labels
-    { pattern: /^([A-Z][a-z\u00C0-\u00FF]+\s+[A-Z][a-z\u00C0-\u00FF]+)\s*$/gm,
+    // Standalone CamelCase name pair or triple on its own line (e.g. "Francesca Chiapperini", "Lo Menzo Sara")
+    { pattern: /^([A-Z][a-z\u00C0-\u00FF]+(?:\s+[A-Z][a-z\u00C0-\u00FF]+){1,2})\s*$/gm,
       label: '[OPERATORE]', type: 'name' },
     // Utente(ID): pattern
     { pattern: /Utente\([A-Z0-9]+\)\s*:/gi,
@@ -1514,6 +1518,28 @@ const ANON_CONFIG = {
       label: 'Cognome: [PAZIENTE]', type: 'name' },
     { pattern: /(?<=Cognome\s*:\s*\[PAZIENTE\]\s*)Nome\s*:\s*[A-Z][A-Za-z\u00C0-\u00FF]+/gi,
       label: 'Nome: [PAZIENTE]', type: 'name' },
+    // ── MFS / Equipe / signature lists ──────────────────────────────
+    // MFS followed by comma-separated names (e.g. "MFS Mietto, Tarchiari")
+    { pattern: /MFS\s+[A-Z][a-zA-Z\u00C0-\u00FF']+(?:(?:\s*,\s*|\s+e\s+|\s+)[A-Z][a-zA-Z\u00C0-\u00FF']+)*/g,
+      label: 'MFS [OPERATORE]', type: 'name' },
+    // MFS with initial.surname list (e.g. "MFS I. Shevchuck, L.Fontanel")
+    { pattern: /MFS\s+(?:[A-Z]\.?\s*[A-Z][a-zA-Z\u00C0-\u00FF']+(?:\s*,\s*)?)+/g,
+      label: 'MFS [OPERATORE]', type: 'name' },
+    // Equipe: followed by names on same or next line
+    { pattern: /Equipe\s*:\s*[A-Z][a-zA-Z\u00C0-\u00FF']+(?:\s+[A-Z][a-zA-Z\u00C0-\u00FF']+)*/g,
+      label: 'Equipe: [OPERATORE]', type: 'name' },
+    // Dr. ssa / Dr.ssa with space before ssa (e.g. "Dr. ssa M. Zandonà")
+    { pattern: /[Dd]r\.?\s+ssa\.?\s+(?:[A-Z]\.\s*)?[A-Z][a-zA-Z\u00C0-\u00FF']+/g,
+      label: '[OPERATORE]', type: 'name' },
+    // CamelCase name concatenated with 2-letter initials (e.g. "ChiapperiniFC", "FranchiniBF")
+    { pattern: /[A-Z][a-z\u00C0-\u00FF]{3,}[A-Z]{2,3}(?=\s|$)/gm,
+      label: '[OPERATORE]', type: 'name' },
+    // CamelCase name pair after colon at end of line (e.g. "...: Tiziana Bettella")
+    { pattern: /(?<=:\s*)(?!(?:Esame|Anamnesi|Decorso|Terapia|Motivo|Clinica|Stroke|Pronto|Reparto|Diagnosi|Profilo|Formula|Conteggio)\s)[A-Z][a-z\u00C0-\u00FF]{2,}\s+[A-Z][a-z\u00C0-\u00FF]{2,}(?=\s*$)/gm,
+      label: '[OPERATORE]', type: 'name' },
+    // ALLCAPS NOME COGNOME followed by colon (e.g. "FORNASIER TOMMASO:")
+    { pattern: /(?:^|\n)\s*(?!(?:STROKE|CLINICA|PRONTO|ESAME|ANAMNESI|DECORSO|TERAPIA|MOTIVO|REPARTO|AZIENDA|REGIONE|PROFILO|DIAGNOSI|EMATOLOGIA|COSTITUENTI|MARCATORI|FORMULA|CONTEGGIO|MICROSCOPIA|METABOLITI)\b)[A-Z]{2,}\s+[A-Z]{2,}\s*:/gm,
+      label: '[OPERATORE]:', type: 'name' },
   ],
 
   nameDict_fallback: [],
