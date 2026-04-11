@@ -3394,9 +3394,15 @@ function refreshPrompt(){
   pUsr=buildUserPromptStr();
   renderPromptView();updateTokenPanel();
 }
-async function copyFull(){refreshPrompt();await navigator.clipboard.writeText(document.getElementById('promptView').value);flash();}
-async function copyUser(){refreshPrompt();await navigator.clipboard.writeText(pUsr);flash();}
+async function copyFull(){refreshPrompt();await navigator.clipboard.writeText(document.getElementById('promptView').value);flashBtn(event?.target);}
+async function copyUser(){refreshPrompt();await navigator.clipboard.writeText(pUsr);flashBtn(event?.target);}
 function flash(){const el=document.getElementById('copyConfirm');el.style.display='block';setTimeout(()=>el.style.display='none',1600);}
+function flashBtn(btn){
+  if(!btn)return flash();
+  const orig=btn.innerHTML;
+  btn.innerHTML='✓ Copiato';btn.style.color='var(--green)';
+  setTimeout(()=>{btn.innerHTML=orig;btn.style.color='';},1800);
+}
 
 // ═══════════════════════════════════════════════════
 // OUTPUT ACTIONS
@@ -3631,12 +3637,7 @@ ${tick3}
 ${letterText}
 ${tick3}`;
 
-  navigator.clipboard.writeText(prompt).then(()=>{
-    const btn = event.target;
-    const orig = btn.textContent;
-    btn.textContent = '✓ Copiato!'; btn.style.color = 'var(--green)';
-    setTimeout(()=>{ btn.textContent = orig; btn.style.color = ''; }, 1800);
-  });
+  navigator.clipboard.writeText(prompt).then(()=>flashBtn(event?.target));
 }
 
 function finalizzaLettera(){
@@ -3649,7 +3650,7 @@ function finalizzaLettera(){
   goTo(4);
 }
 
-function copyLetter(){navigator.clipboard.writeText(S.letter).then(()=>showToast('Testo copiato negli appunti.'));}
+function copyLetter(){navigator.clipboard.writeText(S.letter).then(()=>flashBtn(event?.target));}
 function printLetter(){
   const w=window.open('','_blank');
   w.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Lettera di Dimissione</title><style>body{font-family:'Times New Roman',serif;font-size:12pt;line-height:1.8;margin:2.5cm;color:#000}pre{white-space:pre-wrap;font-family:inherit}</style></head><body><pre>${esc(S.letter)}</pre></body></html>`);
@@ -4696,13 +4697,7 @@ function copyFingerprintPrompt(){
   let prompt = FINGERPRINT_PROMPT_V2;
   if(folder) prompt = prompt.replace('[INCOLLA QUI LA CARTELLA CLINICA ANONIMIZZATA]', folder);
   if(letter) prompt = prompt.replace('[INCOLLA QUI LA LETTERA DI DIMISSIONE]', letter);
-  navigator.clipboard.writeText(prompt).then(()=>{
-    const btn = event.target;
-    const orig = btn.textContent;
-    btn.textContent = '✓ Copiato!';
-    btn.style.color = 'var(--green)';
-    setTimeout(()=>{btn.textContent=orig;btn.style.color='';}, 2000);
-  });
+  navigator.clipboard.writeText(prompt).then(()=>flashBtn(event?.target));
 }
 
 // ── Manual JSON import ───────────────────────────────────────────────
@@ -4973,10 +4968,7 @@ function copyFingerprintPromptForEdit(){
   if(letter) prompt = prompt.replace('[INCOLLA QUI LA LETTERA DI DIMISSIONE]', letter);
   navigator.clipboard.writeText(prompt).then(()=>{
     const btn = document.getElementById('caseEditPanel').querySelector('[onclick="copyFingerprintPromptForEdit()"]');
-    if(!btn) return;
-    const orig = btn.textContent;
-    btn.textContent = '✓ Copiato!'; btn.style.color = 'var(--green)';
-    setTimeout(()=>{ btn.textContent = orig; btn.style.color = ''; }, 2000);
+    flashBtn(btn);
   });
 }
 
