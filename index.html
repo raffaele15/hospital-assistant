@@ -1476,7 +1476,7 @@ const ANON_CONFIG = {
     { pattern: /\[NOME\]\s*\(\d{2}\/\d{2}\/\d{4}\s+[\d:]+\)/g,
       label: '[OPERATORE_FARMACO]', type: 'boiler' },
     { pattern: /^\(S\)\s+[A-Z][A-Z\s\d\.\*]+$/gim,
-      label: '[CONFERMA_FARMACO]', type: 'boiler' },
+      label: '[PRESCRIZIONE_FARMACO]', type: 'boiler' },
     { pattern: /(?:anni\s+\d{1,3}|Sesso:\s*[MF]|C\.F\.:|nato\s+il)[^\n]{0,15}(\d{2}[\/\.]\d{2}[\/\.]\d{4})/gi,
       label: '[DATI_PAZIENTE]', type: 'date' },
     { pattern: /Frequenza\s+campionamento[^\n]*/gi,
@@ -1495,6 +1495,25 @@ const ANON_CONFIG = {
     // Name after date in lab stamp headers
     { pattern: /(?<=\d{2}\/\d{2}\/\d{4}\s+)([A-Z][a-z\u00C0-\u00FF]{3,})(?=\s*$)/gm,
       label: '[NOME]', type: 'name' },
+    // ── Registro Operatorio patterns ──────────────────────────────
+    // DOTT./DOTT.SSA NOME COGNOME with comma-separated multiple names
+    { pattern: /DOTT\.?\s*(?:SSA\.?)?\s+[A-Z][A-Z\u00C0-\u00FF]+\s+[A-Z][A-Z\u00C0-\u00FF]+/gi,
+      label: '[OPERATORE]', type: 'name' },
+    // Names after surgical roles (Chirurgo, Anestesisti, Infermieri)
+    { pattern: /(?:Chirurgh?[oi]|Anestesist[aei]|Infermier[aei]\s+(?:di\s+)?(?:sala|Anestesia))\s+([A-Z][A-Z\u00C0-\u00FF\s']+)$/gim,
+      replace: function(m, name) { return m.replace(name, '[OPERATORE]'); },
+      label: '[OPERATORE]', type: 'name' },
+    // Standalone ALLCAPS first+last name on line after role labels
+    { pattern: /^([A-Z][a-z\u00C0-\u00FF]+\s+[A-Z][a-z\u00C0-\u00FF]+)\s*$/gm,
+      label: '[OPERATORE]', type: 'name' },
+    // Utente(ID): pattern
+    { pattern: /Utente\([A-Z0-9]+\)\s*:/gi,
+      label: '[ID_OPERATORE]:', type: 'id' },
+    // Cognome: NOME Nome: NOME pattern in registro
+    { pattern: /Cognome\s*:\s*[A-Z][A-Za-z\u00C0-\u00FF]+/gi,
+      label: 'Cognome: [PAZIENTE]', type: 'name' },
+    { pattern: /(?<=Cognome\s*:\s*\[PAZIENTE\]\s*)Nome\s*:\s*[A-Z][A-Za-z\u00C0-\u00FF]+/gi,
+      label: 'Nome: [PAZIENTE]', type: 'name' },
   ],
 
   nameDict_fallback: [],
@@ -1577,8 +1596,9 @@ const ANON_CONFIG = {
     /^(?:P\.?\s*IVA|Partita\s+IVA|C\.?F\.?|Cod(?:ice)?\s+Fiscale)\s*[:\-]?\s*[\d\w]+\s*$/i,
     /^C\.?F\.?\s+P\.?\s*IVA\s+\d+\s*$/i,
     // Azienda / Ospedale / Università header lines
-    /^Azienda\s+Ospedaliero[^\n]*/i,
+    /^Azienda\s+Ospedalier[ao][^\n]*/i,
     /^Azienda\s+Ospedale[^\n]*/i,
+    /^Registro\s+Operatorio\s*$/i,
     /^Azienda\s+ULSS[^\n]*/i,
     /^Ospedale\s+[A-Z][^\n]*/i,
     /^Universit[àa]\s+(?:degli\s+Studi\s+)?di\s+[A-Z][^\n]*/i,
@@ -2304,7 +2324,7 @@ async function processPdf(file){
     const ex=document.getElementById('inp_raw').value.trim();
     document.getElementById('inp_raw').value=ex?ex+'\n\n--- '+file.name+' ---\n\n'+full:full;
     bar.style.width='100%';spin.style.display='none';stxt.style.color='var(--green)';
-    stxt.textContent=`✓ ${tot} pagina${tot===1?'':'e'} · ${full.length.toLocaleString()} caratteri`;
+    stxt.textContent=`✓ ${tot} pagin${tot===1?'a':'e'} · ${full.length.toLocaleString()} caratteri`;
     document.getElementById('pdfFileInput').value='';
   }catch(err){spin.style.display='none';stxt.style.color='var(--red)';stxt.textContent='✗ '+err.message;}
 }
@@ -3840,8 +3860,28 @@ function esc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').repl
 function escR(s){return s.replace(/[.*+?^${}()|[\]\\]/g,'\\$&');}
 function clearAll(){
   if(!confirm('Cancellare tutto?'))return;
-  document.getElementById('inp_raw').value='';document.getElementById('inp_diagnosi').value='';
+  document.getElementById('inp_raw').value='';
+  document.getElementById('inp_diagnosi').value='';
   S.rawText=S.cleanText=S.anonText=S.letter='';S.strippedBlocks=[];S.patientData={nome:'',cognome:'',dataNascita:''};
+  S_XLS.text='';S_XLS.filename='';
+  // Reset PDF status
+  const pdfStatus=document.getElementById('pdfStatus');
+  if(pdfStatus) pdfStatus.style.display='none';
+  const pdfBar=document.getElementById('pdfBar');
+  if(pdfBar) pdfBar.style.display='none';
+  // Reset XLS status
+  const xlsStatus=document.getElementById('xlsStatus');
+  if(xlsStatus) xlsStatus.style.display='none';
+  const xlsPreview=document.getElementById('xlsPreview');
+  if(xlsPreview){xlsPreview.style.display='none';xlsPreview.textContent='';}
+  // Reset anonimizzazione
+  document.getElementById('origText').innerHTML='—';
+  document.getElementById('anonText').value='';
+  document.getElementById('anonStatusTxt').textContent='Pronto.';
+  const bpSec=document.getElementById('bpSection');
+  if(bpSec) bpSec.style.display='none';
+  const repSec=document.getElementById('repSection');
+  if(repSec) repSec.style.display='none';
 }
 
 // ═══════════════════════════════════════════════════
