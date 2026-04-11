@@ -1372,6 +1372,23 @@ const ANON_CONFIG = {
         return '[OPERATORE]';
       },
       label: '[OPERATORE]', type: 'name' },
+    // ── Apostrophe surname patterns (D'Amore, D'Errico, O'Brien etc.) ──
+    // "Giovanni\nD'amore\n" — Name on one line, D'surname on next (diary entries)
+    { pattern: /^([A-Z][a-z\u00C0-\u00FF]{2,})\r?\n([A-Z]'[a-zA-Z\u00C0-\u00FF]{2,})\s*$/gm,
+      label: '[OPERATORE]', type: 'name' },
+    // "Giovanni\nD'amore\nI..." — Name, D'surname, then role code on next line
+    { pattern: /([A-Z][a-z\u00C0-\u00FF]{2,})\r?\n([A-Z]'[a-zA-Z\u00C0-\u00FF]{2,})\r?\n(?=[MIFRO][A-Z])/gm,
+      label: '[OPERATORE]\n', type: 'name' },
+    // "D'amore Giovanni" or "Giovanni D'amore" — apostrophe surname pair anywhere
+    { pattern: /\b([A-Z]'[a-zA-Z\u00C0-\u00FF]{2,})\s+([A-Z][a-z\u00C0-\u00FF]{2,})\b/g,
+      label: '[OPERATORE]', type: 'name' },
+    { pattern: /\b([A-Z][a-z\u00C0-\u00FF]{2,})\s+([A-Z]'[a-zA-Z\u00C0-\u00FF]{2,})\b/g,
+      label: '[OPERATORE]', type: 'name' },
+    // "(D'amore Giovanni)" or "(Giovanni D'amore)" — parenthesized apostrophe names
+    { pattern: /\(([A-Z]'[a-zA-Z\u00C0-\u00FF]{2,})\s+([A-Z][a-z\u00C0-\u00FF]{2,})\)/g,
+      label: '([OPERATORE])', type: 'name' },
+    { pattern: /\(([A-Z][a-z\u00C0-\u00FF]{2,})\s+([A-Z]'[a-zA-Z\u00C0-\u00FF]{2,})\)/g,
+      label: '([OPERATORE])', type: 'name' },
     // Single-word CamelCase surname on its own line, after [OPERATORE] context lines
     { pattern: /(?<=\[OPERATORE\]\r?\n)([A-Z][a-z\u00C0-\u00FF]{3,})(?=\r?\n)/gm,
       replace: function(m, name) {
@@ -1420,8 +1437,17 @@ const ANON_CONFIG = {
       label: 'MMG/PLS: [OPERATORE]', type: 'name' },
     { pattern: /\b[A-Z][a-z\u00C0-\u00FF]+\s+[A-Z][a-z\u00C0-\u00FF]+(?=\s+\(\d{2}\/\d{2}\/\d{4})/g,
       label: '[OPERATORE]', type: 'name' },
-    { pattern: /\b([A-Z][a-z\u00C0-\u00FF]+(?:\s+[A-Z][a-z\u00C0-\u00FF]+){1,2})(?=\s*[MIFR](?:[A-Za-z0-9]|\s|$)|\s+[MIFR]\s+[A-Za-z])/g,
-      replace: function(m, words) {
+    // Apostrophe surname + name before date: "D'amore Giovanni (15/02/2026..."
+    { pattern: /\b[A-Z]'[a-zA-Z\u00C0-\u00FF]{2,}\s+[A-Z][a-z\u00C0-\u00FF]+(?=\s+\(\d{2}\/\d{2}\/\d{4})/g,
+      label: '[OPERATORE]', type: 'name' },
+    { pattern: /\b[A-Z][a-z\u00C0-\u00FF]+\s+[A-Z]'[a-zA-Z\u00C0-\u00FF]{2,}(?=\s+\(\d{2}\/\d{2}\/\d{4})/g,
+      label: '[OPERATORE]', type: 'name' },
+    { pattern: /\b([A-Z][a-z\u00C0-\u00FF]+(?:\s+[A-Z][a-z\u00C0-\u00FF]+){1,2})(?=[MIFRO](?:[A-Za-z0-9]|\s|$)|\s+[MIFRO]\s+[A-Za-z]|\s*[MIFRO](?:[A-Za-z0-9]|\s|$))/g,
+      replace: function(m, words, offset, full) {
+        // Check if role code is glued (no space) — definitely a name+role
+        const after = full.charAt(offset + m.length);
+        const glued = /[MIFRO]/.test(after) && !/\s/.test(m.charAt(m.length - 1));
+        if (glued) return '[OPERATORE]';
         const ws = words.trim().split(/\s+/);
         if (shouldSkipName(ws)) return m;
         return '[OPERATORE]';
