@@ -154,7 +154,6 @@ hr.div{border:none;border-top:1px solid var(--border);margin:18px 0}
   <div style="font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:500;letter-spacing:.14em;color:var(--accent);text-transform:uppercase;margin-bottom:8px;">Lettera<span style="color:var(--dim);">.</span>AI</div>
   <div style="width:300px;max-width:90vw;">
     <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:24px;">
-      <div style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--dim);text-transform:uppercase;letter-spacing:.1em;margin-bottom:16px;">Accesso</div>
       <label style="display:block;font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--dim);letter-spacing:.1em;text-transform:uppercase;margin-bottom:5px;">Username</label>
       <input type="text" id="loginUser" autocomplete="username" style="width:100%;margin-bottom:12px;" onkeydown="if(event.key==='Enter')doLogin()">
       <label style="display:block;font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--dim);letter-spacing:.1em;text-transform:uppercase;margin-bottom:5px;">Password</label>
@@ -898,16 +897,14 @@ async function doLogin(){
     // Decripta le credenziali
     const apiKey=await decryptData(entry.apiKey,pass);
     const ghToken=await decryptData(entry.ghToken,pass);
-    // Inietta le credenziali nei campi (non visibili se type=password)
+    // Inietta le credenziali nei campi (solo in memoria, non salvate in localStorage)
     document.getElementById('apiKeyInput').value=apiKey;
     document.getElementById('cfg_gh_token').value=ghToken;
     // Nascondi login, mostra app
     document.getElementById('loginScreen').style.display='none';
     document.getElementById('loginUser').value='';
     document.getElementById('loginPass').value='';
-    // Salva le impostazioni GitHub con il token appena iniettato
-    saveBaseSettings();
-    // Trigger auto-pull
+    // Trigger auto-pull (usa i valori dai campi, non da localStorage)
     const cfg=await getGitHubCfg();
     if(cfg.token&&cfg.repo){
       try{
