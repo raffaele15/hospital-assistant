@@ -281,7 +281,7 @@ hr.div{border:none;border-top:1px solid var(--border);margin:18px 0}
     <span class="spin" id="anonSpin" style="display:none;"></span>
     <span id="anonStatusTxt" style="font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--mid);">Pronto.</span>
   </div>
-  <div id="dictStatus" style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--dim);padding:4px 2px;">⏳ Caricamento dizionario nomi in corso...</div>
+  <div id="dictStatus" style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--dim);padding:4px 2px;"></div>
   <div class="collapsible-section" id="bpSection" style="display:none;">
     <button class="collapsible-toggle" onclick="toggleSection('bpSection')">
       <i class="ct-icon">▶</i>
@@ -589,13 +589,13 @@ hr.div{border:none;border-top:1px solid var(--border);margin:18px 0}
       </div>
 
       <div class="card">
-        <div class="ctitle">Sorgenti Dizionario Nomi</div>
-        <div class="ib" style="margin-bottom:10px;">URL raw GitHub o altro CDN per i file cognomi/nomi.</div>
+        <div class="ctitle">Dizionario Nomi <span style="color:var(--dim);font-size:9px;text-transform:none;letter-spacing:0;margin-left:6px;">opzionale</span></div>
+        <div class="ib" style="margin-bottom:10px;">Abilita il fuzzy matching per rilevare nomi/cognomi con errori di battitura. Inserisci URL raw GitHub. Se vuoto, l'anonimizzazione usa solo i pattern regex (sufficiente nella maggior parte dei casi).</div>
         <label>URL Cognomi (testo, uno per riga)</label>
-        <input type="text" id="cfg_surnames_url" placeholder="https://raw.githubusercontent.com/...">
+        <input type="text" id="cfg_surnames_url" placeholder="https://raw.githubusercontent.com/PaoloSarti/lista_cognomi_italiani/master/cognomi.txt">
         <label>URL Nomi propri (CSV, prima colonna = nome)</label>
-        <input type="text" id="cfg_firstnames_url" placeholder="https://raw.githubusercontent.com/...">
-        <button class="btn btn-g" style="margin-top:12px;" onclick="reloadNameDictionary()" title="Scarica di nuovo i dizionari cognomi/nomi dalle URL configurate">↺ Ricarica dizionario</button>
+        <input type="text" id="cfg_firstnames_url" placeholder="https://raw.githubusercontent.com/mrblasco/genderNamesITA/master/gender_firstnames_ITA.csv">
+        <button class="btn btn-g" style="margin-top:12px;" onclick="reloadNameDictionary()" title="Scarica i dizionari cognomi/nomi dalle URL configurate">↺ Carica dizionario</button>
         <div id="dictStatusSettings" style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--dim);margin-top:8px;"></div>
       </div>
 
@@ -1759,8 +1759,8 @@ function applyRegex(text) {
 // EXTERNAL NAME DICTIONARY + FUZZY ENGINE
 // ═══════════════════════════════════════════════════
 const NAME_SOURCES = {
-  firstNames: 'https://raw.githubusercontent.com/mrblasco/genderNamesITA/master/gender_firstnames_ITA.csv',
-  surnames:   'https://raw.githubusercontent.com/PaoloSarti/lista_cognomi_italiani/master/cognomi.txt',
+  firstNames: '',
+  surnames:   '',
 };
 const NAMES_DB = { firstNames:[], surnames:[], loaded:false, loading:false, error:null };
 
@@ -1823,19 +1823,33 @@ async function loadNameDictionary() {
   if(NAMES_DB.loaded||NAMES_DB.loading)return;
   NAMES_DB.loading=true;
   const statusEl=document.getElementById('dictStatus');
-  if(statusEl)statusEl.textContent='⏳ Caricamento dizionario nomi...';
   const customSurnamesUrl=document.getElementById('cfg_surnames_url')?.value.trim();
   const customFirstNamesUrl=document.getElementById('cfg_firstnames_url')?.value.trim();
   const surnamesUrl=customSurnamesUrl||NAME_SOURCES.surnames;
   const firstNamesUrl=customFirstNamesUrl||NAME_SOURCES.firstNames;
+  // Se nessuna URL configurata, usa solo fallback locale
+  if(!surnamesUrl&&!firstNamesUrl){
+    const fb=ANON_CONFIG.nameDict_fallback;
+    fb.forEach(n=>{bkSurnames.add(n.toLowerCase());bkFirstNames.add(n.toLowerCase());});
+    NAMES_DB.surnames=fb.map(n=>n.toLowerCase());
+    NAMES_DB.loaded=true;
+    const msg=fb.length?`Dizionario locale (${fb.length} nomi) — configura URL in Impostazioni Avanzate per fuzzy matching`:'Dizionario nomi non configurato';
+    if(statusEl)statusEl.textContent=msg;
+    NAMES_DB.loading=false;
+    return;
+  }
+  if(statusEl)statusEl.textContent='⏳ Caricamento dizionario nomi...';
   try{
-    const [surnameResp,firstNameResp]=await Promise.all([fetch(surnamesUrl),fetch(firstNamesUrl)]);
-    if(surnameResp.ok){
+    const fetches=[];
+    if(surnamesUrl)fetches.push(fetch(surnamesUrl)); else fetches.push(Promise.resolve(null));
+    if(firstNamesUrl)fetches.push(fetch(firstNamesUrl)); else fetches.push(Promise.resolve(null));
+    const [surnameResp,firstNameResp]=await Promise.all(fetches);
+    if(surnameResp?.ok){
       const text=await surnameResp.text();
       const names=text.split('\n').map(l=>l.trim().toLowerCase()).filter(l=>l.length>=3&&l.length<=30&&/^[a-zàèéìòùäöü'\- ]+$/.test(l));
       NAMES_DB.surnames=names; names.forEach(n=>bkSurnames.add(n));
     }
-    if(firstNameResp.ok){
+    if(firstNameResp?.ok){
       const text=await firstNameResp.text();
       const lines=text.split('\n').slice(1);
       const names=lines.map(l=>l.split(',')[0].replace(/['"]/g,'').trim().toLowerCase()).filter(n=>n.length>=3&&n.length<=20&&/^[a-zàèéìòùäöü'\- ]+$/.test(n));
@@ -1983,9 +1997,9 @@ function applyNameDict(text) {
     'nascita','cognome','nome','sesso','reparto','diagnosi','anamnesi',
     'terapia','esame','referto','paziente','medico','infermiere',
     'ambulatorio','ricovero','dimissione','urgente','ordinario',
-    'stroke','unita','scala','valore','misura','dato','nota',
+    'stroke','unita','scala','valore','valori','misura','dato','nota',
     'stato','grado','tipo','data','ora','firma','timbro',
-    'mese','anno','giorno','settimana',
+    'mese','anno','giorno','giorni','settimana',
     'setto','atrio','mitrale','aortica','ventricolo','valvola',
     'glucosio','urea','creatinina','sodio','potassio','cloro',
     'calcio','fosfato','albumina','bilirubina','totale','coniugata',
@@ -2020,6 +2034,75 @@ function applyNameDict(text) {
     'coagulativo','coagulativa','tiroideo','tiroidea',
     'eritrocitario','eritrocitaria','sierologico','microscopico',
     'ormonale','aptoglobina',
+    // ── Termini clinici/anatomici che sono anche cognomi italiani ──
+    'gentili','franca','franco','corso','corsi',
+    'vigile','vigili','semplici','semplice',
+    'capo','piano','piani','presente','presenti',
+    'durante','bianco','bianchi','bianca','bianche',
+    'rosso','rossi','rossa','rosse',
+    'ferro','noto','nota','noti','note',
+    'falda','falde','quadro','quadri',
+    'stabile','stabili','modesto','modesta','modesti',
+    'minuto','minuti','minuta','massa','masse',
+    'modica','modico','modici','modiche',
+    'luce','recupero','campo','campi',
+    'consiglio','consigli','massimo','massima',
+    'minimi','minimo','minima','minime',
+    'febbraio','gennaio','marzo','aprile','maggio','giugno',
+    'luglio','agosto','settembre','ottobre','novembre','dicembre',
+    'prossimi','prossimo','prossima','prossime',
+    'secondo','seconda','secondi','seconde',
+    'lettera','lettere','parziale','parziali',
+    'venoso','venosa','venosi','venose',
+    'assenza','toni','tono',
+    'sala','sale','volta','volte',
+    'busta','buste','medici',
+    'compatto','compatta','compatti',
+    'terzo','terza','terzi','terze',
+    'inferiore','inferiori','superiore','superiori',
+    'sensitivo','sensitiva','sensitivi',
+    'orario','orari','corporeo','corporea',
+    'fini','fine','destro','destra','destri','destre',
+    'sinistro','sinistra','sinistri','sinistre',
+    'sottile','sottili','corno','corni',
+    'laterale','laterali','mediana','mediane','mediano',
+    'basale','basali','frontale','frontali',
+    'parietale','parietali','temporale','temporali',
+    'occipitale','occipitali',
+    'dorsale','dorsali','cervicale','cervicali',
+    'torace','addome','polmonare','polmonari',
+    'pleurica','pleuriche','pleurico',
+    'asse','assiale','lungo','lunga','lunghi','lunghe',
+    'breve','brevi','acuta','acuto','acuti','acute',
+    'grave','gravi','lieve','lievi',
+    'chetoni','chetone',
+    'trasferiamo','trasferimento','trasferito','trasferita',
+    'invasione','evoluzione','riduzione','estensione',
+    'perfusione','diffusione','infusione','conclusione',
+    'formazione','pressione','depressione','impressione',
+    'stria','strie','areola','areole',
+    'continua','continuo','continui','continue',
+    'corretta','corretto','corretti','corrette',
+    'integra','integro','integri','integre',
+    'libera','libero','liberi','libere',
+    'valida','valido','validi','valide',
+    'costante','costanti','completa','completo',
+    'flaccida','flaccido','rigida','rigido',
+    'spontanea','spontaneo','spontanei','spontanee',
+    'profonda','profondo','profondi','profonde',
+    'bene','beni','male','mali',
+    'positivo','positiva','positivi','positive',
+    'negativo','negativa','negativi','negative',
+    'assente','assenti','normale','normali',
+    'raro','rara','rari','rare',
+    'naso','nasale','nasali','orale','orali',
+    'corto','corta','corti','corte',
+    'alto','alta','alti','alte',
+    'basso','bassa','bassi','basse',
+    'medio','media','medi','medie',
+    'grosso','grossa','grossi','grosse',
+    'piccolo','piccola','piccoli','piccole',
+    'chiaro','chiara','chiari','chiare',
   ]);
   for(const name of allSurnames){
     if(name.length<4)continue;
