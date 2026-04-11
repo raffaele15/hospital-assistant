@@ -1349,10 +1349,16 @@ const ANON_CONFIG = {
       label: '[OPERATORE]', type: 'name' },
     // Single-word CamelCase surname on its own line, after [OPERATORE] context lines
     { pattern: /(?<=\[OPERATORE\]\r?\n)([A-Z][a-z\u00C0-\u00FF]{3,})(?=\r?\n)/gm,
+      replace: function(m, name) {
+        return TRAILING_SKIP.has(name.toLowerCase()) ? name : '[OPERATORE]';
+      },
       label: '[OPERATORE]', type: 'name' },
     // Single-word CamelCase surname immediately before role-code line (M/I/F/R + text)
     { pattern: /^([A-Z][a-z\u00C0-\u00FF]{3,})\r?\n(?=[MIFR][A-Z])/gm,
-      replace: (m, name) => '[OPERATORE]\n', label: '[OPERATORE]', type: 'name' },
+      replace: function(m, name) {
+        return TRAILING_SKIP.has(name.toLowerCase()) ? m : '[OPERATORE]\n';
+      },
+      label: '[OPERATORE]', type: 'name' },
     // ": COGNOME NOME" ALL-CAPS after colon on own line
     { pattern: /^\s*:\s*[A-Z]{3,}(?:\s+[A-Z]{3,})+\s*$/gm,
       label: ': [OPERATORE]', type: 'name' },
@@ -1537,7 +1543,11 @@ const ANON_CONFIG = {
     { pattern: /\([A-Z][a-z\u00C0-\u00FF]+(?:\s+[A-Z][a-z\u00C0-\u00FF]+){1,2}\)/g,
       label: '([OPERATORE])', type: 'name' },
     // Name after date in lab stamp headers
-    { pattern: /(?<=\d{2}\/\d{2}\/\d{4}\s+)(?!(?:Numero|Esame|Note|Motivo|Alla|Classe|Pagina|Reparto|Giorno|Page)\b)([A-Z][a-z\u00C0-\u00FF]{3,})(?=\s*$)/gm,
+    // Name after date in lab stamp headers — checked against TRAILING_SKIP at runtime
+    { pattern: /(?<=\d{2}\/\d{2}\/\d{4}\s+)([A-Z][a-z\u00C0-\u00FF]{3,})(?=\s*$)/gm,
+      replace: function(m, name) {
+        return TRAILING_SKIP.has(name.toLowerCase()) ? m : '[NOME]';
+      },
       label: '[NOME]', type: 'name' },
     // ── Registro Operatorio patterns ──────────────────────────────
     // DOTT./DOTT.SSA NOME COGNOME with comma-separated multiple names
