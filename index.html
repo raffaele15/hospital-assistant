@@ -3966,7 +3966,7 @@ async function syncLibraryToGitHub(){
     const sha=existing?.sha;
     const lib=loadLibrary();
     await ghApiPut(cfg,JSON.stringify(lib,null,2),sha);
-    ghStatus(`✓ ${lib.length} casi caricati su ${cfg.repo}/${cfg.path}`,'var(--green)');
+    ghStatus(`✓ ${lib.filter(x=>x.type!=='ward').length} casi · ${lib.filter(x=>x.type==='ward').length} reparti → ${cfg.repo}/${cfg.path}`,'var(--green)');
   }catch(e){ghStatus('✗ '+e.message,'var(--red)');}
 }
 async function pullLibraryFromGitHub(){
@@ -3982,7 +3982,7 @@ async function pullLibraryFromGitHub(){
     saveLibrary(lib);renderLibrary();
     localStorage.setItem('letteraai_lastpull',new Date().toISOString());
     updateLastPullTime();updateRefCaseNoCases();
-    ghStatus(`✓ ${lib.length} casi scaricati da ${cfg.repo}/${cfg.path}`,'var(--green)');
+    ghStatus(`✓ ${lib.filter(x=>x.type!=='ward').length} casi · ${lib.filter(x=>x.type==='ward').length} reparti ← ${cfg.repo}/${cfg.path}`,'var(--green)');
   }catch(e){ghStatus('✗ '+e.message,'var(--red)');}
 }
 
@@ -5079,7 +5079,7 @@ updateRefCaseNoCases();
     if(merged.length!==remote.length){
       ghStatus(`↓ Auto-sync: ${remote.length} casi da GitHub + ${localOnly.length} locali non ancora pushati`,'var(--blue)');
     } else {
-      ghStatus(`↓ Auto-sync: ${remote.length} casi caricati da GitHub`,'var(--dim)');
+      ghStatus(`↓ Auto-sync: ${remote.filter(x=>x.type!=='ward').length} casi · ${remote.filter(x=>x.type==='ward').length} reparti`,'var(--dim)');
     }
   }catch(e){
     console.warn('Auto-pull GitHub failed:',e.message);
