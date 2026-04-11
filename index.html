@@ -1258,6 +1258,11 @@ const TRAILING_SKIP = new Set([
   'ridotto','ridotta','modesto','modesta','discreto','discretamente',
   'sottile','sottili','crescita','alcuni','alcune','comparsa',
   'bradicardia','reperti','screening','positivo','negativo',
+  // ── Document section headers / structural terms (ALLCAPS false positives) ──
+  'emorragia','cerebrale','intraparenchimale','cranio','encefalo',
+  'emisoma','progetto','riabilitativo','indagine','frontespizio',
+  'infermieristico','neuro','energy','medica','batteriologica',
+  'sieroimmunologica','descrizione','multifibre',
 ]);
 
 // Italian compound-surname prepositions: when one of these appears in a CamelCase pair
@@ -1273,8 +1278,8 @@ function shouldSkipName(words) {
   // Returns true if this should NOT be treated as a name
   const nonPrep = words.filter(w => !SURNAME_PREPS.has(w.toLowerCase()));
   if (nonPrep.length === 0) return true; // all prepositions → skip
-  // If every non-preposition word is in TRAILING_SKIP → skip (clinical term)
-  return nonPrep.every(w => TRAILING_SKIP.has(w.toLowerCase()));
+  // If ANY non-preposition word is in TRAILING_SKIP → skip (clinical term)
+  return nonPrep.some(w => TRAILING_SKIP.has(w.toLowerCase()));
 }
 
 const ANON_CONFIG = {
@@ -1489,13 +1494,7 @@ const ANON_CONFIG = {
     // ── LAB HEADER — protect "Costituente Risultato Unita'" line ──────────
     { pattern: /^Costituente\s+Risultato\s+Unit[^\n]*/gm,
       label: '[INTESTAZIONE_LAB]', type: 'boiler' },
-    // ── LAB NOTES — protect clinical comments in lab blocks ───────────────
-    { pattern: /^(?:alterata\s+a\s+digiuno|gravidanza)\s*:[^\n]*/gim,
-      label: '[NOTA_LAB]', type: 'boiler' },
-    { pattern: /Obiettivo\s+terapeutico\s*:\s*[\d,\.]+/gi,
-      label: '[OBIETTIVO_TERAPEUTICO]', type: 'boiler' },
-    { pattern: /^Commento\s*:\s*[^\n]+/gim,
-      label: '[COMMENTO_LAB]', type: 'boiler' },
+    // ── LAB NOTES — preserve clinical comments in lab blocks ───────────────
     // ECG metadata
     { pattern: /\b[A-Z]{2,}(?:\s+[A-Z]{2,})+(?=\s+(?:Età|Sesso|Nome|Cognome)\s*:)/g,
       label: '[PAZIENTE]', type: 'name' },
