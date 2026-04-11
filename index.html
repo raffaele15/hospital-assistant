@@ -535,7 +535,7 @@ hr.div{border:none;border-top:1px solid var(--border);margin:18px 0}
     <label>Personal Access Token (PAT)</label>
     <input type="password" id="cfg_gh_token" placeholder="ghp_xxxxxxxxxxxxxxxxxxxx">
     <label>Nome Repository</label>
-    <input type="text" id="cfg_gh_repo" placeholder="Es: hospital-assistant" value="hospital-assistant">
+    <input type="text" id="cfg_gh_repo" placeholder="Es: hospital-assistant-data" value="hospital-assistant-data">
     <label>Percorso file JSON nel repo</label>
     <input type="text" id="cfg_gh_path" placeholder="cases.json" value="cases.json">
     <div style="display:flex;gap:8px;margin-top:12px;flex-wrap:wrap;">
@@ -3824,7 +3824,6 @@ function saveBaseSettings(){
     regex:document.getElementById('cfg_regex').value,
     surnamesUrl:document.getElementById('cfg_surnames_url').value,
     firstNamesUrl:document.getElementById('cfg_firstnames_url').value,
-    ghRepo:document.getElementById('cfg_gh_repo').value,
     ghPath:document.getElementById('cfg_gh_path').value,
   }));showToast('Impostazioni salvate.');
 }
@@ -3834,11 +3833,13 @@ function loadBaseSettings(){
     if(c.regex)document.getElementById('cfg_regex').value=c.regex;
     if(c.surnamesUrl)document.getElementById('cfg_surnames_url').value=c.surnamesUrl;
     if(c.firstNamesUrl)document.getElementById('cfg_firstnames_url').value=c.firstNamesUrl;
-    if(c.ghRepo)document.getElementById('cfg_gh_repo').value=c.ghRepo;
+    // Repo: sempre dal default hardcoded, mai da localStorage
+    document.getElementById('cfg_gh_repo').value=DEFAULT_GH_REPO;
     if(c.ghPath)document.getElementById('cfg_gh_path').value=c.ghPath||'cases.json';
-    // Pulisci eventuali token rimasti da versioni precedenti
-    if(c.ghToken){
+    // Pulisci eventuali dati obsoleti da versioni precedenti
+    if(c.ghToken||c.ghRepo){
       delete c.ghToken;
+      delete c.ghRepo;
       localStorage.setItem('letteraai_cfg',JSON.stringify(c));
     }
   }catch(e){}
@@ -3906,7 +3907,7 @@ async function resolveGitHubOwner(token){
 function getGitHubCfgSync(){
   const c=JSON.parse(localStorage.getItem('letteraai_cfg')||'{}');
   const token=document.getElementById('cfg_gh_token')?.value?.trim() || DEFAULT_GH_TOKEN;
-  let repo=c.ghRepo || DEFAULT_GH_REPO;
+  let repo=document.getElementById('cfg_gh_repo')?.value?.trim() || DEFAULT_GH_REPO;
   if(repo && !repo.includes('/') && _ghOwnerCache){
     repo=_ghOwnerCache+'/'+repo;
   }
@@ -3916,7 +3917,7 @@ function getGitHubCfgSync(){
 async function getGitHubCfg(){
   const c=JSON.parse(localStorage.getItem('letteraai_cfg')||'{}');
   const token=document.getElementById('cfg_gh_token')?.value?.trim() || DEFAULT_GH_TOKEN;
-  let repo=c.ghRepo || DEFAULT_GH_REPO;
+  let repo=document.getElementById('cfg_gh_repo')?.value?.trim() || DEFAULT_GH_REPO;
   const path=c.ghPath || DEFAULT_GH_PATH || 'cases.json';
   if(!token || !repo) return { token, repo, path };
   if(!repo.includes('/')){
