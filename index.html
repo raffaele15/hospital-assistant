@@ -4774,7 +4774,7 @@ function renderFpV2Preview(fpObj){
   const fkArrayFields=['apertura','connettori','incertezza','chiusura']
     .map(function(k){return field('fp_fk_'+k,k+' (uno per riga)',(fk[k]||[]).join('\n'));}).join('');
 
-  const ovExtraFields=['esami','accertamenti','terapia_domiciliare','terapia_dimissione','stile']
+  const ovExtraFields=['esami','terapia_domiciliare','terapia_dimissione','stile']
     .map(function(k){return '<div style="margin-top:8px;">'+field('fp_ov_'+k,k,ov[k],2)+'</div>';}).join('');
 
   container.innerHTML=
@@ -4848,12 +4848,10 @@ function saveFpEdits(editorId){
     override_rules:{
       eon_schema:val('fp_ov_eon_schema'),
       esami:val('fp_ov_esami'),
-      accertamenti:val('fp_ov_accertamenti'),
       terapia_domiciliare:val('fp_ov_terapia_domiciliare'),
       terapia_dimissione:val('fp_ov_terapia_dimissione'),
       stile:val('fp_ov_stile'),
     },
-    qualita:orig.qualita||{},
   };
   newTplFingerprintJson=JSON.stringify(updated);
   container._fpObj=updated;
