@@ -2037,6 +2037,8 @@ function applyNameDict(text) {
     // ── Termini clinici/anatomici che sono anche cognomi italiani ──
     'gentili','franca','franco','corso','corsi',
     'vigile','vigili','semplici','semplice',
+    'alla','alle','allo','agli',
+    'esami','motivi','pazienti',
     'capo','piano','piani','presente','presenti',
     'durante','bianco','bianchi','bianca','bianche',
     'rosso','rossi','rossa','rosse',
@@ -2218,9 +2220,26 @@ function runPipeline() {
 
         // ── GLOBAL SWEEP ────────────────────────────────────────────────────
         // Every name detected gets replaced in ALL its occurrences for consistency.
+        // Skip common clinical words that might have been caught as part of a larger match.
+        const SWEEP_SKIP = new Set([
+          'alla','alle','allo','agli','della','delle','dello','degli',
+          'nella','nelle','nello','negli','sulla','sulle','sullo','sugli',
+          'dalla','dalle','dallo','dagli',
+          'esame','esami','motivo','motivi','paziente','pazienti',
+          'data','date','nome','cognome','firma','tipo',
+          'obiettivo','obiettivi','generale','generali',
+          'ingresso','uscita','reparto','reparti',
+          'clinica','clinico','clinici','cliniche',
+          'decorso','terapia','diagnosi','anamnesi',
+          'dimissione','ricovero','medico','medici',
+          'luce','nota','noto','noti','note',
+          'stampa','stampato','rappresentazione',
+        ]);
         const sweepReps = [...reps].sort((a,b) => b.orig.length - a.orig.length);
         for (const r of sweepReps) {
           if (!r.orig || r.orig.length < 2) continue;
+          // Skip single clinical words that shouldn't be globally replaced
+          if (!r.orig.includes(' ') && SWEEP_SKIP.has(r.orig.toLowerCase())) continue;
           try {
             const esc = r.orig.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
             finalText = finalText.replace(new RegExp(esc, 'g'), r.repl);
@@ -4394,8 +4413,23 @@ async function processCasePdf(file) {
       const res2   = applyNameDict(res.text);
       const merged = [...res.reps, ...res2.reps];
       let finalText = restore(res2.text);
+      const SWEEP_SKIP = new Set([
+        'alla','alle','allo','agli','della','delle','dello','degli',
+        'nella','nelle','nello','negli','sulla','sulle','sullo','sugli',
+        'dalla','dalle','dallo','dagli',
+        'esame','esami','motivo','motivi','paziente','pazienti',
+        'data','date','nome','cognome','firma','tipo',
+        'obiettivo','obiettivi','generale','generali',
+        'ingresso','uscita','reparto','reparti',
+        'clinica','clinico','clinici','cliniche',
+        'decorso','terapia','diagnosi','anamnesi',
+        'dimissione','ricovero','medico','medici',
+        'luce','nota','noto','noti','note',
+        'stampa','stampato','rappresentazione',
+      ]);
       for (const r of [...merged].sort((a, b) => b.orig.length - a.orig.length)) {
         if (!r.orig || r.orig.length < 2) continue;
+        if (!r.orig.includes(' ') && SWEEP_SKIP.has(r.orig.toLowerCase())) continue;
         try {
           const esc = r.orig.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
           finalText = finalText.replace(new RegExp(esc, 'g'), r.repl);
