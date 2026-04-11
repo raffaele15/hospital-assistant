@@ -264,8 +264,6 @@ hr.div{border:none;border-top:1px solid var(--border);margin:18px 0}
   </div>
   <label>Testo Completo del Paziente</label>
   <textarea id="inp_raw" style="flex:1;min-height:200px;" placeholder="Incolla qui il testo copiato dal PDF...&#10;&#10;Può contenere tutto, incluse intestazioni ospedaliere — verranno rimosse automaticamente."></textarea>
-  <label>Diagnosi Principale</label>
-  <input type="text" id="inp_diagnosi" placeholder='Es: "Sospetto minor stroke silviano destro a genesi indeterminata"'>
   <div class="btn-row">
     <button class="btn btn-p" onclick="goToAnon()">Avanti → Anonimizza</button>
     <button class="btn btn-g" onclick="clearAll()">✕ Reset</button>
@@ -1262,6 +1260,23 @@ const TRAILING_SKIP = new Set([
   'bradicardia','reperti','screening','positivo','negativo',
 ]);
 
+// Italian compound-surname prepositions: when one of these appears in a CamelCase pair
+// AND the other word is NOT in TRAILING_SKIP, treat as a name (e.g. "Alice Dalle" → name).
+// Only blocks anonymization if ALL non-preposition words are in TRAILING_SKIP.
+const SURNAME_PREPS = new Set([
+  'dal','dalla','dalle','dallo','del','della','delle','dello',
+  'dei','degli','di','de','la','lo','li','le',
+]);
+
+function shouldSkipName(words) {
+  // words: array of strings from a matched CamelCase group
+  // Returns true if this should NOT be treated as a name
+  const nonPrep = words.filter(w => !SURNAME_PREPS.has(w.toLowerCase()));
+  if (nonPrep.length === 0) return true; // all prepositions → skip
+  // If every non-preposition word is in TRAILING_SKIP → skip (clinical term)
+  return nonPrep.every(w => TRAILING_SKIP.has(w.toLowerCase()));
+}
+
 const ANON_CONFIG = {
   regexRules: [
     // ── Intestazioni istituzionali AOUP / Regione Veneto ────────────────────
@@ -1337,7 +1352,7 @@ const ANON_CONFIG = {
     // "Dr. I. D'Errico" / "dott Pieroni" / "prof Guerra" — flexible title (with/without dot,
     // any case: dott dott. Dott. dr Dr. prof Prof. med), optional ssa suffix,
     // optional initials, then name with compound/apostrophe surnames
-    { pattern: /(?:[Dd]ott\.?(?:ssa\.?)?|[Dd]r\.?(?:ssa\.?)?|[Pp]rof\.?(?:ssa\.?)?|[Mm]ed\.?)\s+(?:[A-Z]\.\s*){0,3}[A-Z][a-zA-Z'\u00C0-\u00FF\-]{2,}(?:\s+(?:De[ilr]?|Da[il]?|Dal|Di|Della|Von|Al|El)\s+[A-Z][a-zA-Z'\u00C0-\u00FF]+|\s+(?![Dd]ott\.?|[Dd]r\.?|[Pp]rof\.?)[A-Z][a-zA-Z'\u00C0-\u00FF\-]+)*/g,
+    { pattern: /(?:[Dd]ott\.?(?:ssa\.?)?|[Dd]r\.?(?:ssa\.?)?|[Pp]r?of\.?(?:ssa\.?)?|[Pp]orf\.?|[Mm]ed\.?)\s*(?:[A-Z]\.\s*){0,3}[A-Z][a-zA-Z'\u00C0-\u00FF\-]{2,}(?:\s+(?:De[ilr]?|Da[il]?|Dal|Di|Della|Von|Al|El)\s+[A-Z][a-zA-Z'\u00C0-\u00FF]+|\s+(?![Dd]ott\.?|[Dd]r\.?|[Pp]rof\.?)[A-Z][a-zA-Z'\u00C0-\u00FF\-]+)*/g,
       label: '[OPERATORE]', type: 'name' },
     // "[NOME]NomeCognome" or "LUCACognome" — patient name glued to label "Cognome"
     { pattern: /[A-Za-z\u00C0-\u00FF]+(?=Cognome\b)/g,
@@ -1348,7 +1363,7 @@ const ANON_CONFIG = {
     // Standalone "Cognome Nome" CamelCase pair on its own line
     { pattern: /^([A-Z][a-z\u00C0-\u00FF]{2,})\s+([A-Z][a-z\u00C0-\u00FF]{2,})\s*$/gm,
       replace: function(m, w1, w2) {
-        if (TRAILING_SKIP.has(w1.toLowerCase()) || TRAILING_SKIP.has(w2.toLowerCase())) return m;
+        if (shouldSkipName([w1, w2])) return m;
         return '[OPERATORE]';
       },
       label: '[OPERATORE]', type: 'name' },
@@ -1403,7 +1418,7 @@ const ANON_CONFIG = {
     { pattern: /\b([A-Z][a-z\u00C0-\u00FF]+(?:\s+[A-Z][a-z\u00C0-\u00FF]+){1,2})(?=\s*[MIFR](?:[A-Za-z0-9]|\s|$)|\s+[MIFR]\s+[A-Za-z])/g,
       replace: function(m, words) {
         const ws = words.trim().split(/\s+/);
-        if (ws.some(w => TRAILING_SKIP.has(w.toLowerCase()))) return m;
+        if (shouldSkipName(ws)) return m;
         return '[OPERATORE]';
       },
       label: '[OPERATORE]', type: 'name' },
@@ -1510,7 +1525,7 @@ const ANON_CONFIG = {
     { pattern: /\b(?!(?:STROKE|ESAMI|PROFILO|ANAMNESI|DECORSO|TERAPIA|MOTIVO|REGIONE|AZIENDA|MARCATORI|EMATOLOGIA|COSTITUENTI|UNITA|DI|DEL|DELLA|DEGLI|DELLE|AI|AL)\b)[A-Z]{2,}(?:\s+(?!(?:STROKE|ESAMI|PROFILO|ANAMNESI|DECORSO|TERAPIA|MOTIVO|REGIONE|AZIENDA|MARCATORI|EMATOLOGIA|COSTITUENTI|UNITA|UNIT|DI|DEL|DELLA|DEGLI|DELLE|LAB|LABORATORIO|FISIOLOGICA|PATOLOGICA|CLINICO|LIPIDICO|PROTEICO|ERITROCITARIO|COAGULATIVO|RENALE|EPATICA|TIROIDEA|MUSCOLARI|SPECIALI|LEUCOCITARIA|FLOGOSI|URINE|MICROBIOLOGICI|BIOCHIMICI)\b)[A-Z]{2,})+(?=[A-Z][a-z])/g,
       label: '[PAZIENTE]', type: 'name' },
     // Signature blocks — flexible title (dott/dr/prof with or without dot, any case)
-    { pattern: /(?:[Dd]ott\.?(?:ssa\.?)?|[Dd]r\.?(?:ssa\.?)?|[Pp]rof\.?(?:ssa\.?)?|[Mm]ed\.?)\s+(?:[A-Z]\.\s*){0,4}[A-Z][a-zA-Z'\u00C0-\u00FF]+(?:\s+(?![Dd]ott\.?|[Dd]r\.?|[Pp]rof\.?)[A-Z][a-zA-Z'\u00C0-\u00FF]+)*/g,
+    { pattern: /(?:[Dd]ott\.?(?:ssa\.?)?|[Dd]r\.?(?:ssa\.?)?|[Pp]r?of\.?(?:ssa\.?)?|[Pp]orf\.?|[Mm]ed\.?)\s*(?:[A-Z]\.\s*){0,4}[A-Z][a-zA-Z'\u00C0-\u00FF]+(?:\s+(?![Dd]ott\.?|[Dd]r\.?|[Pp]rof\.?)[A-Z][a-zA-Z'\u00C0-\u00FF]+)*/g,
       label: '[OPERATORE]', type: 'name' },
     { pattern: /\bD\.\s+[A-Z][a-zA-Z\u00C0-\u00FF]{2,}(?:\s+[A-Z][a-zA-Z\u00C0-\u00FF]+)+/g,
       label: '[OPERATORE]', type: 'name' },
@@ -1572,7 +1587,7 @@ const ANON_CONFIG = {
       replace: function(m, w1, rest) {
         // Check each word against TRAILING_SKIP
         const words = (w1 + rest).trim().split(/\s+/);
-        if (words.some(w => TRAILING_SKIP.has(w.toLowerCase()))) return m;
+        if (shouldSkipName(words)) return m;
         return '[OPERATORE]';
       },
       label: '[OPERATORE]', type: 'name' },
@@ -1603,14 +1618,14 @@ const ANON_CONFIG = {
     // CamelCase name pair after colon at end of line (e.g. "...: Tiziana Bettella")
     { pattern: /(?<=:\s*)([A-Z][a-z\u00C0-\u00FF]{2,})\s+([A-Z][a-z\u00C0-\u00FF]{2,})(?=\s*$)/gm,
       replace: function(m, w1, w2) {
-        if (TRAILING_SKIP.has(w1.toLowerCase()) || TRAILING_SKIP.has(w2.toLowerCase())) return m;
+        if (shouldSkipName([w1, w2])) return m;
         return '[OPERATORE]';
       },
       label: '[OPERATORE]', type: 'name' },
     // ALLCAPS NOME COGNOME followed by colon (e.g. "FORNASIER TOMMASO:")
     { pattern: /(?:^|\n)\s*([A-Z]{2,})\s+([A-Z]{2,})\s*:/gm,
       replace: function(m, w1, w2) {
-        if (TRAILING_SKIP.has(w1.toLowerCase()) || TRAILING_SKIP.has(w2.toLowerCase())) return m;
+        if (shouldSkipName([w1, w2])) return m;
         return '[OPERATORE]:';
       },
       label: '[OPERATORE]:', type: 'name' },
@@ -3200,7 +3215,7 @@ function getActiveWardName(){
 }
 
 function buildLetterTemplate(){
-  const diagnosi=document.getElementById('inp_diagnosi').value.trim()||'[DIAGNOSI_PRINCIPALE]';
+  const diagnosi='[DIAGNOSI_PRINCIPALE]';
   const today=new Date().toLocaleDateString('it-IT',{day:'2-digit',month:'2-digit',year:'numeric'});
   const tipo=getLetterTemplateType();
   const ward=(document.getElementById('transferWard')?.value||'altro reparto').trim();
@@ -4057,7 +4072,7 @@ function exportWord(){
 function newLetter(){
   if(!confirm('Nuova lettera? I dati correnti andranno persi.'))return;
   S.rawText=S.cleanText=S.anonText=S.letter='';S.strippedBlocks=[];S.patientData={nome:'',cognome:'',dataNascita:''};
-  document.getElementById('inp_raw').value='';document.getElementById('inp_diagnosi').value='';
+  document.getElementById('inp_raw').value='';
   document.getElementById('letterOut').textContent='—';document.getElementById('usageInfo').style.display='none';
   document.querySelectorAll('.ni').forEach(n=>n.classList.remove('done'));
   goTo(0);
@@ -4119,7 +4134,6 @@ function escR(s){return s.replace(/[.*+?^${}()|[\]\\]/g,'\\$&');}
 function clearAll(){
   if(!confirm('Cancellare tutto?'))return;
   document.getElementById('inp_raw').value='';
-  document.getElementById('inp_diagnosi').value='';
   S.rawText=S.cleanText=S.anonText=S.letter='';S.strippedBlocks=[];S.patientData={nome:'',cognome:'',dataNascita:''};
   S_XLS.text='';S_XLS.filename='';
   // Reset PDF status
