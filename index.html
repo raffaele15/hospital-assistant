@@ -1489,15 +1489,8 @@ const ANON_CONFIG = {
       label: '[CODICE_FISCALE]', type: 'id' },
     { pattern: /\([A-Z][a-z\u00C0-\u00FF]+(?:\s+[A-Z][a-z\u00C0-\u00FF]+){1,2}\)/g,
       label: '([OPERATORE])', type: 'name' },
-    // Trailing first name after placeholder
-    { pattern: /(?<=\[(?:OPERATORE|PAZIENTE)\]\s+)([A-Z][a-z\u00C0-\u00FF]{3,})(?=[,\s.])/g,
-      label: '[NOME]', type: 'name' },
-    // Leading first name before placeholder (e.g. "19:46Francesca [OPERATORE]")
-    { pattern: /([A-Z][a-z\u00C0-\u00FF]{3,})\s+\[(?:OPERATORE|NOME)\]/g,
-      replace: function(m, name) { return '[OPERATORE] [OPERATORE]'; },
-      label: '[OPERATORE]', type: 'name' },
     // Name after date in lab stamp headers
-    { pattern: /(?<=\d{2}\/\d{2}\/\d{4}\s+)([A-Z][a-z\u00C0-\u00FF]{3,})(?=\s*$)/gm,
+    { pattern: /(?<=\d{2}\/\d{2}\/\d{4}\s+)(?!(?:Numero|Esame|Note|Motivo|Alla|Classe|Pagina|Reparto|Giorno|Page)\b)([A-Z][a-z\u00C0-\u00FF]{3,})(?=\s*$)/gm,
       label: '[NOME]', type: 'name' },
     // ── Registro Operatorio patterns ──────────────────────────────
     // DOTT./DOTT.SSA NOME COGNOME with comma-separated multiple names
@@ -1535,11 +1528,20 @@ const ANON_CONFIG = {
     { pattern: /[A-Z][a-z\u00C0-\u00FF]{3,}[A-Z]{2,3}(?=\s|$)/gm,
       label: '[OPERATORE]', type: 'name' },
     // CamelCase name pair after colon at end of line (e.g. "...: Tiziana Bettella")
-    { pattern: /(?<=:\s*)(?!(?:Esame|Anamnesi|Decorso|Terapia|Motivo|Clinica|Stroke|Pronto|Reparto|Diagnosi|Profilo|Formula|Conteggio)\s)[A-Z][a-z\u00C0-\u00FF]{2,}\s+[A-Z][a-z\u00C0-\u00FF]{2,}(?=\s*$)/gm,
+    { pattern: /(?<=:\s*)(?!(?:Esame|Anamnesi|Decorso|Terapia|Motivo|Clinica|Stroke|Pronto|Reparto|Diagnosi|Profilo|Formula|Conteggio|Lieve|Paresi|Grave|Plegia|Segni|Respiro|Vigile|Ingresso|Uscita|Addome|Diuresi|Obiettivo|Generale|Paziente|Presenza|Stazionario|Esiti|Ridotto|Modesto|Modesta|Discreto|Sottile|Crescita|Alcuni|Alcune|Comparsa|Sostanzialmente|Bradicardia|Reperti|Numero|Screeni)\s)[A-Z][a-z\u00C0-\u00FF]{2,}\s+[A-Z][a-z\u00C0-\u00FF]{2,}(?=\s*$)/gm,
       label: '[OPERATORE]', type: 'name' },
     // ALLCAPS NOME COGNOME followed by colon (e.g. "FORNASIER TOMMASO:")
     { pattern: /(?:^|\n)\s*(?!(?:STROKE|CLINICA|PRONTO|ESAME|ANAMNESI|DECORSO|TERAPIA|MOTIVO|REPARTO|AZIENDA|REGIONE|PROFILO|DIAGNOSI|EMATOLOGIA|COSTITUENTI|MARCATORI|FORMULA|CONTEGGIO|MICROSCOPIA|METABOLITI)\b)[A-Z]{2,}\s+[A-Z]{2,}\s*:/gm,
       label: '[OPERATORE]:', type: 'name' },
+    // ── Cleanup pass: residual names adjacent to placeholders ──────
+    // These run AFTER all other patterns have created [OPERATORE]/[PAZIENTE] placeholders
+    // Trailing first name after placeholder — SAME LINE ONLY (no newline in lookbehind gap)
+    { pattern: /(?<=\[(?:OPERATORE|PAZIENTE)\][^\S\n]+)(?!(?:Fisico|Obiettivo|Generale|Neurologico|Neurologica|Patologica|Remota|Prossima|Fisiologica|Familiare|Clinico|Diagnostico|Intervento|Motivo|Esame|Esami|Alla|Alle|Allo|Agli|Note|Noto|Noti|Nota|Verso|Decorso|Durante|Anamnesi|Terapia|Allergie|Paziente|Pazienti|Dalla|Dalle|Nella|Nelle|Sulla|Sulle|Della|Delle|Dello|Degli|Stampa|Stampato|Lieve|Paresi|Plegia|Grave|Segni|Respiro|Addome|Diuresi|Apiretico|Vigile|Stazionario|Presenta|Prosegue|Somministrata|Rilevati|Monitorata|Posturato|Numero|Montserrat|Ingresso|Uscita|Esiti|Resto|Presso|Previo|Data|Tipo|Classe|Reparto|Giorno|Ricovero|Nessuna|Sostanzialmente)\b)([A-Z][a-z\u00C0-\u00FF]{3,})(?=[,\s.)\]])/g,
+      label: '[NOME]', type: 'name' },
+    // Leading first name before placeholder (e.g. "19:46Francesca [OPERATORE]")
+    { pattern: /([A-Z][a-z\u00C0-\u00FF]{3,})\s+\[(?:OPERATORE|NOME)\]/g,
+      replace: function(m, name) { return '[OPERATORE] [OPERATORE]'; },
+      label: '[OPERATORE]', type: 'name' },
   ],
 
   nameDict_fallback: [],
@@ -2131,6 +2133,14 @@ function applyNameDict(text) {
     'grosso','grossa','grossi','grosse',
     'piccolo','piccola','piccoli','piccole',
     'chiaro','chiara','chiari','chiare',
+    'paresi','uscita','numero','numeri',
+    'presenza','stazionario','stazionaria',
+    'prosegue','somministrata','somministrato',
+    'rilevati','rilevato','rilevata',
+    'monitorata','monitorato','posturato','posturata',
+    'presenta','presentano','diuresi',
+    'apiretico','apiretica',
+    'verso','allergie','allergia',
   ]);
   for(const name of allSurnames){
     if(name.length<4)continue;
@@ -2260,6 +2270,13 @@ function runPipeline() {
           'dimissione','ricovero','medico','medici',
           'luce','nota','noto','noti','note',
           'stampa','stampato','rappresentazione',
+          'lieve','paresi','plegia','grave','segni',
+          'respiro','vigile','presenza','stazionario',
+          'verso','durante','allergie','numero',
+          'fisico','diagnostico','intervento',
+          'addome','diuresi','apiretico',
+          'prosegue','somministrata','rilevati',
+          'monitorata','posturato','presenta',
         ]);
         const sweepReps = [...reps].sort((a,b) => b.orig.length - a.orig.length);
         for (const r of sweepReps) {
@@ -4453,6 +4470,13 @@ async function processCasePdf(file) {
         'dimissione','ricovero','medico','medici',
         'luce','nota','noto','noti','note',
         'stampa','stampato','rappresentazione',
+        'lieve','paresi','plegia','grave','segni',
+        'respiro','vigile','presenza','stazionario',
+        'verso','durante','allergie','numero',
+        'fisico','diagnostico','intervento',
+        'addome','diuresi','apiretico',
+        'prosegue','somministrata','rilevati',
+        'monitorata','posturato','presenta',
       ]);
       for (const r of [...merged].sort((a, b) => b.orig.length - a.orig.length)) {
         if (!r.orig || r.orig.length < 2) continue;
