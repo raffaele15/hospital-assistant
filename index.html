@@ -4417,12 +4417,12 @@ async function ghApiGet(cfg){
   if(r.status===404)return null;
   if(!r.ok)throw new Error(`GitHub GET ${r.status}: ${await r.text()}`);
   const meta=await r.json();
-  // For large files (>1MB), GitHub may not include content — use download_url instead
+  // For large files (>1MB), GitHub may omit content — fetch raw text via download_url
   if(!meta.content && meta.download_url){
-    const dl=await fetch(meta.download_url,{headers:{Authorization:`token ${cfg.token}`}});
-    if(!dl.ok)throw new Error(`GitHub download ${dl.status}`);
-    const text=await dl.text();
-    return { ...meta, _rawText: text };
+    try{
+      const dl=await fetch(meta.download_url);
+      if(dl.ok) meta._rawText = await dl.text();
+    }catch(e){ console.warn('download_url fallback failed:',e); }
   }
   return meta;
 }
