@@ -1330,12 +1330,12 @@ const ANON_CONFIG = {
       label: '([DATA_NASCITA])', type: 'date' },
     { pattern: /(?:^|\r?\n)\s*(?:Paziente|Intestatario|Nominativo)\s*:\s*(?!(?:Nato|Data|Sesso|Cod|RIC|vigile|orientato|deceduto)\b)[A-Z][a-z\u00C0-\u00FF]+(?:\s+(?!(?:Nato|Data|Sesso|Cod|RIC)\b)[A-Z][a-z\u00C0-\u00FF]+)?/gm,
       label: '[PAZIENTE]', type: 'name' },
-    { pattern: /(?<=dimettiamo\s+in\s+data\s+odierna\s+(?:il\s+Sig\.?ra?\.?\s+|la\s+Sig\.?ra\.?\s+))[A-Z][a-zA-Z\u00C0-\u00FF]+(?:\s+[A-Z][a-zA-Z\u00C0-\u00FF]+)?(?=\s*,)/gi,
+    { pattern: /(?<=(?:dimettiamo|trasferiamo)\s+in\s+data\s+odierna\s+(?:il\s+[Ss]ig\.?(?:nor)?(?:ra?)?\.?\s+|la\s+[Ss]ig\.?(?:nora)?(?:ra)?\.?\s+))[A-Z][a-zA-Z\u00C0-\u00FF]+(?:\s+[A-Z][a-zA-Z\u00C0-\u00FF]+)?(?=\s*,)/gi,
       label: '[PAZIENTE]', type: 'name' },
-    { pattern: /\bil\s+(?:[Ss]ig\.(?:ra)?|[Pp]aziente)\s+([A-Z][a-zA-Z\u00C0-\u00FF]+(?:\s+[A-Z][a-zA-Z\u00C0-\u00FF]+)?)/g,
+    { pattern: /\bil\s+(?:[Ss]ig\.(?:nor)?(?:ra)?|[Pp]aziente)\s+([A-Z][a-zA-Z\u00C0-\u00FF]+(?:\s+[A-Z][a-zA-Z\u00C0-\u00FF]+){0,2})/g,
       label: 'il sig. [PAZIENTE]', type: 'name' },
-    // "Sig. Cognome" / "Sig.ra Cognome" in report headers
-    { pattern: /\bSig\.(?:ra\.?)?\s+[A-Z][a-z\u00C0-\u00FF]{2,}/g,
+    // "Sig. Cognome Nome" / "Sig.ra Cognome Nome" in report headers (1-2 words)
+    { pattern: /\bSig\.(?:ra\.?)?\s+[A-Z][a-z\u00C0-\u00FF]{2,}(?:\s+[A-Z][a-z\u00C0-\u00FF]{2,})?/g,
       label: '[PAZIENTE]', type: 'name' },
     // ALL-CAPS surname immediately before [NOME] tag
     { pattern: /\b[A-Z]{3,}(?=\s+\[NOME\])/g,
@@ -1410,7 +1410,7 @@ const ANON_CONFIG = {
     { pattern: /(\[OPERATORE\][^\n]*?\se\s)([A-Z][a-z\u00C0-\u00FF]{3,})/g,
       replace: (m,pre,name) => pre+'[OPERATORE]', label: 'e [OPERATORE]', type: 'name' },
     // ─────────────────────────────────────────────────────────────────────────
-    { pattern: /\bla\s+[Ss]ig\.?ra\.?\s+([A-Z][a-zA-Z\u00C0-\u00FF]+)/g,
+    { pattern: /\bla\s+[Ss]ig\.?(?:nora)?(?:ra)?\.?\s+([A-Z][a-zA-Z\u00C0-\u00FF]+(?:\s+[A-Z][a-zA-Z\u00C0-\u00FF]+){0,2})/g,
       label: 'la sig.ra [PAZIENTE]', type: 'name' },
     { pattern: /\b[A-Za-z0-9._%+\-]+@[A-Za-z0-9.\-]+\.[A-Za-z]{2,}\b/g,
       label: '[EMAIL]', type: 'id' },
@@ -2314,14 +2314,65 @@ function extractPatientData(rawText) {
   const pd = { nome: '', cognome: '', dataNascita: '' };
   const lines = rawText.split('\n');
 
+  // Helper: expand 2-digit year to 4-digit
+  function expandYear(d) {
+    return d.replace(/(\d{2}[\/\-]\d{2}[\/\-])(\d{2})$/, (m,pre,yy) => {
+      const y = parseInt(yy);
+      return pre + (y > 30 ? '19' : '20') + yy;
+    });
+  }
+
+  // ── Pattern 0 (HIGHEST PRIORITY) — Frontespizio ────────────────────────
+  // "COGNOME NOMEPaziente: DD/MM/YYYY" (glued) or with whitespace/newline
+  // This is the most reliable source: the demographic header at the top of the PDF
+  {
+    // Try glued format first: "COGNOME NOMEPaziente:" (PDF.js often concatenates)
+    const fpGlued = rawText.match(/([A-ZÀÈÉÌÒÙ][A-ZÀÈÉÌÒÙ'\- ]+?)(?:\s*)Paziente\s*:\s*(\d{2}\/\d{2}\/\d{4})/);
+    if (fpGlued) {
+      const namePart = fpGlued[1].trim();
+      const words = namePart.split(/\s+/).filter(w => w.length >= 2);
+      if (words.length >= 2) {
+        // Last word is nome, everything before is cognome (handles "DE ROSSI MARIO")
+        pd.nome = words.pop();
+        pd.cognome = words.join(' ');
+        pd.dataNascita = fpGlued[2];
+      }
+    }
+    // Also try: name on line before "Paziente: DD/MM/YYYY"
+    if (!pd.cognome || !pd.nome) {
+      for (let i = 0; i < lines.length; i++) {
+        const pzM = lines[i].match(/^\s*Paziente\s*:\s*(\d{2}\/\d{2}\/\d{4})/);
+        if (pzM && i > 0) {
+          const prev = lines[i-1].trim();
+          const words = prev.split(/\s+/).filter(w => /^[A-ZÀÈÉÌÒÙ]/.test(w) && w.length >= 2);
+          if (words.length >= 2) {
+            pd.nome = words.pop();
+            pd.cognome = words.join(' ');
+            pd.dataNascita = pzM[1];
+            break;
+          }
+        }
+      }
+    }
+  }
+
   // Pattern 1 — "Cognome: ROSSI  Nome: MARIO  Data nascita: 01/01/1940"
+  // Only fill fields not already found by Pattern 0 (frontespizio)
   for (const line of lines) {
-    const cogM = line.match(/Cognome\s*[:\s]+([A-ZÀ-Ü][A-Za-zÀ-ü\s'\-]{1,40}?)(?:\s{2,}|\t|$)/i);
-    const nomM = line.match(/\bNome\s*[:\s]+([A-ZÀ-Ü][A-Za-zÀ-ü\s'\-]{1,40}?)(?:\s{2,}|\t|$)/i);
-    const dnM  = line.match(/[Nn]ato\/a\s+il\s+(\d{2}[\/\-]\d{2}[\/\-]\d{4})|[Dd]ata\s+(?:di\s+)?[Nn]ascita\s*[:\s]+(\d{2}[\/\-]\d{2}[\/\-]\d{4})/);
-    if (cogM) pd.cognome = cogM[1].trim();
-    if (nomM) pd.nome    = nomM[1].trim();
-    if (dnM)  pd.dataNascita = (dnM[1]||dnM[2]).replace(/-/g,'/');
+    // Guard: skip lines containing "NOME COMPLETO" (it's a label, not a name)
+    if (/NOME\s+COMPLETO/i.test(line)) continue;
+    if (!pd.cognome) {
+      const cogM = line.match(/Cognome\s*[:\s]+([A-ZÀ-Ü][A-Za-zÀ-ü\s'\-]{1,40}?)(?:\s{2,}|\t|$)/i);
+      if (cogM) pd.cognome = cogM[1].trim();
+    }
+    if (!pd.nome) {
+      const nomM = line.match(/(?<!\w)Nome\s*[:\s]+([A-ZÀ-Ü][A-Za-zÀ-ü\s'\-]{1,40}?)(?:\s{2,}|\t|$)/i);
+      if (nomM) pd.nome = nomM[1].trim();
+    }
+    if (!pd.dataNascita) {
+      const dnM = line.match(/[Nn]ato\/a\s+il\s+(\d{2}[\/\-]\d{2}[\/\-]\d{4})|[Dd]ata\s+(?:di\s+)?[Nn]ascita\s*[:\s]+(\d{2}[\/\-]\d{2}[\/\-]\d{4})/);
+      if (dnM) pd.dataNascita = (dnM[1]||dnM[2]).replace(/-/g,'/');
+    }
   }
 
   // Pattern 2 — "Episodio RIC_AO_XXXXX ROSSI MARIO nato/a il 01/01/1940"
@@ -2334,10 +2385,54 @@ function extractPatientData(rawText) {
     }
   }
 
-  // Pattern 3 — "ROSSI MARIO  01/01/1940" style header lines
+  // Pattern 3 — "il sig./la sig.ra COGNOME NOME (d.n. DD/MM/YYYY)" or "(DD/MM/YY)"
+  if (!pd.cognome || !pd.nome) {
+    const sigM = rawText.match(/(?:il\s+sig(?:nor)?\.?|la\s+sig(?:nora)?\.?(?:ra)?\.?|il\s+paziente)\s+([A-ZÀ-Ü][a-zA-ZÀ-ü'\-]+)\s+([A-ZÀ-Ü][a-zA-ZÀ-ü'\-]+)/i);
+    if (sigM) {
+      if (!pd.cognome) pd.cognome = sigM[1].trim();
+      if (!pd.nome)    pd.nome    = sigM[2].trim();
+    }
+  }
+
+  // Pattern 4 — "d.n. DD/MM/YYYY" or "d.n. DD/MM/YY" or "(d. n. DD/MM/YY)"
+  if (!pd.dataNascita) {
+    const dnM = rawText.match(/d\.?\s*n\.?\s+(\d{2}[\/\-]\d{2}[\/\-]\d{2,4})/i);
+    if (dnM) {
+      pd.dataNascita = expandYear(dnM[1].replace(/-/g,'/'));
+    }
+  }
+
+  // Pattern 5 — "COGNOME NOME\nPaziente:" or ALLCAPS name on line before "Paziente:"
+  if (!pd.cognome || !pd.nome) {
+    for (let i = 0; i < lines.length; i++) {
+      if (/^Paziente\s*:/i.test(lines[i]) && i > 0) {
+        const prev = lines[i-1].trim();
+        const nameM = prev.match(/^([A-ZÀÈÉÌÒÙ]{2,})\s+([A-ZÀÈÉÌÒÙ]{2,})$/);
+        if (nameM) {
+          if (!pd.cognome) pd.cognome = nameM[1].trim();
+          if (!pd.nome)    pd.nome    = nameM[2].trim();
+          break;
+        }
+      }
+    }
+  }
+
+  // Pattern 6 — "COGNOME NOME  DD/MM/YYYY  XXXXXXXX" demographic header
+  if (!pd.cognome || !pd.nome) {
+    const hdrM = rawText.match(/\b([A-ZÀÈÉÌÒÙ]{2,})\s+([A-ZÀÈÉÌÒÙ]{2,})\s+(\d{2}\/\d{2}\/\d{4})\s+\d+/);
+    if (hdrM) {
+      const yr = parseInt(hdrM[3].slice(6));
+      if (yr >= 1900 && yr <= 2010) {
+        if (!pd.cognome) pd.cognome = hdrM[1].trim();
+        if (!pd.nome)    pd.nome    = hdrM[2].trim();
+        if (!pd.dataNascita) pd.dataNascita = hdrM[3];
+      }
+    }
+  }
+
+  // Pattern 7 (fallback) — first plausible birthdate in document
   if (!pd.dataNascita) {
     const dnM2 = rawText.match(/\b(\d{2}\/\d{2}\/\d{4})\b/);
-    // Only use if it looks like a birthdate (year 1900-2010 range)
     if (dnM2) {
       const yr = parseInt(dnM2[1].slice(6));
       if (yr >= 1900 && yr <= 2010) pd.dataNascita = dnM2[1];
