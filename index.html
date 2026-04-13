@@ -1010,12 +1010,10 @@ GERARCHIA DELLE ISTRUZIONI
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 1. REGOLE ASSOLUTE — sempre applicate, non sovrascrivibili
-2. override_rules del fingerprint — sovrascrivono le sezioni corrispondenti di questo documento
+2. Fingerprint (ragionamento, stile, frasi chiave) — guida lo stile e la struttura
 3. Questo documento — default per tutto ciò che il fingerprint non specifica
 4. Template lettera — struttura e sequenza delle sezioni
 5. Dati clinici — contenuto effettivo
-
-Se il fingerprint contiene override_rules, quelle istruzioni sostituiscono le sezioni corrispondenti qui sotto. Le sezioni non menzionate nell'override seguono questo documento.
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 STRUTTURA
@@ -1073,21 +1071,21 @@ OMETTI:
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 ESAME OBIETTIVO NEUROLOGICO (EON)
-[sovrascrivibile da override_rules.eon_schema]
+
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 - Se l'EON alla dimissione è riportato esplicitamente nell'input: trascrivilo verbatim, senza riformulare né accorciare.
-- Se non è riportato esplicitamente: ricostruiscilo dall'ultima valutazione neurologica disponibile nei diari clinici, usando come base lo schema di normalità del fingerprint (override_rules.eon_schema) se presente, altrimenti lo schema default sotto.
+- Se non è riportato esplicitamente: ricostruiscilo dall'ultima valutazione neurologica disponibile nei diari clinici, usando come base lo schema di normalità del fingerprint (eon_schema) se presente, altrimenti lo schema default sotto.
 - Sostituisci le voci dello schema solo dove l'input documenta esplicitamente un deficit o un'anomalia.
 - Non inventare deficit non documentati. Non omettere deficit documentati.
 - Includi sempre NIHSS e mRS all'ultimo punteggio disponibile nell'input.
 
-SCHEMA DEFAULT (usato solo se override_rules.eon_schema non è presente nel fingerprint):
+SCHEMA DEFAULT (usato solo se eon_schema non è presente nel fingerprint):
 "paziente vigile, orientato s/p/t, collaborante. Eloquio fluente, non disartria. Esegue ordini semplici. Capo e sguardo in asse. Marcia autonoma senza caratteri patologici, possibile su punte, talloni e in tandem. Non oscillazioni in Romberg. Raggiunge e mantiene la posizione di Mingazzini I e II senza slivellamenti. Forza conservata ai quattro arti. ROT normovivaci e simmetrici ai quattro arti. Sensibilità tattile integra, nega parestesie. Pallestesia nella norma. Manovre I/N e T/G correttamente eseguite. Non segni di eminegligenza. Ai nervi cranici: pupille isocoriche, isocicliche, normofotoreagenti. CV integro per confronto. MOE integra. Non deficit sensitivi in territorio trigeminale. Non deficit VII. Lingua normosporta, spinta validamente contro le guance bilateralmente. Velo palatino mobile e simmetrico. NIHSS: X. mRS: X."
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 ESAMI DI LABORATORIO
-[sovrascrivibile da override_rules.esami]
+
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 SELEZIONE DEL VALORE DA RIPORTARE:
@@ -1096,7 +1094,7 @@ L'input può contenere misurazioni ripetute nel tempo in tre formati:
   (b) primo → ultimo (es. "Hb 9.2 → 10.8 g/dL") — usa SEMPRE l'ultimo valore (a destra della freccia).
   (c) lista cronologica senza freccia — usa SEMPRE il valore più recente disponibile.
   (d) solo valori patologici riportati — usa i valori forniti; non inventare valori normali.
-  Se il fingerprint o override_rules.esami specificano una convenzione diversa, quella ha priorità.
+  Se il fingerprint specifica una convenzione diversa, quella ha priorità.
 
 RISULTATO PRECEDENTE — REGOLA CRITICA:
 Nei referti di laboratorio AOUP il formato tipico è:
@@ -1131,7 +1129,7 @@ Funzionalità renale: Creatinina 1.02 mg/dL (v.n. 0.6-1.1); urea nella norma.
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 ACCERTAMENTI STRUMENTALI
-[sovrascrivibile da override_rules.accertamenti TRANNE la regola sulle conclusioni]
+
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 - Formato: "**Nome esame (DD/MM):** conclusione sintetica del referto."
@@ -1145,7 +1143,7 @@ ACCERTAMENTI STRUMENTALI
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 TERAPIA DOMICILIARE
-[sovrascrivibile da override_rules.terapia_domiciliare]
+
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 - Lista inline separata da virgole: nome commerciale + dosaggio + orario se disponibile in anamnesi.
@@ -1154,7 +1152,7 @@ TERAPIA DOMICILIARE
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 TERAPIA ALLA DIMISSIONE
-[sovrascrivibile da override_rules.terapia_dimissione]
+
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 Tabella markdown obbligatoria a 4 colonne:
@@ -1187,7 +1185,7 @@ DECORSO CLINICO:
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 REGISTRO E STILE
-[sovrascrivibile da override_rules.stile]
+
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 - Registro formale clinico italiano. Mai colloquiale.
@@ -4418,7 +4416,15 @@ async function ghApiGet(cfg){
   const r=await fetch(url,{headers:{Authorization:`token ${cfg.token}`,'Accept':'application/vnd.github.v3+json'}});
   if(r.status===404)return null;
   if(!r.ok)throw new Error(`GitHub GET ${r.status}: ${await r.text()}`);
-  return r.json();
+  const meta=await r.json();
+  // For large files (>1MB), GitHub may not include content — use download_url instead
+  if(!meta.content && meta.download_url){
+    const dl=await fetch(meta.download_url,{headers:{Authorization:`token ${cfg.token}`}});
+    if(!dl.ok)throw new Error(`GitHub download ${dl.status}`);
+    const text=await dl.text();
+    return { ...meta, _rawText: text };
+  }
+  return meta;
 }
 async function ghApiPut(cfg,content,sha){
   const url=`https://api.github.com/repos/${cfg.repo}/contents/${cfg.path}`;
@@ -4459,9 +4465,17 @@ async function pullLibraryFromGitHub(){
   try{
     const file=await ghApiGet(cfg);
     if(!file){ghStatus('✗ File non trovato. Fai prima un push.','var(--red)');return;}
-    const decoded=decodeURIComponent(escape(atob(file.content.replace(/\n/g,''))));
+    let decoded;
+    if(file._rawText) {
+      decoded = file._rawText;
+    } else if(file.content) {
+      decoded=decodeURIComponent(escape(atob(file.content.replace(/\n/g,''))));
+    } else {
+      throw new Error('Contenuto vuoto dal server GitHub');
+    }
+    if(!decoded || !decoded.trim()) throw new Error('File vuoto');
     const lib=JSON.parse(decoded);
-    if(!Array.isArray(lib))throw new Error('Formato non valido');
+    if(!Array.isArray(lib))throw new Error('Formato non valido — atteso array JSON');
     saveLibrary(lib);renderLibrary();
     localStorage.setItem('letteraai_lastpull',new Date().toISOString());
     updateLastPullTime();updateRefCaseNoCases();
@@ -4481,7 +4495,15 @@ async function pullLibraryFromGeneration(){
   try{
     const file=await ghApiGet(cfg);
     if(!file){el.textContent='✗ File non trovato';el.style.color='var(--red)';return;}
-    const decoded=decodeURIComponent(escape(atob(file.content.replace(/\n/g,''))));
+    let decoded;
+    if(file._rawText) {
+      decoded = file._rawText;
+    } else if(file.content) {
+      decoded=decodeURIComponent(escape(atob(file.content.replace(/\n/g,''))));
+    } else {
+      throw new Error('Contenuto vuoto');
+    }
+    if(!decoded || !decoded.trim()) throw new Error('File vuoto');
     const lib=JSON.parse(decoded);
     if(!Array.isArray(lib))throw new Error('Formato non valido');
     saveLibrary(lib);renderLibrary();
@@ -5018,18 +5040,11 @@ Restituisci un oggetto JSON con questa struttura:
     "note_speciali": "come vengono gestiti farmaci nuovi vs continuativi, sospesi, a scalare, switch terapeutici nella tabella e nel decorso"
   },
   "note_stilistiche": "Estrai SOLO: (1) formule fisse ricorrenti nel decorso (es. 'Durante la degenza il paziente è sempre stato apiretico, eupnoico...'); (2) formule fisse per la diagnosi (es. 'a verosimile eziologia...', 'in paziente con...'); (3) formule per switch terapeutici nel decorso e nella terapia alla dimissione (es. 'in considerazione di X è stata sostituita la terapia Y con Z'). NON includere tempi verbali o registro — sono gestiti dal system prompt.",
-  "override_rules": {
-    "eon_schema": "schema EON di normalità specifico del reparto — usato quando EON non è esplicito nell'input",
-    "esami": "istruzioni specifiche del reparto per gli esami di laboratorio — specifica: quale valore usare quando ci sono misurazioni ripetute (primo, ultimo, primo→ultimo), se riportare solo i patologici o tutti, eventuali esami sempre riportati con valore numerico oltre ai default (colesterolo, HDL, LDL, trigliceridi, HbA1c, creatinina), e qualsiasi altra convenzione locale — sovrascrive il default",
-    "terapia_domiciliare": "istruzioni specifiche per terapia domiciliare — sovrascrive il default",
-    "terapia_dimissione": "istruzioni specifiche per terapia alla dimissione — sovrascrive il default",
-    "stile": "istruzioni specifiche di registro e stile — NON includere tempi verbali (gestiti dal system prompt) — sovrascrive il default"
-  },
+  "eon_schema": "schema EON di normalità specifico del reparto estratto dalla lettera o dai diari — se non identificabile lascia il campo vuoto",
   "qualita": {
     "lettera_modello": {"livello": "alta|media|bassa", "nota": "spiegazione se livello non è alta"},
     "ragionamento": {"livello": "alta|media|bassa", "nota": "spiegazione se livello non è alta"},
-    "frasi_chiave": {"livello": "alta|media|bassa", "nota": "spiegazione se livello non è alta"},
-    "override_rules": {"livello": "alta|media|bassa", "nota": "spiegazione se livello non è alta"}
+    "frasi_chiave": {"livello": "alta|media|bassa", "nota": "spiegazione se livello non è alta"}
   }
 }
 
@@ -5040,8 +5055,9 @@ REGOLE FERREE:
 - USA [PLACEHOLDER_TIPO] descrittivi come [DIAGNOSI_PRINCIPALE], [PROCEDURA_ESEGUITA], [ESITO_ESAME], [FARMACO_CLASSE]
 - La lettera-modello deve essere lunga abbastanza da coprire tutti i pattern strutturali, non una versione abbreviata
 - Le frasi_chiave devono essere frasi reali estratte o parafrasate dalla lettera originale, non inventate
-- override_rules.eon_schema: inserisci lo schema EON di normalità del reparto estratto dalla lettera o dai diari — se non identificabile lascia il campo vuoto
-- NON specificare tempi verbali in note_stilistiche o override_rules.stile — il system prompt di generazione impone il passato prossimo come regola assoluta non sovrascrivibile
+- override_rules NON è più presente nel fingerprint — le regole editoriali sono fisse nel system prompt e non sovrascrivibili da un singolo caso
+- eon_schema: inserisci lo schema EON di normalità del reparto estratto dalla lettera o dai diari — se non identificabile lascia il campo vuoto
+- NON specificare tempi verbali in note_stilistiche — il system prompt di generazione impone il passato prossimo come regola assoluta non sovrascrivibile
 - qualita: per ogni campo valuta onestamente il livello (alta/media/bassa) e spiega brevemente i limiti se non alta
 - Solo JSON valido, senza testo prima o dopo, senza backtick
 
@@ -5085,22 +5101,10 @@ function buildFpSystemAddendum(fpObj){
   }
   const st=fpObj.struttura_terapia||{};
   if(st.note_speciali) out+=`\n**Farmaci nuovi vs continuativi:** ${st.note_speciali}`;
-  // ── Override rules — replace corresponding sections of global editorial logic ──
-  const ov=fpObj.override_rules||{};
-  const ovKeys=Object.entries(ov).filter(([,v])=>v&&v.trim());
-  if(ovKeys.length){
-    out+='\n\n## OVERRIDE REGOLE REPARTO\nLe seguenti istruzioni sovrascrivono le sezioni corrispondenti del global editorial logic:\n';
-    const labels={
-      eon_schema:    'ESAME OBIETTIVO NEUROLOGICO — Schema normalità reparto',
-      esami:         'ESAMI DI LABORATORIO — Formato reparto',
-      terapia_domiciliare: 'TERAPIA DOMICILIARE — Convenzioni reparto',
-      terapia_dimissione:  'TERAPIA ALLA DIMISSIONE — Convenzioni reparto',
-      stile:         'REGISTRO E STILE — Convenzioni reparto',
-    };
-    for(const [k,v] of ovKeys){
-      const label=labels[k]||k;
-      out+=`\n### ${label}\n${v}\n`;
-    }
+  // EON schema — top-level field (moved from override_rules); backward compat with old fingerprints
+  const eonSchema = fpObj.eon_schema || fpObj.override_rules?.eon_schema || '';
+  if (eonSchema.trim()) {
+    out+=`\n\n## SCHEMA EON DI NORMALITÀ REPARTO\n${eonSchema}`;
   }
   return out;
 }
@@ -5177,7 +5181,6 @@ function renderFpV2Preview(fpObj){
   const container=document.getElementById('newTplSections');
   const r=fpObj.ragionamento||{};
   const fk=fpObj.frasi_chiave||{};
-  const ov=fpObj.override_rules||{};
   const q=fpObj.qualita||{};
   const lm=fpObj.lettera_modello||'';
   const editorId='fpEditor_'+Date.now();
@@ -5203,9 +5206,6 @@ function renderFpV2Preview(fpObj){
 
   const fkArrayFields=['apertura','connettori','incertezza','chiusura']
     .map(function(k){return field('fp_fk_'+k,k+' (uno per riga)',(fk[k]||[]).join('\n'));}).join('');
-
-  const ovExtraFields=['esami','terapia_domiciliare','terapia_dimissione','stile']
-    .map(function(k){return '<div style="margin-top:8px;">'+field('fp_ov_'+k,k,ov[k],2)+'</div>';}).join('');
 
   container.innerHTML=
     '<div id="'+editorId+'" style="border:1px solid var(--accent-d);border-radius:var(--r);overflow:hidden;margin-top:4px;">'+
@@ -5236,12 +5236,11 @@ function renderFpV2Preview(fpObj){
           '<input type="text" id="fp_fk_terapia_intro" value="'+esc(fk.terapia_intro||'')+'" style="font-size:11px;"></div>'+
       '</div>'+
     '</div>'+
-    // override_rules
+    // eon_schema (top-level)
     '<div style="padding:12px;border-bottom:1px solid var(--border);">'+
-      '<div style="'+mono+';font-size:9px;color:var(--dim);margin-bottom:8px;text-transform:uppercase;display:flex;align-items:center;">Override Rules'+qFlag('override_rules')+'</div>'+
+      '<div style="'+mono+';font-size:9px;color:var(--dim);margin-bottom:8px;text-transform:uppercase;">Schema EON Normalit&#224;</div>'+
       '<div><div style="'+mono+';font-size:9px;color:var(--blue);margin-bottom:3px;">eon_schema &mdash; schema normalit&#224; EON del reparto</div>'+
-        '<textarea id="fp_ov_eon_schema" rows="5" style="font-size:11px;">'+esc(ov.eon_schema||'')+'</textarea></div>'+
-      ovExtraFields+
+        '<textarea id="fp_eon_schema" rows="5" style="font-size:11px;">'+esc(fpObj.eon_schema||'')+'</textarea></div>'+
     '</div>'+
     // note_stilistiche
     '<div style="padding:12px;">'+
@@ -5275,13 +5274,7 @@ function saveFpEdits(editorId){
     },
     struttura_terapia:orig.struttura_terapia||{},
     note_stilistiche:val('fp_note_stilistiche'),
-    override_rules:{
-      eon_schema:val('fp_ov_eon_schema'),
-      esami:val('fp_ov_esami'),
-      terapia_domiciliare:val('fp_ov_terapia_domiciliare'),
-      terapia_dimissione:val('fp_ov_terapia_dimissione'),
-      stile:val('fp_ov_stile'),
-    },
+    eon_schema:val('fp_eon_schema'),
   };
   newTplFingerprintJson=JSON.stringify(updated);
   container._fpObj=updated;
@@ -5352,7 +5345,7 @@ function renderCaseEditFpPreview(fpStr){
   }
   // Show a compact quality summary
   const q=fpObj.qualita||{};
-  const fields=['lettera_modello','ragionamento','frasi_chiave','override_rules'];
+  const fields=['lettera_modello','ragionamento','frasi_chiave'];
   const badges=fields.map(f=>{
     const qf=q[f];
     if(!qf) return '';
