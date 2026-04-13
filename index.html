@@ -991,7 +991,7 @@ async function handleApiError(resp) {
 const DEFAULT_SYS = `Sei il sistema di generazione delle lettere di dimissione ospedaliere italiane.
 Il reparto e il contesto clinico dipendono dal template e dal fingerprint selezionati.
 Scrivi in italiano formale clinico. Restituisci SOLO la lettera, senza preamboli, commenti o spiegazioni.
-I placeholder [PAZIENTE_NOME], [DATA_NASCITA], [CITTA] e [REPARTO] rimarranno nella lettera generata e verranno sostituiti offline dal sistema locale dopo la generazione.
+I placeholder [PAZIENTE_NOME], [DATA_NASCITA] e [REPARTO] rimarranno nella lettera generata e verranno sostituiti offline dal sistema locale dopo la generazione.
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 REGOLE ASSOLUTE — inviolabili, nessun fingerprint le sovrascrive
@@ -1000,10 +1000,10 @@ REGOLE ASSOLUTE — inviolabili, nessun fingerprint le sovrascrive
 - Non inventare, inferire o aggiungere dati non esplicitamente presenti nell'input.
 - Non aggiungere diagnosi, valori di laboratorio, farmaci, dosi o date non forniti.
 - Se una sezione è prevista ma i dati mancano: "Non documentato."
-- Usa [CITTA] e [REPARTO] esattamente come appaiono nel template — non sostituirli con valori reali.
+- Usa [REPARTO] esattamente come appare nel template — non sostituirlo con valori reali.
 - Usa SEMPRE il passato prossimo per tutti gli eventi del ricovero ("ha eseguito", "è stata avviata", "ha presentato", "è stato sottoposto", "è stata documentata"). MAI il passato remoto ("fu ricoverato") e MAI l'imperfetto narrativo ("veniva ricoverato", "si procedeva"). Unica eccezione: il presente per lo stato alla dimissione ("deambula", "si alimenta").
 - Restituisci SOLO la lettera, senza testo prima o dopo.
-- FORMATTAZIONE: riproduci ESATTAMENTE la spaziatura del template. Una sola riga vuota tra sezioni consecutive — MAI due o più righe vuote consecutive. NON aggiungere righe vuote extra tra paragrafi, tra intestazione di sezione e contenuto, o dentro le sezioni. Il risultato deve avere la stessa densità del template, senza "aria" aggiuntiva.
+- FORMATTAZIONE: riproduci ESATTAMENTE la spaziatura del template. Una riga vuota di separazione tra ogni sezione (anamnesi, terapia domiciliare, motivo del ricovero, EON, EOG, esami, accertamenti, decorso, obiettività alla dimissione, terapia). Una riga vuota PRIMA e DOPO la diagnosi tra virgolette. MAI due o più righe vuote consecutive. NON aggiungere righe vuote dentro le sezioni (es. dentro il decorso clinico o dentro gli esami). Il risultato deve avere la stessa densità del template.
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 GERARCHIA DELLE ISTRUZIONI
@@ -3438,7 +3438,7 @@ function buildLetterTemplate(){
 Genera la lettera seguendo ESATTAMENTE questa struttura. Il paziente NON viene dimesso a domicilio ma trasferito presso ${ward}. Per dati assenti: "Non documentato." — MAI inventare.
 
 ---
-[CITTA], ${today}
+Padova, ${today}
 
 Egregi Colleghi,
 
@@ -3470,27 +3470,27 @@ Presso il Pronto Soccorso AOUP è stato sottoposto a:
 [dall'input]
 
 Durante la degenza il paziente è stato sottoposto ai seguenti **esami ematochimici:**
-**Emocromo con formula:** [valori o "nella norma"]
-**Profilo coagulativo:** [dall'input]
-**Indici di flogosi:** [dall'input]
-**Funzionalità epatica:** [dall'input]
-**Funzionalità renale con ionemia:** [dall'input]
-**Profilo metabolico:** [dall'input]
-**Profilo proteico:** [dall'input]
-**Enzimi muscolari:** [dall'input]
-**Albumina:** [dall'input]
-**Profilo carenziale:** [dall'input]
-**Funzionalità tiroidea:** [dall'input]
-**ntBNP:** [dall'input]
-**Esame urine:** [dall'input]
-**Microbiologia:** [dall'input]
+- **Emocromo con formula:** [valori o "nella norma"]
+- **Profilo coagulativo:** [dall'input]
+- **Indici di flogosi:** [dall'input]
+- **Funzionalità epatica:** [dall'input]
+- **Funzionalità renale con ionemia:** [dall'input]
+- **Profilo metabolico:** [dall'input]
+- **Profilo proteico:** [dall'input]
+- **Enzimi muscolari:** [dall'input]
+- **Albumina:** [dall'input]
+- **Profilo carenziale:** [dall'input]
+- **Funzionalità tiroidea:** [dall'input]
+- **ntBNP:** [dall'input]
+- **Esame urine:** [dall'input]
+- **Microbiologia:** [dall'input]
 
 e alle seguenti **indagini diagnostico-strumentali e valutazioni specialistiche:**
-**> ECG (DD/MM):** [dall'input]
-**> Rx torace (DD/MM):** [dall'input]
-**> TC encefalo (DD/MM):** [dall'input]
-**> Valutazione fisiatrica (DD/MM):** [se eseguita]
-[altri accertamenti se presenti nell'input]
+- **ECG (DD/MM):** [dall'input]
+- **Rx torace (DD/MM):** [dall'input]
+- **TC encefalo (DD/MM):** [dall'input]
+- **Valutazione fisiatrica (DD/MM):** [se eseguita]
+- [altri accertamenti se presenti nell'input]
 
 **Decorso Clinico:**
 [Prosa clinica unica 150-300 parole, passato prossimo, MAI passato remoto, NESSUNA riga vuota interna — sintesi decisioni terapeutiche e andamento. Includere il motivo del trasferimento presso ${ward}.]
@@ -3505,7 +3505,9 @@ e alle seguenti **indagini diagnostico-strumentali e valutazioni specialistiche:
 [Una riga per farmaco — nome+dosaggio | n cp per os | 8.00 o 8.00-20.00 | terapia domiciliare / nuova terapia / nuova terapia fino a rivalutazione]
 
 Si raccomanda:
-[raccomandazioni specifiche dall'input — formato lista con trattino]
+– [raccomandazione 1]
+– [raccomandazione 2]
+– [raccomandazione N — una per riga, con trattino lungo (–), basate sull'input]
 
 Rimaniamo a disposizione e porgiamo cordiali saluti.
 
@@ -3521,7 +3523,7 @@ Rimaniamo a disposizione e porgiamo cordiali saluti.
 Genera la lettera seguendo ESATTAMENTE questa struttura. Per dati assenti: "Non documentato." — MAI inventare.
 
 ---
-[CITTA], ${today}
+Padova, ${today}
 
 Egregi Colleghi,
 
@@ -3553,27 +3555,27 @@ Presso il Pronto Soccorso AOUP è stato sottoposto a:
 [dall'input]
 
 Durante la degenza il paziente è stato sottoposto ai seguenti **esami ematochimici:**
-**Emocromo con formula:** [valori o "nella norma"]
-**Profilo coagulativo:** [dall'input]
-**Indici di flogosi:** [dall'input]
-**Funzionalità epatica:** [dall'input]
-**Funzionalità renale con ionemia:** [dall'input]
-**Profilo metabolico:** [dall'input]
-**Profilo proteico:** [dall'input]
-**Enzimi muscolari:** [dall'input]
-**Albumina:** [dall'input]
-**Profilo carenziale:** [dall'input]
-**Funzionalità tiroidea:** [dall'input]
-**ntBNP:** [dall'input]
-**Esame urine:** [dall'input]
-**Microbiologia:** [dall'input]
+- **Emocromo con formula:** [valori o "nella norma"]
+- **Profilo coagulativo:** [dall'input]
+- **Indici di flogosi:** [dall'input]
+- **Funzionalità epatica:** [dall'input]
+- **Funzionalità renale con ionemia:** [dall'input]
+- **Profilo metabolico:** [dall'input]
+- **Profilo proteico:** [dall'input]
+- **Enzimi muscolari:** [dall'input]
+- **Albumina:** [dall'input]
+- **Profilo carenziale:** [dall'input]
+- **Funzionalità tiroidea:** [dall'input]
+- **ntBNP:** [dall'input]
+- **Esame urine:** [dall'input]
+- **Microbiologia:** [dall'input]
 
 e alle seguenti **indagini diagnostico-strumentali e valutazioni specialistiche:**
-**> ECG (DD/MM):** [dall'input]
-**> Rx torace (DD/MM):** [dall'input]
-**> TC encefalo (DD/MM):** [dall'input]
-**> Valutazione fisiatrica (DD/MM):** [se eseguita]
-[altri accertamenti se presenti nell'input]
+- **ECG (DD/MM):** [dall'input]
+- **Rx torace (DD/MM):** [dall'input]
+- **TC encefalo (DD/MM):** [dall'input]
+- **Valutazione fisiatrica (DD/MM):** [se eseguita]
+- [altri accertamenti se presenti nell'input]
 
 **Decorso Clinico:**
 [Prosa clinica unica 150-300 parole, passato prossimo, MAI passato remoto, NESSUNA riga vuota interna — sintesi decisioni terapeutiche e andamento]
@@ -3590,7 +3592,9 @@ e alle seguenti **indagini diagnostico-strumentali e valutazioni specialistiche:
 Il paziente è atteso in regime di post-degenza per eseguire **visita neurologica ed ecocolordoppler dei tronchi sovraortici e transcranico** di controllo in data **[DD/MM/YYYY]** alle ore **[HH:MM]** per l'Ambulatorio di Malattie Cerebrovascolari, al piano terra della Palazzina di Neuroscienze.
 
 Si raccomanda:
-[raccomandazioni specifiche dall'input — formato lista con trattino]
+– [raccomandazione 1]
+– [raccomandazione 2]
+– [raccomandazione N — una per riga, con trattino lungo (–), basate sull'input]
 
 Rimaniamo a disposizione e porgiamo cordiali saluti.
 
@@ -3726,7 +3730,7 @@ async function generateLetter(){
     const genUsageEl=document.getElementById('genUsageInfo');
     genUsageEl.style.display='block';
     genUsageEl.innerHTML=`✓ Costo effettivo — input: ${(u.input_tokens||0).toLocaleString()} tok ($${inCost.toFixed(4)}) · output: ${(u.output_tokens||0).toLocaleString()} tok ($${outCost.toFixed(4)}) — <strong style="color:var(--text);">totale: $${total.toFixed(4)}</strong>`;
-    document.getElementById('letterOut').textContent=S.letter;
+    renderLetterToEl(S.letter, document.getElementById('letterOut'));
     document.getElementById('nav3').classList.add('done');
     document.getElementById('nav4').classList.add('done');
     // Pre-populate Verifica textarea and go there
@@ -4030,15 +4034,140 @@ function finalizzaLettera(){
   S.letter = applyPatientData(S.letter, S.patientData);
   // Clean up excessive blank lines
   S.letter = S.letter.replace(/\n{3,}/g,'\n\n').trim();
-  document.getElementById('letterOut').textContent = S.letter;
+  renderLetterToEl(S.letter, document.getElementById('letterOut'));
   document.getElementById('nav4').classList.add('done');
   goTo(4);
 }
 
-function copyLetter(){navigator.clipboard.writeText(S.letter).then(()=>flashBtn(event?.target));}
+function copyLetter(){
+  // Build formatted HTML for clipboard
+  const text = S.letter || '';
+  const lines = text.split('\n');
+  let html = '<div style="font-family:\'Times New Roman\',serif;font-size:12pt;line-height:1.8;">';
+
+  // Detect signature block: lines containing [FIRMA_] or "(medici in formazione" / "(Dirigente"
+  function isSignatureLine(l){ return /\[FIRMA_|\(medici in formazione|\(Dirigente medico\)/i.test(l); }
+
+  // Process lines: right-align date, convert **bold**, format signatures
+  let i = 0;
+  while(i < lines.length){
+    let line = esc(lines[i]);
+    // Right-align first line if it's the date
+    if(i === 0 && /^\s*\S+,\s*\d{2}\/\d{2}\/\d{4}/.test(lines[0])){
+      html += '<p style="text-align:right;margin:0;">' + line.trim() + '</p>';
+      i++; continue;
+    }
+    // Signature block: collect consecutive signature lines
+    if(isSignatureLine(lines[i])){
+      const sigLines = [];
+      while(i < lines.length && (isSignatureLine(lines[i]) || lines[i].trim() === '')){
+        if(lines[i].trim()) sigLines.push(esc(lines[i]).replace(/\*\*(.+?)\*\*/g,'<b>$1</b>'));
+        i++;
+      }
+      // Render as two-column table: left = formazione, right = dirigente
+      if(sigLines.length >= 2){
+        html += '<table style="width:100%;border:none;margin-top:12px;"><tr>';
+        html += '<td style="text-align:left;vertical-align:top;border:none;padding:0;">' + sigLines.filter(l=>/FORMAZIONE|medici in formazione/i.test(l)).map(l=>l.trim()).join('<br>') + '</td>';
+        html += '<td style="text-align:right;vertical-align:top;border:none;padding:0;">' + sigLines.filter(l=>/DIRIGENTE|Dirigente medico/i.test(l)).map(l=>l.trim()).join('<br>') + '</td>';
+        html += '</tr></table>';
+      } else {
+        sigLines.forEach(l => { html += '<p style="margin:0;">' + l + '</p>'; });
+      }
+      continue;
+    }
+    // Convert **bold** markers to <b>
+    line = line.replace(/\*\*(.+?)\*\*/g, '<b>$1</b>');
+    // Blank line → paragraph break
+    if(line.trim() === ''){
+      html += '<br>';
+    } else {
+      html += '<p style="margin:0;">' + line + '</p>';
+    }
+    i++;
+  }
+  html += '</div>';
+
+  // Copy both HTML (for Word/Docs) and plain text (fallback)
+  const blob = new Blob([html], {type: 'text/html'});
+  const blobText = new Blob([text], {type: 'text/plain'});
+  const item = new ClipboardItem({
+    'text/html': blob,
+    'text/plain': blobText
+  });
+  navigator.clipboard.write([item]).then(()=>flashBtn(event?.target));
+}
+
+// Helper: detect signature lines
+function _isSignatureLine(l){ return /\[FIRMA_|\(medici in formazione|\(Dirigente medico\)/i.test(l); }
+
+// Build signature HTML block (shared by renderLetterToEl and renderLetterPrintHtml)
+function _renderSignatureHtml(sigLines){
+  const left = sigLines.filter(l=>/FORMAZIONE|medici in formazione/i.test(l)).map(l=>l.trim());
+  const right = sigLines.filter(l=>/DIRIGENTE|Dirigente medico/i.test(l)).map(l=>l.trim());
+  return '<div style="display:flex;justify-content:space-between;margin-top:8px;">' +
+    '<div>' + left.join('<br>') + '</div>' +
+    '<div style="text-align:right;">' + right.join('<br>') + '</div>' +
+  '</div>';
+}
+
+// Render letter into .paper element with date right-aligned and signatures left/right
+function renderLetterToEl(text, el){
+  const escaped = esc(text);
+  const lines = escaped.split('\n');
+  const processed = [];
+  let i = 0;
+  while(i < lines.length){
+    if(_isSignatureLine(lines[i])){
+      const sigLines = [];
+      while(i < lines.length && (_isSignatureLine(lines[i]) || lines[i].trim() === '')){
+        if(lines[i].trim()) sigLines.push(lines[i]);
+        i++;
+      }
+      processed.push(_renderSignatureHtml(sigLines));
+    } else if(i === 0 && /^\s*\S+,\s*\d{2}\/\d{2}\/\d{4}/.test(lines[0])){
+      processed.push('<div style="text-align:right;">' + lines[0].trim() + '</div>');
+      i++;
+    } else {
+      processed.push(lines[i]);
+      i++;
+    }
+  }
+  el.innerHTML = processed.join('\n');
+}
+
+function renderLetterPrintHtml(text){
+  const escaped = esc(text);
+  const lines = escaped.split('\n');
+  const parts = [];
+  let i = 0;
+  // Date line
+  if(lines.length > 0 && /^\s*\S+,\s*\d{2}\/\d{2}\/\d{4}/.test(lines[0])){
+    parts.push('<div style="text-align:right;margin-bottom:0;">' + lines[0].trim() + '</div>');
+    i = 1;
+  }
+  // Collect pre content and signature
+  let preLines = [];
+  while(i < lines.length){
+    if(_isSignatureLine(lines[i])){
+      if(preLines.length) { parts.push('<pre>' + preLines.join('\n') + '</pre>'); preLines = []; }
+      const sigLines = [];
+      while(i < lines.length && (_isSignatureLine(lines[i]) || lines[i].trim() === '')){
+        if(lines[i].trim()) sigLines.push(lines[i]);
+        i++;
+      }
+      parts.push(_renderSignatureHtml(sigLines));
+    } else {
+      preLines.push(lines[i]);
+      i++;
+    }
+  }
+  if(preLines.length) parts.push('<pre>' + preLines.join('\n') + '</pre>');
+  return parts.join('');
+}
+
 function printLetter(){
   const w=window.open('','_blank');
-  w.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Lettera di Dimissione</title><style>body{font-family:'Times New Roman',serif;font-size:12pt;line-height:1.8;margin:2.5cm;color:#000}pre{white-space:pre-wrap;font-family:inherit}</style></head><body><pre>${esc(S.letter)}</pre></body></html>`);
+  w.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Lettera di Dimissione</title><style>body{font-family:'Times New Roman',serif;font-size:12pt;line-height:1.8;margin:2.5cm;color:#000}pre{white-space:pre-wrap;font-family:inherit;margin-top:0}</style></head><body>${renderLetterPrintHtml(S.letter)}</body></html>`);
   w.document.close();w.print();
 }
 // ═══════════════════════════════════════════════════
