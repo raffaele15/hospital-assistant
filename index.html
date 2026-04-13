@@ -1311,21 +1311,21 @@ const ANON_CONFIG = {
     { pattern: /\b(?:Nosografico|Ref\.?\s*SSI|Ric\/Ref|Ref\.|ASSIPCA|Num\.\s*(?:interno|esterno)|N\.\s*Richiesta)\s*:?\s*[\d\/\-A-Z_]+/gi,
       label: '[ID_INTERNO]', type: 'id' },
     { pattern: /\b\d\/\d{4}\/\d{4,6}\b/g, label: '[ID_RICOVERO]', type: 'id' },
-    { pattern: /(?:nato\/a?\s+il|d\.n\.|Data\s+(?:di\s+)?[Nn]ascita\s*:?)\s*\d{1,2}[\/\-\.]\d{1,2}[\/\-\.]\d{4}/gi,
+    { pattern: /(?:nato\/a?\s+il|[Nn]ato\s+il\s*:|d\.n\.|Data\s+(?:di\s+)?[Nn]ascita\s*:?)\s*\d{1,2}[\/\-\.]\d{1,2}[\/\-\.]\d{2,4}/gi,
       label: '[DATA_NASCITA]', type: 'date' },
-    { pattern: /\[PAZIENTE\][^\n]{0,50}?:\s*(\d{2}[\/\.]\d{2}[\/\.]\d{4})/g,
+    { pattern: /\[PAZIENTE\][^\n]{0,50}?:\s*(\d{2}[\/\.]\d{2}[\/\.]\d{2,4})/g,
       label: '[PAZIENTE]: [DATA_NASCITA]', type: 'date' },
-    { pattern: /\bDN\s+\d{2}[\/\.]\d{2}[\/\.]\d{4}\b/gi,
+    { pattern: /\bDN\s+\d{2}[\/\.]\d{2}[\/\.]\d{2,4}\b/gi,
       label: '[DATA_NASCITA]', type: 'date' },
-    { pattern: /\(d\.n\.\d{2}\/\d{2}\/\d{4}\)/gi,
+    { pattern: /\(d\.n\.\d{2}\/\d{2}\/\d{2,4}\)/gi,
       label: '[DATA_NASCITA]', type: 'date' },
-    { pattern: /\bNato\/a?\s+il:?\s*\d{2}\/\d{2}\/\d{4}\b/gi,
+    { pattern: /\b[Nn]ato(?:\/a)?\s+il\s*:?\s*\d{2}[\/\-\.]\d{2}[\/\-\.]\d{2,4}\b/gi,
       label: '[DATA_NASCITA]', type: 'date' },
-    { pattern: /di\s+anni\s+\d{1,3}\s+\(D\.?N\.?\s+\d{2}[\/\.]\d{2}[\/\.]\d{4}\)/gi,
+    { pattern: /di\s+anni\s+\d{1,3}\s+\(D\.?N\.?\s+\d{2}[\/\.]\d{2}[\/\.]\d{2,4}\)/gi,
       label: '[ETA_DN]', type: 'date' },
-    { pattern: /di\s+anni\s+\d{1,3}\s+\(d\.n\.\d{2}\/\d{2}\/\d{4}\)/gi,
+    { pattern: /di\s+anni\s+\d{1,3}\s+\(d\.n\.\d{2}\/\d{2}\/\d{2,4}\)/gi,
       label: '[ETA_DN]', type: 'date' },
-    { pattern: /\(n[\s.]+\s*\d{1,2}[\/\-\.]\d{1,2}[\/\-\.]\d{4}\)/gi,
+    { pattern: /\(n[\s.]+\s*\d{1,2}[\/\-\.]\d{1,2}[\/\-\.]\d{2,4}\)/gi,
       label: '([DATA_NASCITA])', type: 'date' },
     { pattern: /(?:^|\r?\n)\s*(?:Paziente|Intestatario|Nominativo)\s*:\s*(?!(?:Nato|Data|Sesso|Cod|RIC|vigile|orientato|deceduto)\b)[A-Z][a-z\u00C0-\u00FF]+(?:\s+(?!(?:Nato|Data|Sesso|Cod|RIC)\b)[A-Z][a-z\u00C0-\u00FF]+)?/gm,
       label: '[PAZIENTE]', type: 'name' },
@@ -1431,7 +1431,7 @@ const ANON_CONFIG = {
     // ALL CAPS patient name before Paziente: keyword
     { pattern: /(?:Paziente|Intestatario|Nominativo)\s*:\s*[A-Z]{2,}(?:\s+[A-Z]{2,})?/g,
       label: '[PAZIENTE]', type: 'name' },
-    { pattern: /\(?(?:Nato\s+il|nato\s+in\s+data|nato\/a?\s+il|n\.\s*|n\s+\.\s*|Data\s+di\s+nascita|D\.?N\.?)\s*:?\s*\d{1,2}[\/\-\.]\d{1,2}[\/\-\.]\d{4}\)?/gi,
+    { pattern: /\(?(?:Nato\s+il|nato\s+in\s+data|nato\/a?\s+il|n\.\s*|n\s+\.\s*|Data\s+di\s+nascita|D\.?N\.?)\s*:?\s*\d{1,2}[\/\-\.]\d{1,2}[\/\-\.]\d{2,4}\)?/gi,
       label: '[DATA_NASCITA]', type: 'date' },
     { pattern: /Nosologico\s*:?\s*[\w\-\/]*/gi,
       label: '[NOSOLOGICO]', type: 'boiler' },
@@ -1584,7 +1584,7 @@ const ANON_CONFIG = {
       label: '[OPERATORE_FARMACO]', type: 'boiler' },
     { pattern: /^\(S\)\s+[A-Z][A-Z\s\d\.\*]+$/gim,
       label: '[PRESCRIZIONE_FARMACO]', type: 'boiler' },
-    { pattern: /(?:anni\s+\d{1,3}|Sesso:\s*[MF]|C\.F\.:|nato\s+il)[^\n]{0,15}(\d{2}[\/\.]\d{2}[\/\.]\d{4})/gi,
+    { pattern: /(?:anni\s+\d{1,3}|Sesso:\s*[MF]|C\.F\.:|nato\s+il)[^\n]{0,15}(\d{2}[\/\.]\d{2}[\/\.]\d{2,4})/gi,
       label: '[DATI_PAZIENTE]', type: 'date' },
     { pattern: /Frequenza\s+campionamento[^\n]*/gi,
       label: '[METADATI_ECG]', type: 'boiler' },
@@ -2347,7 +2347,7 @@ function extractPatientData(rawText) {
   // This is the most reliable source: the demographic header at the top of the PDF
   {
     // Try glued format first: "COGNOME NOMEPaziente:" (PDF.js often concatenates)
-    const fpGlued = rawText.match(/([A-ZÀÈÉÌÒÙ][A-ZÀÈÉÌÒÙ'\- ]+?)(?:\s*)Paziente\s*:\s*(\d{2}\/\d{2}\/\d{4})/);
+    const fpGlued = rawText.match(/([A-ZÀÈÉÌÒÙ][A-ZÀÈÉÌÒÙ'\- ]+?)(?:\s*)Paziente\s*:\s*(\d{2}\/\d{2}\/\d{2,4})/);
     if (fpGlued) {
       const namePart = fpGlued[1].trim();
       const words = namePart.split(/\s+/).filter(w => w.length >= 2);
@@ -2355,20 +2355,20 @@ function extractPatientData(rawText) {
         // Last word is nome, everything before is cognome (handles "DE ROSSI MARIO")
         pd.nome = words.pop();
         pd.cognome = words.join(' ');
-        pd.dataNascita = fpGlued[2];
+        pd.dataNascita = expandYear(fpGlued[2]);
       }
     }
     // Also try: name on line before "Paziente: DD/MM/YYYY"
     if (!pd.cognome || !pd.nome) {
       for (let i = 0; i < lines.length; i++) {
-        const pzM = lines[i].match(/^\s*Paziente\s*:\s*(\d{2}\/\d{2}\/\d{4})/);
+        const pzM = lines[i].match(/^\s*Paziente\s*:\s*(\d{2}\/\d{2}\/\d{2,4})/);
         if (pzM && i > 0) {
           const prev = lines[i-1].trim();
           const words = prev.split(/\s+/).filter(w => /^[A-ZÀÈÉÌÒÙ]/.test(w) && w.length >= 2);
           if (words.length >= 2) {
             pd.nome = words.pop();
             pd.cognome = words.join(' ');
-            pd.dataNascita = pzM[1];
+            pd.dataNascita = expandYear(pzM[1]);
             break;
           }
         }
@@ -2390,18 +2390,18 @@ function extractPatientData(rawText) {
       if (nomM) pd.nome = nomM[1].trim();
     }
     if (!pd.dataNascita) {
-      const dnM = line.match(/[Nn]ato\/a\s+il\s+(\d{2}[\/\-]\d{2}[\/\-]\d{4})|[Dd]ata\s+(?:di\s+)?[Nn]ascita\s*[:\s]+(\d{2}[\/\-]\d{2}[\/\-]\d{4})/);
-      if (dnM) pd.dataNascita = (dnM[1]||dnM[2]).replace(/-/g,'/');
+      const dnM = line.match(/[Nn]ato(?:\/a)?\s+il\s*:?\s*(\d{2}[\/\-]\d{2}[\/\-]\d{2,4})|[Dd]ata\s+(?:di\s+)?[Nn]ascita\s*[:\s]+(\d{2}[\/\-]\d{2}[\/\-]\d{2,4})/);
+      if (dnM) pd.dataNascita = expandYear((dnM[1]||dnM[2]).replace(/-/g,'/'));
     }
   }
 
   // Pattern 2 — "Episodio RIC_AO_XXXXX ROSSI MARIO nato/a il 01/01/1940"
   if (!pd.cognome || !pd.nome) {
-    const epM = rawText.match(/Episodio\s+\S+\s+([A-ZÀÈÉÌÒÙ][A-ZÀÈÉÌÒÙ\s]{1,25}?)\s+([A-ZÀÈÉÌÒÙ][A-ZÀÈÉÌÒÙ\s]{1,25}?)\s+nato\/a\s+il\s+(\d{2}[\/\-]\d{2}[\/\-]\d{4})/);
+    const epM = rawText.match(/Episodio\s+\S+\s+([A-ZÀÈÉÌÒÙ][A-ZÀÈÉÌÒÙ\s]{1,25}?)\s+([A-ZÀÈÉÌÒÙ][A-ZÀÈÉÌÒÙ\s]{1,25}?)\s+nato\/a\s+il\s+(\d{2}[\/\-]\d{2}[\/\-]\d{2,4})/);
     if (epM) {
       if (!pd.cognome) pd.cognome = epM[1].trim();
       if (!pd.nome)    pd.nome    = epM[2].trim();
-      if (!pd.dataNascita) pd.dataNascita = epM[3].replace(/-/g,'/');
+      if (!pd.dataNascita) pd.dataNascita = expandYear(epM[3].replace(/-/g,'/'));
     }
   }
 
@@ -2555,14 +2555,20 @@ function runPipeline() {
       }
       if (pd.dataNascita) {
         const esc = s => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        // Replace 4-digit year version
         try {
           const re = new RegExp(esc(pd.dataNascita), 'g');
-          const before = clean;
           clean = clean.replace(re, '[DATA_NASCITA]');
-          if (clean !== before) {
-            pdReps.push({ orig: pd.dataNascita, repl: '[DATA_NASCITA]', type: 'Data sensibile' });
-          }
         } catch(e) {}
+        // Also replace 2-digit year version if the original was expanded
+        const short2 = pd.dataNascita.replace(/(\d{2}\/\d{2}\/)(?:19|20)(\d{2})$/, '$1$2');
+        if (short2 !== pd.dataNascita) {
+          try {
+            const re2 = new RegExp(esc(short2), 'g');
+            clean = clean.replace(re2, '[DATA_NASCITA]');
+          } catch(e) {}
+        }
+        pdReps.push({ orig: pd.dataNascita, repl: '[DATA_NASCITA]', type: 'Data sensibile' });
       }
 
       S.cleanText = clean;
@@ -4850,6 +4856,11 @@ async function processCasePdf(file) {
       try {
         const esc = s => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
         clean = clean.replace(new RegExp(esc(pd.dataNascita), 'g'), '[DATA_NASCITA]');
+        // Also replace 2-digit year version
+        const short2 = pd.dataNascita.replace(/(\d{2}\/\d{2}\/)(?:19|20)(\d{2})$/, '$1$2');
+        if (short2 !== pd.dataNascita) {
+          clean = clean.replace(new RegExp(esc(short2), 'g'), '[DATA_NASCITA]');
+        }
       } catch(e) {}
     }
 
