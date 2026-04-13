@@ -1661,6 +1661,27 @@ const ANON_CONFIG = {
       label: '[OPERATORE]:', type: 'name' },
     // ── Cleanup pass: residual names adjacent to placeholders ──────
     // These run AFTER all other patterns have created [OPERATORE]/[PAZIENTE] placeholders
+    // [OPERATORE] followed by Initial. Surname (e.g. "[OPERATORE] G. Bellon")
+    { pattern: /(?<=\[OPERATORE\]\s*)([A-Z]\.?\s+[A-Z][a-z\u00C0-\u00FF]{2,})/g,
+      label: '[OPERATORE]', type: 'name' },
+    // Role abbreviations (CTSRM, TSRM, TdR, IP, OSS, etc.) + Initial. Surname
+    { pattern: /\b(?:CTSRM|TSRM|TdR|IP|OSS|AFD|CPS)\s+(?:[A-Z]\.?\s+)?[A-Z][a-z\u00C0-\u00FF]{2,}/g,
+      label: '[OPERATORE]', type: 'name' },
+    // ALLCAPS single surname after surgical role labels
+    // "INTERVENTO:  COGO" or "1° OPERATORE  ROSSI" or "Chirurgo:  BIANCHI"
+    { pattern: /(?:INTERVENTO|OPERATORE|CHIRURGO|ANESTESISTA|FERRISTA|STRUMENTISTA|INFERMIERE)\s*:?\s+([A-Z]{3,})(?=\s{2,}|\s+[A-Z][a-z]|\s*$)/gm,
+      replace: function(m, name) {
+        if (TRAILING_SKIP.has(name.toLowerCase())) return m;
+        return m.replace(name, '[OPERATORE]');
+      },
+      label: '[OPERATORE]', type: 'name' },
+    // "1° COGNOME" / "2° COGNOME" — numbered operator in surgical report
+    { pattern: /[12345]°\s+([A-Z]{3,})(?=\s|$)/gm,
+      replace: function(m, name) {
+        if (TRAILING_SKIP.has(name.toLowerCase())) return m;
+        return m.replace(name, '[OPERATORE]');
+      },
+      label: '[OPERATORE]', type: 'name' },
     // Trailing first name after placeholder — contextual: only match if followed by
     // EOL, closing bracket, or another placeholder (= signature context).
     // Skip if followed by lowercase word, colon, number, etc. (= clinical context).
@@ -2482,12 +2503,73 @@ function runPipeline() {
       S.patientData = extractPatientData(S.rawText);
 
       // Stage 1 — boilerplate
-      const{clean,strippedBlocks}=stripBoilerplate(S.rawText);
-      S.cleanText=clean; S.strippedBlocks=strippedBlocks;
+      const{clean:cleanRaw,strippedBlocks}=stripBoilerplate(S.rawText);
+      S.strippedBlocks=strippedBlocks;
       renderBoilerplateReview(strippedBlocks);
 
+      // ── Stage 0.5 — Pre-anonymize patient name & DOB from frontespizio ──
+      // Replace ALL occurrences of the patient's name and DOB throughout the
+      // document before regex patterns run. This is the most reliable pass
+      // because the frontespizio is the authoritative source for patient identity.
+      let clean = cleanRaw;
+      const pdReps = []; // track what we replaced for the reps panel
+      const pd = S.patientData;
+      if (pd.cognome || pd.nome) {
+        const cog = pd.cognome, nom = pd.nome;
+        // Build all case variants of the name to search for
+        const variants = [];
+        const esc = s => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        if (cog && nom) {
+          const cogU = cog.toUpperCase(), nomU = nom.toUpperCase();
+          // "COGNOME NOME", "NOME COGNOME", "Cognome Nome", "Nome Cognome"
+          variants.push({ pat: esc(cogU) + '\\s+' + esc(nomU), label: '[PAZIENTE]' });
+          variants.push({ pat: esc(nomU) + '\\s+' + esc(cogU), label: '[PAZIENTE]' });
+          variants.push({ pat: esc(cog) + '\\s+' + esc(nom), label: '[PAZIENTE]' });
+          variants.push({ pat: esc(nom) + '\\s+' + esc(cog), label: '[PAZIENTE]' });
+          // Also mixed: "COGNOME Nome" / "Nome COGNOME" (common in headers)
+          variants.push({ pat: esc(cogU) + '\\s+' + esc(nom), label: '[PAZIENTE]' });
+          variants.push({ pat: esc(cog) + '\\s+' + esc(nomU), label: '[PAZIENTE]' });
+          variants.push({ pat: esc(nomU) + '\\s+' + esc(cog), label: '[PAZIENTE]' });
+          variants.push({ pat: esc(nom) + '\\s+' + esc(cogU), label: '[PAZIENTE]' });
+        }
+        // Individual surname and name (only as whole words, min 3 chars to avoid false positives)
+        if (cog && cog.length >= 3) {
+          variants.push({ pat: '\\b' + esc(cog.toUpperCase()) + '\\b', label: '[PAZIENTE]' });
+          variants.push({ pat: '\\b' + esc(cog) + '\\b', label: '[PAZIENTE]' });
+        }
+        if (nom && nom.length >= 3) {
+          variants.push({ pat: '\\b' + esc(nom.toUpperCase()) + '\\b', label: '[NOME]' });
+          variants.push({ pat: '\\b' + esc(nom) + '\\b', label: '[NOME]' });
+        }
+        // Apply longest-first to avoid partial replacements
+        variants.sort((a,b) => b.pat.length - a.pat.length);
+        for (const v of variants) {
+          try {
+            const re = new RegExp(v.pat, 'g');
+            const before = clean;
+            clean = clean.replace(re, v.label);
+            if (clean !== before) {
+              pdReps.push({ orig: v.pat.replace(/\\[bsS+*?^${}()|[\]\\]/g,'').replace(/\\\s\+/g,' '), repl: v.label, type: 'Nome' });
+            }
+          } catch(e) {}
+        }
+      }
+      if (pd.dataNascita) {
+        const esc = s => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        try {
+          const re = new RegExp(esc(pd.dataNascita), 'g');
+          const before = clean;
+          clean = clean.replace(re, '[DATA_NASCITA]');
+          if (clean !== before) {
+            pdReps.push({ orig: pd.dataNascita, repl: '[DATA_NASCITA]', type: 'Data sensibile' });
+          }
+        } catch(e) {}
+      }
+
+      S.cleanText = clean;
+
       const{frozen,restore}=freezeLabLines(clean);
-      let finalText=clean, reps=[];
+      let finalText=clean, reps=[...pdReps];
 
       stxt.textContent='Stage 1 — Regex strutturale...';
       const res=applyRegex(frozen);
@@ -4697,7 +4779,45 @@ async function processCasePdf(file) {
 
     // Stage 2: anonymization
     setCaseImportStatus('Anonimizzazione — Strip boilerplate...', 45);
-    const { clean } = stripBoilerplate(full);
+    const { clean: cleanRaw } = stripBoilerplate(full);
+
+    // ── Pre-anonymize patient name & DOB from frontespizio ──
+    const pd = extractPatientData(full);
+    let clean = cleanRaw;
+    if (pd.cognome || pd.nome) {
+      const cog = pd.cognome, nom = pd.nome;
+      const variants = [];
+      const esc = s => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      if (cog && nom) {
+        const cogU = cog.toUpperCase(), nomU = nom.toUpperCase();
+        variants.push({ pat: esc(cogU) + '\\s+' + esc(nomU), label: '[PAZIENTE]' });
+        variants.push({ pat: esc(nomU) + '\\s+' + esc(cogU), label: '[PAZIENTE]' });
+        variants.push({ pat: esc(cog) + '\\s+' + esc(nom), label: '[PAZIENTE]' });
+        variants.push({ pat: esc(nom) + '\\s+' + esc(cog), label: '[PAZIENTE]' });
+        variants.push({ pat: esc(cogU) + '\\s+' + esc(nom), label: '[PAZIENTE]' });
+        variants.push({ pat: esc(cog) + '\\s+' + esc(nomU), label: '[PAZIENTE]' });
+        variants.push({ pat: esc(nomU) + '\\s+' + esc(cog), label: '[PAZIENTE]' });
+        variants.push({ pat: esc(nom) + '\\s+' + esc(cogU), label: '[PAZIENTE]' });
+      }
+      if (cog && cog.length >= 3) {
+        variants.push({ pat: '\\b' + esc(cog.toUpperCase()) + '\\b', label: '[PAZIENTE]' });
+        variants.push({ pat: '\\b' + esc(cog) + '\\b', label: '[PAZIENTE]' });
+      }
+      if (nom && nom.length >= 3) {
+        variants.push({ pat: '\\b' + esc(nom.toUpperCase()) + '\\b', label: '[NOME]' });
+        variants.push({ pat: '\\b' + esc(nom) + '\\b', label: '[NOME]' });
+      }
+      variants.sort((a,b) => b.pat.length - a.pat.length);
+      for (const v of variants) {
+        try { clean = clean.replace(new RegExp(v.pat, 'g'), v.label); } catch(e) {}
+      }
+    }
+    if (pd.dataNascita) {
+      try {
+        const esc = s => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        clean = clean.replace(new RegExp(esc(pd.dataNascita), 'g'), '[DATA_NASCITA]');
+      } catch(e) {}
+    }
 
     setCaseImportStatus('Anonimizzazione — Regex strutturale...', 55);
     const { frozen, restore } = freezeLabLines(clean);
