@@ -1003,6 +1003,7 @@ REGOLE ASSOLUTE — inviolabili, nessun fingerprint le sovrascrive
 - Usa [CITTA] e [REPARTO] esattamente come appaiono nel template — non sostituirli con valori reali.
 - Usa SEMPRE il passato prossimo per tutti gli eventi del ricovero ("ha eseguito", "è stata avviata", "ha presentato", "è stato sottoposto", "è stata documentata"). MAI il passato remoto ("fu ricoverato") e MAI l'imperfetto narrativo ("veniva ricoverato", "si procedeva"). Unica eccezione: il presente per lo stato alla dimissione ("deambula", "si alimenta").
 - Restituisci SOLO la lettera, senza testo prima o dopo.
+- FORMATTAZIONE: riproduci ESATTAMENTE la spaziatura del template. Una sola riga vuota tra sezioni consecutive — MAI due o più righe vuote consecutive. NON aggiungere righe vuote extra tra paragrafi, tra intestazione di sezione e contenuto, o dentro le sezioni. Il risultato deve avere la stessa densità del template, senza "aria" aggiuntiva.
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 GERARCHIA DELLE ISTRUZIONI
@@ -3704,6 +3705,8 @@ async function generateLetter(){
     if(!resp.ok) await handleApiError(resp);
     const data=await resp.json();
     S.letter=data.content[0].text;
+    // Clean up: collapse 3+ consecutive newlines to exactly 2 (one blank line)
+    S.letter=S.letter.replace(/\n{3,}/g,'\n\n').trim();
     // Replace [CITTA] and [REPARTO] with resolved values
     const resolvedWard=getActiveWardName();
     S.letter=S.letter.replace(/\[CITTA\]/g,'Padova');
@@ -4021,6 +4024,8 @@ function finalizzaLettera(){
   if(edited) S.letter = edited;
   // Replace patient placeholders with real data extracted from raw text
   S.letter = applyPatientData(S.letter, S.patientData);
+  // Clean up excessive blank lines
+  S.letter = S.letter.replace(/\n{3,}/g,'\n\n').trim();
   document.getElementById('letterOut').textContent = S.letter;
   document.getElementById('nav4').classList.add('done');
   goTo(4);
