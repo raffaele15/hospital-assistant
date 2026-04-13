@@ -4413,18 +4413,25 @@ function ghStatus(msg,color='var(--dim)'){
 }
 async function ghApiGet(cfg){
   const url=`https://api.github.com/repos/${cfg.repo}/contents/${cfg.path}`;
-  const r=await fetch(url,{headers:{Authorization:`token ${cfg.token}`,'Accept':'application/vnd.github.v3+json'}});
-  if(r.status===404)return null;
-  if(!r.ok)throw new Error(`GitHub GET ${r.status}: ${await r.text()}`);
-  const meta=await r.json();
-  // For large files (>1MB), GitHub may omit content — fetch raw text via download_url
-  if(!meta.content && meta.download_url){
-    try{
-      const dl=await fetch(meta.download_url);
-      if(dl.ok) meta._rawText = await dl.text();
-    }catch(e){ console.warn('download_url fallback failed:',e); }
+  try{
+    const r=await fetch(url,{headers:{Authorization:`token ${cfg.token}`,'Accept':'application/vnd.github.v3+json'}});
+    if(r.status===404)return null;
+    if(!r.ok)throw new Error(`GitHub GET ${r.status}: ${await r.text()}`);
+    const meta=await r.json();
+    if(!meta.content && meta.download_url){
+      try{
+        const dl=await fetch(meta.download_url);
+        if(dl.ok) meta._rawText = await dl.text();
+      }catch(e){ console.warn('download_url fallback failed:',e); }
+    }
+    return meta;
+  }catch(e){
+    if(e.message==='Failed to fetch'){
+      console.error('ghApiGet failed — URL:',url,'repo:',cfg.repo,'path:',cfg.path);
+      throw new Error('Failed to fetch — verifica connessione internet e che il token abbia permessi "repo" su '+cfg.repo);
+    }
+    throw e;
   }
-  return meta;
 }
 async function ghApiPut(cfg,content,sha){
   const url=`https://api.github.com/repos/${cfg.repo}/contents/${cfg.path}`;
