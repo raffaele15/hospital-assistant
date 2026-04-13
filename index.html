@@ -1343,7 +1343,9 @@ const ANON_CONFIG = {
     // Digits glued to ALL-CAPS surname before [NOME]
     { pattern: /(?<=\d)[A-Z]{3,}(?=\s+\[NOME\])/g,
       label: '[PAZIENTE]', type: 'name' },
-    { pattern: /Stampato\s+da\s*:\s*[A-Z][a-zA-Z\u00C0-\u00FF]+(?:\s+[A-Z][a-zA-Z\u00C0-\u00FF]+)*/g,
+    { pattern: /Stampato\s+(?:il\s+)?\d{2}\/\d{2}\/\d{4}\s+\d{2}:\d{2}\s+[^\n]*Stampato\s+da\s*:\s*[^\n]*/g,
+      label: '[DATA_STAMPA]Stampato da: [OPERATORE]', type: 'boiler' },
+    { pattern: /Stampato\s+da\s*:\s*[^\n]+/g,
       label: 'Stampato da: [OPERATORE]', type: 'name' },
     // FIX: Specializzando pattern — flexible title prefix (dott/dr with or without dot, any case)
     { pattern: /Specializzando\s*:\s*(?:(?:[Dd]ott\.?(?:ssa\.?)?|[Dd]r\.?(?:ssa\.?)?)\s+)?(?:[A-Z]\.\s*)?[A-Z][a-zA-Z'\u00C0-\u00FF]+(?:\s+[A-Z][a-zA-Z'\u00C0-\u00FF]+)*/g,
@@ -1422,8 +1424,11 @@ const ANON_CONFIG = {
       label: '[SSN]', type: 'id' },
     { pattern: /Indirizzo\s+(?:domicilio|residenza)\s*:?\s*[^\n\r]+/gi,
       label: '[INDIRIZZO_PAZIENTE]', type: 'boiler' },
-    { pattern: /\b(?:VIA|VIALE|CORSO|PIAZZA|LARGO|VICOLO|STRADA)\s+[A-Z][A-Z\s]+\d+(?:\s+[A-Z][A-Z\s]+)?/g,
+    { pattern: /\b(?:VIA|VIALE|CORSO|PIAZZA|PIAZZALE|PIAZZETTA|LARGO|VICOLO|STRADA|BORGATA|CONTRADA|LOCALIT[AÀ]|FRAZIONE)\s+[A-Z][A-Z\s\u00C0-\u00FF]+\d+(?:\s*[-\/]\s*[A-Z0-9]+)?/gi,
       label: '[INDIRIZZO_PAZIENTE]', type: 'boiler' },
+    // "domicilio: <address>" or "residenza: <address>" after label
+    { pattern: /domicilio\s*:\s*[^\n\r]{5,}/gi,
+      label: 'domicilio: [INDIRIZZO_PAZIENTE]', type: 'boiler' },
     // ALL CAPS patient name before Paziente: keyword
     { pattern: /(?:Paziente|Intestatario|Nominativo)\s*:\s*[A-Z]{2,}(?:\s+[A-Z]{2,})?/g,
       label: '[PAZIENTE]', type: 'name' },
@@ -4397,9 +4402,10 @@ function extractDischargeLetter(anonText) {
 
   // ── Phase 2: once a letter zone is found, trim its start to the greeting ─
   const GREETING_RE = [
-    /^\s*Alla?\s+C\.\s*A\.\s+del\s+Medico\s+Curante/i,
+    /^\s*Alla?\s+C\.\s*A\.\s+de[li]/i,
     /^\s*Al\s+Medico\s+Curante/i,
     /^\s*Ai\s+Colleghi\s+del/i,
+    /^\s*Egregi\s+Colleghi/i,
     /^\s*Gentili\s+Colleghi/i,
     /^\s*Alla\s+cortese\s+attenzione/i,
     /^\s*All['']attenzione\s+de[li]/i,
@@ -4426,12 +4432,14 @@ function extractDischargeLetter(anonText) {
   const anchors = [];
   for (let i = 0; i < lines.length; i++) {
     if (ANCHOR_RE.test(lines[i])) {
-      // Verify there's a ward header within 15 lines above
-      let hasHeader = false;
+      // Verify there's a ward header OR a greeting line within 15 lines above
+      let hasContext = false;
       for (let j = Math.max(0, i - 15); j < i; j++) {
-        if (WARD_HEADER_RE.test(lines[j])) { hasHeader = true; break; }
+        if (WARD_HEADER_RE.test(lines[j]) || GREETING_RE.some(re => re.test(lines[j]))) {
+          hasContext = true; break;
+        }
       }
-      if (hasHeader && (!anchors.length || i - anchors[anchors.length-1] > 10)) {
+      if (hasContext && (!anchors.length || i - anchors[anchors.length-1] > 10)) {
         anchors.push(i);
       }
     }
