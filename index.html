@@ -222,9 +222,9 @@ hr.div{border:none;border-top:1px solid var(--border);margin:18px 0}
       ondragleave="this.style.borderColor='var(--border)'"
       ondrop="handlePdfDrop(event)">
       <input type="file" id="pdfFileInput" accept=".pdf" style="display:none;" onchange="handlePdfFile(event)">
-      <div style="font-size:24px;margin-bottom:6px;color:var(--dim);">⬆</div>
+      <div style="font-size:24px;margin-bottom:6px;color:var(--dim);">📁</div>
       <div style="font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--mid);">
-        <strong style="color:var(--text);">Clicca o trascina il PDF</strong> — testo estratto offline, nessun dato trasmesso
+        <strong style="color:var(--text);">Clicca o trascina il PDF</strong> — cartella clinica completa
       </div>
     </div>
     <div id="pdfStatus" style="display:none;margin-top:10px;">
@@ -244,9 +244,9 @@ hr.div{border:none;border-top:1px solid var(--border);margin:18px 0}
       ondragleave="this.style.borderColor='var(--border)'"
       ondrop="handleXlsDrop(event)">
       <input type="file" id="xlsFileInput" accept=".xls,.xlsx,.csv" style="display:none;" onchange="handleXlsFile(event)">
-      <div style="font-size:22px;margin-bottom:5px;color:var(--dim);">📊</div>
+      <div style="font-size:22px;margin-bottom:5px;color:var(--dim);">🧪</div>
       <div style="font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--mid);">
-        <strong style="color:var(--text);">Clicca o trascina XLS / XLSX</strong> — referto laboratorio
+        <strong style="color:var(--text);">Clicca o trascina XLS</strong> — referto laboratorio
       </div>
     </div>
     <div id="xlsStatus" style="display:none;margin-top:10px;">
@@ -427,7 +427,6 @@ hr.div{border:none;border-top:1px solid var(--border);margin:18px 0}
       <div class="ctitle" style="margin:0;">Prompt Completo</div>
       <div style="display:flex;gap:7px;flex-wrap:wrap;">
         <button class="btn btn-g" style="font-size:10px;padding:5px 11px;" onclick="refreshPrompt()" title="Ricostruisce il prompt con le impostazioni correnti (template, fingerprint, testo clinico)">↺ Aggiorna</button>
-        <button class="btn btn-g" style="font-size:10px;padding:5px 11px;" onclick="copyFull()" title="Copia negli appunti il prompt completo (system + user) — utile per incollarlo in Claude.ai o altra AI">⎘ Copia prompt completo</button>
       </div>
     </div>
     <div class="tabs">
@@ -444,8 +443,20 @@ hr.div{border:none;border-top:1px solid var(--border);margin:18px 0}
     <button class="btn btn-g" onclick="goTo(1)">← Indietro</button>
     <button class="btn btn-p" id="genBtn" onclick="generateLetter()">
       <span class="spin" id="genSpin" style="display:none;"></span>
-      ✦ Genera Lettera
+      ✦ Genera Lettera con AI
     </button>
+    <button class="btn btn-g" onclick="copyFull()" title="Copia negli appunti il prompt completo (system + user) — utile per incollarlo in Claude.ai o altra AI">⎘ Copia prompt per AI esterna</button>
+    <button class="btn btn-g" onclick="togglePasteAI()" title="Incolla la risposta copiata dalla chat AI esterna e formattala automaticamente">📋 Incolla da AI esterna</button>
+  </div>
+  <div id="pasteAIPanel" style="display:none;margin-top:12px;">
+    <div class="card" style="border-color:var(--accent-d);">
+      <div class="ctitle" style="margin-bottom:8px;">Incolla la lettera generata dalla chat AI</div>
+      <textarea id="pasteAIInput" rows="10" placeholder="Incolla qui il testo della lettera copiato dalla chat AI..." style="font-size:12px;font-family:'Times New Roman',serif;line-height:1.6;"></textarea>
+      <div style="display:flex;gap:8px;margin-top:8px;">
+        <button class="btn btn-p" onclick="formatPastedLetter()" style="font-size:11px;">Avanti → Verifica</button>
+        <button class="btn btn-g" onclick="togglePasteAI()" style="font-size:11px;">✗ Annulla</button>
+      </div>
+    </div>
   </div>
   <div id="genErr" style="margin-top:10px;font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--red);display:none;"></div>
 </div>
@@ -479,8 +490,20 @@ hr.div{border:none;border-top:1px solid var(--border);margin:18px 0}
       <span class="spin" id="verifSpin" style="display:none;"></span>
       ✦ Verifica con AI
     </button>
-    <button class="btn btn-g" onclick="copyVerificaPrompt()" title="Copia il prompt di verifica negli appunti per incollarlo manualmente in Claude.ai o altra AI">⎘ Copia prompt verifica</button>
+    <button class="btn btn-g" onclick="copyVerificaPrompt()" title="Copia il prompt di verifica negli appunti per incollarlo manualmente in Claude.ai o altra AI">⎘ Copia prompt di verifica per AI esterna</button>
+    <button class="btn btn-g" onclick="togglePasteVerifica()" title="Incolla il risultato JSON della verifica copiato dalla chat AI esterna">📋 Incolla risultato verifica AI esterna</button>
     <div id="verifStats" style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--dim);margin-left:4px;"></div>
+  </div>
+  <!-- Paste verifica result panel -->
+  <div id="pasteVerificaPanel" style="display:none;margin-bottom:12px;">
+    <div class="card" style="border-color:var(--accent-d);">
+      <div class="ctitle" style="margin-bottom:8px;">Incolla il risultato della verifica dall'AI esterna</div>
+      <textarea id="pasteVerificaInput" rows="8" placeholder="Incolla qui il JSON generato dall'AI esterna (array di oggetti con quote, severity, reason)..." style="font-size:11px;font-family:'JetBrains Mono',monospace;line-height:1.5;"></textarea>
+      <div style="display:flex;gap:8px;margin-top:8px;">
+        <button class="btn btn-p" onclick="applyPastedVerifica()" style="font-size:11px;">Applica evidenziazione</button>
+        <button class="btn btn-g" onclick="togglePasteVerifica()" style="font-size:11px;">✗ Annulla</button>
+      </div>
+    </div>
   </div>
   <!-- Modello & Stima costi verifica -->
   <div class="card" style="margin-bottom:14px;">
@@ -504,14 +527,12 @@ hr.div{border:none;border-top:1px solid var(--border);margin:18px 0}
     <!-- Left: editable letter -->
     <div style="display:flex;flex-direction:column;gap:6px;">
       <div style="font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--dim);text-transform:uppercase;letter-spacing:.08em;">Lettera — modificabile</div>
-      <textarea id="verifLetterEdit" style="flex:1;min-height:480px;font-size:12px;line-height:1.7;font-family:'Times New Roman',serif;resize:vertical;" oninput="onVerifLetterEdit()"></textarea>
+      <textarea id="verifLetterEdit" placeholder="Verifica con AI o incolla qui il testo generato dall'AI esterna" style="flex:1;min-height:480px;font-size:12px;line-height:1.7;font-family:'Times New Roman',serif;resize:vertical;" oninput="onVerifLetterEdit()"></textarea>
     </div>
     <!-- Right: highlighted view -->
     <div style="display:flex;flex-direction:column;gap:6px;">
       <div style="font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--dim);text-transform:uppercase;letter-spacing:.08em;">Analisi — <span id="verifRightLabel">in attesa di verifica</span></div>
-      <div id="verifHighlight" class="paper" style="min-height:480px;font-size:12px;line-height:1.7;overflow-y:auto;white-space:pre-wrap;cursor:default;">
-        <span style="color:var(--dim);font-style:italic;">Clicca "Verifica con AI" per analizzare la lettera contro la cartella anonimizzata.</span>
-      </div>
+      <div id="verifHighlight" class="paper" style="min-height:480px;font-size:12px;line-height:1.7;overflow-y:auto;white-space:pre-wrap;cursor:default;padding-top:16px;"><span style="color:var(--dim);">Qui viene visualizzato il testo verificato dall'AI.</span></div>
     </div>
   </div>
   <!-- Flags list -->
@@ -538,9 +559,9 @@ hr.div{border:none;border-top:1px solid var(--border);margin:18px 0}
     <label>Percorso file JSON nel repo</label>
     <input type="text" id="cfg_gh_path" placeholder="cases.json" value="cases.json">
     <div style="display:flex;gap:8px;margin-top:12px;flex-wrap:wrap;">
-      <button class="btn btn-g" style="font-size:10px;padding:6px 13px;" onclick="testGitHubConnection()" title="Verifica che token, repository e percorso siano corretti">⚡ Testa Connessione</button>
-      <button class="btn btn-g" style="font-size:10px;padding:6px 13px;" onclick="pullLibraryFromGitHub()" title="Scarica la libreria da GitHub e la unisce con quella locale">↓ Pull Libreria</button>
-      <button class="btn btn-g" style="font-size:10px;padding:6px 13px;" onclick="syncLibraryToGitHub()" title="Carica la libreria locale su GitHub, sovrascrivendo il file remoto">↑ Push Libreria</button>
+      <button class="btn btn-g" style="font-size:10px;padding:6px 13px;" onclick="testGitHubConnection()" title="Verifica che token, repository e percorso siano corretti">⚡&nbsp;Testa Connessione</button>
+      <button class="btn btn-g" style="font-size:10px;padding:6px 13px;" onclick="pullLibraryFromGitHub()" title="Scarica la libreria da GitHub e la unisce con quella locale">↓&nbsp;Pull Libreria</button>
+      <button class="btn btn-g" style="font-size:10px;padding:6px 13px;" onclick="syncLibraryToGitHub()" title="Carica la libreria locale su GitHub, sovrascrivendo il file remoto">↑&nbsp;Push Libreria</button>
     </div>
     <div id="ghStatus" style="font-family:'JetBrains Mono',monospace;font-size:10px;margin-top:8px;color:var(--dim);"></div>
   </div>
@@ -716,7 +737,7 @@ hr.div{border:none;border-top:1px solid var(--border);margin:18px 0}
     <!-- ── PDF + XLS import zone ──────────────────────────────────────── -->
     <div class="ib blue" style="margin-bottom:12px;font-size:10px;line-height:1.6;">
       <strong style="color:var(--text);">Import rapido da PDF + XLS:</strong> carica la cartella clinica completa (PDF)
-      e il referto di laboratorio (XLS/XLSX). Il testo viene estratto offline, anonimizzato con la stessa pipeline
+      e il referto di laboratorio (XLS). Il testo viene estratto offline, anonimizzato con la stessa pipeline
       dello Step 1–2, e la lettera di dimissione viene individuata automaticamente
       (se presente più di una, viene usata l'ultima).
     </div>
@@ -728,7 +749,7 @@ hr.div{border:none;border-top:1px solid var(--border);margin:18px 0}
         ondragleave="this.style.borderColor='var(--border)'"
         ondrop="handleCaseImportDrop(event,'pdf')">
         <input type="file" id="caseImportPdfInput" accept=".pdf" style="display:none;" onchange="handleCaseImportFile(event,'pdf')">
-        <div style="font-size:18px;color:var(--dim);margin-bottom:4px;">📄</div>
+        <div style="font-size:18px;color:var(--dim);margin-bottom:4px;">📁</div>
         <div style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--mid);">
           <strong style="color:var(--text);">Cartella clinica PDF</strong><br>
           <span id="caseImportPdfName" style="color:var(--dim);">clicca o trascina</span>
@@ -743,7 +764,7 @@ hr.div{border:none;border-top:1px solid var(--border);margin:18px 0}
         <input type="file" id="caseImportXlsInput" accept=".xls,.xlsx" style="display:none;" onchange="handleCaseImportFile(event,'xls')">
         <div style="font-size:18px;color:var(--dim);margin-bottom:4px;">🧪</div>
         <div style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--mid);">
-          <strong style="color:var(--text);">Laboratorio XLS / XLSX</strong><br>
+          <strong style="color:var(--text);">Laboratorio XLS</strong><br>
           <span id="caseImportXlsName" style="color:var(--dim);">opzionale</span>
         </div>
       </div>
@@ -1423,11 +1444,11 @@ const ANON_CONFIG = {
       label: '[SSN]', type: 'id' },
     { pattern: /Indirizzo\s+(?:domicilio|residenza)\s*:?\s*[^\n\r]+/gi,
       label: '[INDIRIZZO_PAZIENTE]', type: 'boiler' },
-    { pattern: /\b(?:VIA|VIALE|CORSO|PIAZZA|PIAZZALE|PIAZZETTA|LARGO|VICOLO|STRADA|BORGATA|CONTRADA|LOCALIT[AÀ]|FRAZIONE)\s+[A-Z][A-Z\s\u00C0-\u00FF]+\d+(?:\s*[-\/]\s*[A-Z0-9]+)?/gi,
+    { pattern: /\b(?:VIA|VIALE|CORSO|PIAZZA|PIAZZALE|PIAZZETTA|LARGO|VICOLO|STRADA|BORGATA|CONTRADA|LOCALIT[AÀ]|FRAZIONE)\s+[A-Z][A-Z\s,\u00C0-\u00FF]+[,\s]\d+(?:\s*[-\/]\s*[A-Z0-9]+)?/gi,
       label: '[INDIRIZZO_PAZIENTE]', type: 'boiler' },
     // "domicilio: <address>" or "residenza: <address>" after label
-    { pattern: /domicilio\s*:\s*[^\n\r]{5,}/gi,
-      label: 'domicilio: [INDIRIZZO_PAZIENTE]', type: 'boiler' },
+    { pattern: /(?:domicilio|residenza)\s*:\s*[^\n\r]{5,}/gi,
+      label: '[INDIRIZZO_PAZIENTE]', type: 'boiler' },
     // ALL CAPS patient name before Paziente: keyword
     { pattern: /(?:Paziente|Intestatario|Nominativo)\s*:\s*[A-Z]{2,}(?:\s+[A-Z]{2,})?/g,
       label: '[PAZIENTE]', type: 'name' },
@@ -2833,6 +2854,7 @@ function updateLocalStorageStats(){
 }
 
 function exportLibraryJson(){
+  if(!checkExportAuth()) return;
   const lib=loadLibrary();
   if(!lib.length){alert('Libreria vuota — nulla da esportare.');return;}
   const blob=new Blob([JSON.stringify(lib,null,2)],{type:'application/json'});
@@ -2849,6 +2871,7 @@ function exportLibraryJson(){
 }
 
 function importLibraryJson(event){
+  if(!checkExportAuth()){ event.target.value=''; return; }
   const file=event.target.files[0];
   if(!file)return;
   const reader=new FileReader();
@@ -3738,7 +3761,7 @@ async function generateLetter(){
     if(verifEl) verifEl.value=S.letter;
     // Reset Verifica right pane for fresh run
     const verifHL=document.getElementById('verifHighlight');
-    if(verifHL) verifHL.innerHTML='<span style="color:var(--dim);font-style:italic;">Clicca "Verifica con AI" per analizzare la lettera contro la cartella anonimizzata.</span>';
+    if(verifHL) verifHL.innerHTML='<span style="color:var(--dim);">Qui viene visualizzato il testo verificato dall\'AI.</span>';
     const verifRL=document.getElementById('verifRightLabel');
     if(verifRL) verifRL.textContent='in attesa di verifica';
     const verifFL=document.getElementById('verifFlagsList');
@@ -3846,7 +3869,7 @@ function goToVerifica(){
   if(el && S.letter && S.letter !== '—') el.value = S.letter;
   // Reset right pane
   document.getElementById('verifHighlight').innerHTML =
-    '<span style="color:var(--dim);font-style:italic;">Clicca "Verifica con AI" per analizzare la lettera contro la cartella anonimizzata.</span>';
+    '<span style="color:var(--dim);">Qui viene visualizzato il testo verificato dall\'AI.</span>';
   document.getElementById('verifRightLabel').textContent = 'in attesa di verifica';
   document.getElementById('verifFlagsList').style.display = 'none';
   document.getElementById('verifStats').textContent = '';
@@ -4004,15 +4027,21 @@ function copyVerificaPrompt(){
 
 Analizza ogni affermazione fattuale nella lettera (diagnosi, farmaci, dosi, date, valori di laboratorio, procedure, parametri vitali, anamnesi) e verificala contro la cartella.
 
-Per ogni problema trovato restituisci una riga con questo formato:
-[TIPO] "frase dalla lettera" → motivo
+Restituisci SOLO un array JSON valido, senza testo prima o dopo, senza backtick.
+Ogni elemento ha questa struttura:
+{
+  "quote": "frase esatta dalla lettera (max 120 caratteri, abbastanza specifica da essere univoca)",
+  "severity": "contradiction" | "unsupported" | "inferred",
+  "reason": "spiegazione in italiano in una riga (max 100 caratteri)"
+}
 
-Dove TIPO è:
-- CONTRADDICE — la lettera afferma qualcosa che contraddice esplicitamente la cartella
-- ASSENTE — la lettera afferma un fatto specifico non presente nella cartella
-- INFERENZA — inferenza clinicamente plausibile ma non documentata
+Severity:
+- "contradiction": la lettera afferma qualcosa che contraddice esplicitamente la cartella
+- "unsupported": la lettera afferma un fatto specifico completamente assente dalla cartella
+- "inferred": la lettera riporta un'inferenza clinicamente ragionevole ma non esplicitamente documentata
 
-Se la lettera è completamente fedele alla cartella scrivi: "Nessuna segnalazione."
+Non segnalare frasi generiche, formule di cortesia, struttura della lettera o stile.
+Segnala solo contenuto clinico fattuale. Se la lettera è completamente fedele alla cartella, restituisci [].
 
 CARTELLA CLINICA ANONIMIZZATA:
 ${tick3}
@@ -4025,6 +4054,201 @@ ${letterText}
 ${tick3}`;
 
   navigator.clipboard.writeText(prompt).then(()=>flashBtn(event?.target));
+}
+
+// ── Paste verifica result from external AI ──
+function togglePasteVerifica(){
+  const panel=document.getElementById('pasteVerificaPanel');
+  panel.style.display=panel.style.display==='none'?'block':'none';
+}
+
+function applyPastedVerifica(){
+  const raw=document.getElementById('pasteVerificaInput').value.trim();
+  if(!raw){alert('Incolla il risultato JSON della verifica.');return;}
+  try{
+    // Strip markdown code fences if present
+    let cleaned=raw.replace(/^```(?:json)?\s*/,'').replace(/\s*```$/,'').trim();
+    const flags=JSON.parse(cleaned);
+    if(!Array.isArray(flags)) throw new Error('Il risultato deve essere un array JSON.');
+    S_verifFlags=flags;
+    const letterText=document.getElementById('verifLetterEdit').value.trim();
+    if(!letterText){alert('Inserisci la lettera nel pannello sinistro prima di applicare la verifica.');return;}
+    renderVerifHighlights(letterText);
+    document.getElementById('pasteVerificaPanel').style.display='none';
+    document.getElementById('pasteVerificaInput').value='';
+  }catch(e){
+    alert('Errore nel parsing del JSON: '+e.message+'\n\nAssicurati che il testo copiato sia un array JSON valido.');
+  }
+}
+
+// ═══════════════════════════════════════════════════
+// PASTE FROM EXTERNAL AI — local formatting
+// ═══════════════════════════════════════════════════
+function togglePasteAI(){
+  const panel=document.getElementById('pasteAIPanel');
+  panel.style.display=panel.style.display==='none'?'block':'none';
+}
+
+function formatPastedLetter(){
+  const raw=document.getElementById('pasteAIInput').value.trim();
+  if(!raw){alert('Incolla il testo della lettera.');return;}
+  S.letter=formatLetterFromChat(raw);
+  // Clean up excessive blank lines
+  S.letter=S.letter.replace(/\n{3,}/g,'\n\n').trim();
+  // Apply patient data placeholders
+  S.letter=applyPatientData(S.letter, S.patientData);
+  renderLetterToEl(S.letter, document.getElementById('letterOut'));
+  document.getElementById('nav3').classList.add('done');
+  document.getElementById('nav4').classList.add('done');
+  const verifEl=document.getElementById('verifLetterEdit');
+  if(verifEl) verifEl.value=S.letter;
+  document.getElementById('pasteAIPanel').style.display='none';
+  goTo(3);
+}
+
+function parseTherapyTable(block){
+  // Remove glued header "FarmacoPosologiaOrarioNote"
+  let cleaned=block.replace(/^Farmaco\s*Posologia\s*Orario\s*Note\s*/i,'').trim();
+  if(!cleaned) return null;
+
+  // If already contains pipe separators, it's already a table
+  if(cleaned.includes('|')) return null;
+
+  // Split by posologia pattern as anchor: "1 cp/cpr/cps per os"
+  const chunks=cleaned.split(/(\d+\s+(?:cpr?s?|compressa|compresse|fiala|fiale|bustina|bustine|gtt|gocce|ml)\s*(?:per\s+(?:os|via\s+orale|im|ev|sc))?(?:\s*x\s*\d+)?)/i);
+  if(chunks.length<3) return null;
+
+  const rows=[];
+  let curDrug=chunks[0].trim();
+
+  for(let i=1;i<chunks.length;i+=2){
+    const pos=chunks[i].trim();
+    const rem=(chunks[i+1]||'').trim();
+
+    // Extract time
+    const tm=rem.match(/^(\d{1,2}[.:]\d{2}(?:\s*[-–]\s*\d{1,2}[.:]\d{2})?)/);
+    let orario='',afterTime=rem;
+    if(tm){orario=tm[1].replace(/\./g,':');afterTime=rem.substring(tm[0].length);}
+
+    // Extract note by matching known patterns
+    const nps=[/^(terapia domiciliare)/i,/^(nuova terapia fino a rivalutazione)/i,
+      /^(nuova terapia)/i,/^(dose modificata rispetto al domicilio)/i,
+      /^(dose modificata)/i,/^(sospeso)/i,
+      /^(fino al \d{2}\/\d{2}(?:\/\d{2,4})?\s+poi\s+stop)/i,/^(da rivalutare)/i];
+    let note='';
+    for(const np of nps){const nm=afterTime.match(np);if(nm){note=nm[1];afterTime=afterTime.substring(nm[0].length);break;}}
+    if(!note&&afterTime.length>0){
+      const ci=afterTime.search(/[A-ZÀ-Ü]/);
+      if(ci>0){note=afterTime.substring(0,ci).trim();afterTime=afterTime.substring(ci);}
+      else if(ci===-1){note=afterTime;afterTime='';}
+    }
+
+    if(curDrug) rows.push({farmaco:curDrug,posologia:pos,orario,note});
+    curDrug=afterTime.trim();
+  }
+
+  if(rows.length===0) return null;
+  let table='| Farmaco | Posologia | Orario | Note |\n';
+  table+='|---------|-----------|--------|------|\n';
+  for(const r of rows) table+=`| ${r.farmaco} | ${r.posologia} | ${r.orario} | ${r.note} |\n`;
+  return table;
+}
+
+function formatLetterFromChat(raw){
+  let text=raw.trim();
+
+  // ── 1. THERAPY TABLE ──
+  const terapiaHeaderRe=/(Terapia\s+(?:alla\s+dimissione|al\s+trasferimento|consigliata\s+alla\s+dimissione)\s*:\s*)/i;
+  const terapiaMatch=text.match(terapiaHeaderRe);
+  if(terapiaMatch){
+    const tStart=terapiaMatch.index+terapiaMatch[0].length;
+    const afterTherapy=text.slice(tStart);
+    const nextSectionRe=/(?:^|\n)\s*(?:Il paziente è atteso|La paziente è attesa|Si raccomanda|Rimaniamo a disposizione)/im;
+    const nextMatch=afterTherapy.match(nextSectionRe);
+    const tEnd=nextMatch?tStart+nextMatch.index:text.length;
+    const therapyBlock=text.slice(tStart,tEnd).trim();
+    if(!therapyBlock.includes('|')){
+      const table=parseTherapyTable(therapyBlock);
+      if(table){
+        text=text.slice(0,tStart)+'\n'+table+'\n'+text.slice(tEnd);
+      }
+    }
+  }
+
+  // ── 2. SECTION HEADERS — add **bold** and ensure blank lines ──
+  const headers=[
+    'In anamnesi:','Cenni anamnestici:',
+    'Terapia domiciliare:',
+    'Motivo del ricovero:','Motivo di ricovero:',
+    'Esame obiettivo neurologico[^:]*:',
+    'Esame obiettivo generale[^:]*:',
+    'Decorso [Cc]linico:',
+    'L\'obiettività alla dimissione[^:]*:',
+    'L\'obiettività al trasferimento[^:]*:',
+    'Terapia alla dimissione:','Terapia al trasferimento:','Terapia consigliata alla dimissione:',
+    'Si raccomanda:',
+  ];
+  for(const hdr of headers){
+    const re=new RegExp('(^|\\n)\\s*\\*{0,2}('+hdr+')\\*{0,2}','gm');
+    text=text.replace(re,(m,pre,h)=>'\n\n**'+h.replace(/\*\*/g,'').trim()+'**');
+  }
+
+  // Bold for PS section header
+  text=text.replace(/(^|\n)\s*\*{0,2}(Presso il Pronto Soccorso[^:]*:)\*{0,2}/gm,'$1\n**$2**');
+
+  // Bold for lab intro line
+  text=text.replace(/(^|\n)\s*\*{0,2}(Durante la degenza[^:]*:)\*{0,2}/gm,'$1\n**$2**');
+
+  // Bold for instrumental section
+  text=text.replace(/(^|\n)\s*\*{0,2}(e alle seguenti[^:]*:)\*{0,2}/gm,'$1\n**$2**');
+
+  // ── 3. DIAGNOSIS — blank line before and after ──
+  text=text.replace(/(?<!\n)\n("[^"]{10,}")/g,'\n\n$1');
+  text=text.replace(/("[^"]{10,}")\n(?!\n)/g,'$1\n\n');
+
+  // ── 4. RECOMMENDATIONS — ensure – dash list ──
+  const siRaccIdx=text.indexOf('**Si raccomanda:**');
+  if(siRaccIdx>=0){
+    const afterSR=text.slice(siRaccIdx+'**Si raccomanda:**'.length);
+    const rimIdx=afterSR.indexOf('Rimaniamo a disposizione');
+    if(rimIdx>0){
+      let recBlock=afterSR.slice(0,rimIdx).trim();
+      let recLines=recBlock.split(/\n/).map(l=>l.trim()).filter(Boolean);
+      recLines=recLines.map(l=>{
+        l=l.replace(/^[-–—•]\s*/,'').trim();
+        return '– '+l;
+      });
+      text=text.slice(0,siRaccIdx)+'**Si raccomanda:**\n'+recLines.join('\n')+'\n\n'+text.slice(siRaccIdx+'**Si raccomanda:**'.length+rimIdx);
+    }
+  }
+
+  // ── 5. LAB CATEGORIES — ensure "- **Category:**" format ──
+  const labCats=[
+    'Emocromo con formula:','Profilo coagulativo:','Pannello coagulativo:',
+    'Indici di flogosi:','Funzionalità epatica:','Funzionalità renale',
+    'Profilo metabolico:','Profilo proteico:','Enzimi muscolari:',
+    'Profilo enzimi','Albumina:','Profilo carenziale:',
+    'Funzionalità tiroidea:','ntBNP:','Esame urine:','Esame delle urine:',
+    'Microbiologia:','Esami microbiologici:','Profilo immunologico:',
+    'Pannello autoimmunità:','Marcatori tumorali:','Markers tumorali:',
+    'Profilo renale:',
+  ];
+  for(const cat of labCats){
+    const esc=cat.replace(/[.*+?^${}()|[\]\\]/g,'\\$&');
+    // Match the category name, optionally already bold, not already preceded by "- "
+    const re=new RegExp('(^|\\n)\\s*(?:-\\s*)?\\*{0,2}('+esc+')\\*{0,2}','gm');
+    text=text.replace(re,'$1- **$2**');
+  }
+
+  // ── 6. INSTRUMENTAL — ensure "- " prefix for each exam ──
+  // Match exam name optionally with date, add "- " prefix
+  const instrRe=/(^|\n)\s*(?:-\s*)?(?:\*{0,2}>\s*\*{0,2})?\*{0,2}((?:ECG|ECD|Rx|TC |RM |RMN|Ecocardiogramma|Holter|AngioRM|Valutazione fisiatrica|Valutazione neuropsicologica|Consulenza|Verbale|Ecocolordopplergrafia|EcocolorDoppler|EcoColorDoppler)[^:]*:)\*{0,2}/gm;
+  text=text.replace(instrRe,'$1- **$2**');
+
+  // ── 7. CLEANUP ──
+  text=text.replace(/\n{3,}/g,'\n\n').trim();
+
+  return text;
 }
 
 function finalizzaLettera(){
@@ -4416,10 +4640,51 @@ function exportWord(){
 
 function newLetter(){
   if(!confirm('Nuova lettera? I dati correnti andranno persi.'))return;
-  S.rawText=S.cleanText=S.anonText=S.letter='';S.strippedBlocks=[];S.patientData={nome:'',cognome:'',dataNascita:''};
+  // Reset state
+  S.rawText=S.cleanText=S.anonText=S.letter='';
+  S.strippedBlocks=[];
+  S.patientData={nome:'',cognome:'',dataNascita:''};
+  S.activeTemplateId=null;
+  S_verifFlags=[];
+
+  // Panel 0 — Input
   document.getElementById('inp_raw').value='';
-  document.getElementById('letterOut').textContent='—';document.getElementById('usageInfo').style.display='none';
+  const pdfSt=document.getElementById('pdfStatus');if(pdfSt)pdfSt.style.display='none';
+  const pdfBar=document.getElementById('pdfBar');if(pdfBar)pdfBar.style.width='0%';
+  const pdfTxt=document.getElementById('pdfStatusTxt');if(pdfTxt)pdfTxt.textContent='';
+
+  // Panel 1 — Anonymization
+  const anonTxt=document.getElementById('anonText');if(anonTxt)anonTxt.value='';
+  const anonSt=document.getElementById('anonStatus');if(anonSt)anonSt.style.borderColor='var(--border)';
+  const anonStTxt=document.getElementById('anonStatusTxt');if(anonStTxt)anonStTxt.textContent='';
+  const anonSpin=document.getElementById('anonSpin');if(anonSpin)anonSpin.style.display='none';
+
+  // Panel 2 — Prompt & Generation
+  const promptView=document.getElementById('promptView');if(promptView)promptView.value='';
+  const genErr=document.getElementById('genErr');if(genErr)genErr.style.display='none';
+  const usageInfo=document.getElementById('usageInfo');if(usageInfo)usageInfo.style.display='none';
+  const genUsage=document.getElementById('genUsageInfo');if(genUsage)genUsage.style.display='none';
+  const pastePanel=document.getElementById('pasteAIPanel');if(pastePanel)pastePanel.style.display='none';
+  const pasteInput=document.getElementById('pasteAIInput');if(pasteInput)pasteInput.value='';
+
+  // Panel 3 — Verifica
+  const verifEdit=document.getElementById('verifLetterEdit');if(verifEdit)verifEdit.value='';
+  const verifHL=document.getElementById('verifHighlight');
+  if(verifHL)verifHL.innerHTML='<span style="color:var(--dim);">Qui viene visualizzato il testo verificato dall\'AI.</span>';
+  const verifRL=document.getElementById('verifRightLabel');if(verifRL)verifRL.textContent='in attesa di verifica';
+  const verifFL=document.getElementById('verifFlagsList');if(verifFL)verifFL.style.display='none';
+  const verifStats=document.getElementById('verifStats');if(verifStats)verifStats.textContent='';
+  const verifErr=document.getElementById('verifErr');if(verifErr)verifErr.style.display='none';
+  const verifUsage=document.getElementById('verifUsageInfo');if(verifUsage)verifUsage.style.display='none';
+  const pasteVerif=document.getElementById('pasteVerificaPanel');if(pasteVerif)pasteVerif.style.display='none';
+  const pasteVerifInput=document.getElementById('pasteVerificaInput');if(pasteVerifInput)pasteVerifInput.value='';
+
+  // Panel 4 — Export
+  document.getElementById('letterOut').textContent='—';
+
+  // Nav badges
   document.querySelectorAll('.ni').forEach(n=>n.classList.remove('done'));
+
   goTo(0);
 }
 
@@ -5851,6 +6116,8 @@ function scrollToBottom(){
     _goTo2(i);
     requestAnimationFrame(updateBtn);
   };
+  // Show arrow on initial page load if content overflows
+  requestAnimationFrame(updateBtn);
 })();
 
 </script>
