@@ -152,7 +152,7 @@ hr.div{border:none;border-top:1px solid var(--border);margin:18px 0}
 </div>
 <!-- Login screen -->
 <div id="loginScreen" style="display:none;position:fixed;inset:0;z-index:3000;background:var(--bg);flex-direction:column;align-items:center;justify-content:center;gap:16px;">
-  <div style="font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:500;letter-spacing:.14em;color:var(--accent);text-transform:uppercase;margin-bottom:8px;">Lettera<span style="color:var(--dim);">.</span>AI</div>
+  <div style="font-family:'JetBrains Mono',monospace;font-size:18px;font-weight:500;letter-spacing:.14em;color:var(--accent);text-transform:uppercase;margin-bottom:8px;">Lettera<span style="color:var(--dim);">.</span>AI</div>
   <div style="width:300px;max-width:90vw;">
     <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:24px;">
       <label style="display:block;font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--dim);letter-spacing:.1em;text-transform:uppercase;margin-bottom:5px;">Username</label>
@@ -200,8 +200,8 @@ hr.div{border:none;border-top:1px solid var(--border);margin:18px 0}
 <aside>
   <div class="ns">Flusso</div>
   <button class="ni active" onclick="goTo(0)" id="nav0"><span class="sn">1</span>Carica Cartella</button>
-  <button class="ni" onclick="goTo(1)" id="nav1"><span class="sn">2</span>Anonimizzazione</button>
-  <button class="ni" onclick="goTo(2)" id="nav2"><span class="sn">3</span>Generazione</button>
+  <button class="ni" onclick="goTo(1)" id="nav1"><span class="sn">2</span>Anonimizza Dati</button>
+  <button class="ni" onclick="goTo(2)" id="nav2"><span class="sn">3</span>Genera Lettera</button>
   <button class="ni" onclick="goTo(3)" id="nav3"><span class="sn">4</span>Verifica</button>
   <button class="ni" onclick="goTo(4)" id="nav4"><span class="sn">5</span>Esporta</button>
   <div class="ns" style="margin-top:14px;">Config</div>
@@ -215,7 +215,7 @@ hr.div{border:none;border-top:1px solid var(--border);margin:18px 0}
 <div class="panel active" id="panel0">
   <div class="ptitle">Carica Cartella</div>
   <div class="card">
-    <div class="ctitle">Carica PDF — Estrazione Testo Offline</div>
+    <div class="ctitle">Carica PDF Cartella Clinica Completa</div>
     <div id="pdfDropzone" onclick="document.getElementById('pdfFileInput').click()"
       style="border:2px dashed var(--border);border-radius:var(--r);padding:24px 20px;text-align:center;cursor:pointer;background:var(--surface2);"
       ondragover="event.preventDefault();this.style.borderColor='var(--accent)'"
@@ -224,7 +224,7 @@ hr.div{border:none;border-top:1px solid var(--border);margin:18px 0}
       <input type="file" id="pdfFileInput" accept=".pdf" style="display:none;" onchange="handlePdfFile(event)">
       <div style="font-size:24px;margin-bottom:6px;color:var(--dim);">📁</div>
       <div style="font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--mid);">
-        <strong style="color:var(--text);">Clicca o trascina il PDF</strong> — cartella clinica completa
+        <strong style="color:var(--text);">Clicca o trascina il PDF</strong>
       </div>
     </div>
     <div id="pdfStatus" style="display:none;margin-top:10px;">
@@ -237,7 +237,7 @@ hr.div{border:none;border-top:1px solid var(--border);margin:18px 0}
     </div>
   </div>
   <div class="card">
-    <div class="ctitle">Carica Referto Laboratorio XLS — Opzionale</div>
+    <div class="ctitle">Carica Tabella Esami di Laboratorio — Opzionale</div>
     <div id="xlsDropzone" onclick="document.getElementById('xlsFileInput').click()"
       style="border:2px dashed var(--border);border-radius:var(--r);padding:20px;text-align:center;cursor:pointer;background:var(--surface2);"
       ondragover="event.preventDefault();this.style.borderColor='var(--accent)'"
@@ -246,7 +246,7 @@ hr.div{border:none;border-top:1px solid var(--border);margin:18px 0}
       <input type="file" id="xlsFileInput" accept=".xls,.xlsx,.csv" style="display:none;" onchange="handleXlsFile(event)">
       <div style="font-size:22px;margin-bottom:5px;color:var(--dim);">🧪</div>
       <div style="font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--mid);">
-        <strong style="color:var(--text);">Clicca o trascina XLS</strong> — referto laboratorio
+        <strong style="color:var(--text);">Clicca o trascina XLS</strong>
       </div>
     </div>
     <div id="xlsStatus" style="display:none;margin-top:10px;">
@@ -262,8 +262,8 @@ hr.div{border:none;border-top:1px solid var(--border);margin:18px 0}
       </div>
     </div>
   </div>
-  <label>Testo Completo del Paziente</label>
-  <textarea id="inp_raw" style="flex:1;min-height:200px;" placeholder="Incolla qui il testo copiato dal PDF...&#10;&#10;Può contenere tutto, incluse intestazioni ospedaliere — verranno rimosse automaticamente."></textarea>
+  <label>Testo Cartella Clinica Completa</label>
+  <textarea id="inp_raw" style="flex:1;min-height:200px;" placeholder="Incolla qui il testo copiato dal PDF della cartella clinica"></textarea>
   <div class="btn-row">
     <button class="btn btn-p" onclick="goToAnon()">Avanti → Anonimizza</button>
     <button class="btn btn-g" onclick="clearAll()">✕ Reset</button>
@@ -272,7 +272,7 @@ hr.div{border:none;border-top:1px solid var(--border);margin:18px 0}
 
 <!-- ═══ STEP 2 ═══ -->
 <div class="panel" id="panel1">
-  <div class="ptitle">Anonimizzazione</div>
+  <div class="ptitle">Anonimizza Dati</div>
   <div class="card">
     <div class="ctitle">Modalità Anonimizzazione</div>
   </div>
@@ -304,7 +304,7 @@ hr.div{border:none;border-top:1px solid var(--border);margin:18px 0}
   </div>
   <div class="diff-grid" id="diffGrid">
     <div class="diff-col">
-      <div class="dlabel">Testo originale — locale, non inviato</div>
+      <div class="dlabel">Testo cartella clinica completa da anonimizzare</div>
       <div class="diff-scroll" id="origScroll">
         <div class="dtext" id="origText" style="height:calc(60vh - 2px);box-sizing:border-box;">—</div>
       </div>
@@ -325,7 +325,7 @@ hr.div{border:none;border-top:1px solid var(--border);margin:18px 0}
 
 <!-- ═══ STEP 3 ═══ -->
 <div class="panel" id="panel2">
-  <div class="ptitle">Generazione</div>
+  <div class="ptitle">Genera Lettera</div>
   <div class="card">
     <div class="ctitle">Modello di Lettera</div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:4px;align-items:stretch;" id="letterTemplateGrid">
@@ -465,7 +465,7 @@ hr.div{border:none;border-top:1px solid var(--border);margin:18px 0}
 <div class="panel" id="panel4">
   <div class="ptitle">Esporta</div>
   <div id="usageInfo" style="display:none;" class="ib blue"></div>
-  <div id="letterOut" class="paper">—</div>
+  <div id="letterOut" class="paper" style="min-height:500px;"><span style="color:var(--dim);">Generato dalla sezione di verifica</span></div>
   <div class="btn-row" style="margin-top:18px;">
     <button class="btn btn-b" onclick="exportWord()" style="background:var(--blue);color:#fff;">⬇ Esporta RTF</button>
     <button class="btn btn-g" onclick="copyLetter()">⎘ Copia testo</button>
@@ -2047,7 +2047,7 @@ async function loadNameDictionary() {
     fb.forEach(n=>{bkSurnames.add(n.toLowerCase());bkFirstNames.add(n.toLowerCase());});
     NAMES_DB.surnames=fb.map(n=>n.toLowerCase());
     NAMES_DB.loaded=true;
-    const msg=fb.length?`Dizionario locale (${fb.length} nomi) — configura URL in Impostazioni Avanzate per fuzzy matching`:'Dizionario nomi non configurato';
+    const msg=fb.length?`Dizionario locale (${fb.length} nomi)`:'';
     if(statusEl)statusEl.textContent=msg;
     NAMES_DB.loading=false;
     return;
@@ -3808,10 +3808,24 @@ async function copyFull(){refreshPrompt();await navigator.clipboard.writeText(do
 async function copyUser(){refreshPrompt();await navigator.clipboard.writeText(pUsr);flashBtn(event?.target);}
 function flash(){const el=document.getElementById('copyConfirm');el.style.display='block';setTimeout(()=>el.style.display='none',1600);}
 function flashBtn(btn){
-  if(!btn)return flash();
-  const orig=btn.innerHTML;
-  btn.innerHTML='✓ Copiato';btn.style.color='var(--green)';
-  setTimeout(()=>{btn.innerHTML=orig;btn.style.color='';},1800);
+  // Button text feedback
+  if(btn){
+    const orig=btn.innerHTML;
+    btn.innerHTML='✓ Copiato';btn.style.color='var(--green)';
+    setTimeout(()=>{btn.innerHTML=orig;btn.style.color='';},1800);
+  }
+  // Floating toast feedback
+  let toast=document.getElementById('copyToast');
+  if(!toast){
+    toast=document.createElement('div');
+    toast.id='copyToast';
+    toast.style.cssText='position:fixed;top:20px;left:50%;transform:translateX(-50%);z-index:9999;background:var(--green);color:#fff;padding:8px 20px;border-radius:8px;font-family:"JetBrains Mono",monospace;font-size:12px;font-weight:600;box-shadow:0 4px 16px rgba(0,0,0,.3);opacity:0;transition:opacity .3s;pointer-events:none;';
+    document.body.appendChild(toast);
+  }
+  toast.textContent='✓ Copiato negli appunti';
+  toast.style.opacity='1';
+  clearTimeout(toast._timer);
+  toast._timer=setTimeout(()=>{toast.style.opacity='0';},1500);
 }
 
 // ═══════════════════════════════════════════════════
@@ -4019,8 +4033,11 @@ function showVerifErr(msg){
 
 function copyVerificaPrompt(){
   const letterText = document.getElementById('verifLetterEdit').value.trim() || S.letter || '';
-  if(!letterText){ alert('La lettera è vuota.'); return; }
-  if(!S.anonText){ alert('Nessun testo anonimizzato disponibile.'); return; }
+  const hasLetter = !!letterText;
+  const hasCartella = !!S.anonText;
+  if(!hasLetter && !hasCartella){ alert('Mancano sia la cartella clinica anonimizzata che la lettera generata.\nCompleta gli Step 1–2 e genera o incolla una lettera.'); return; }
+  if(!hasCartella){ alert('Manca la cartella clinica anonimizzata.\nCompleta gli Step 1–2 per anonimizzare la cartella.'); return; }
+  if(!hasLetter){ alert('Manca la lettera generata.\nGenera una lettera con AI o incollala da AI esterna.'); return; }
   const tick3 = '```';
   const prompt =
 `Sei un clinico esperto che verifica la coerenza tra una cartella clinica anonimizzata e una lettera di dimissione.
@@ -4680,7 +4697,8 @@ function newLetter(){
   const pasteVerifInput=document.getElementById('pasteVerificaInput');if(pasteVerifInput)pasteVerifInput.value='';
 
   // Panel 4 — Export
-  document.getElementById('letterOut').textContent='—';
+  const letterOutEl=document.getElementById('letterOut');
+  letterOutEl.innerHTML='<span style="color:var(--dim);">Generato dalla sezione di verifica</span>';
 
   // Nav badges
   document.querySelectorAll('.ni').forEach(n=>n.classList.remove('done'));
