@@ -1025,6 +1025,8 @@ REGOLE ASSOLUTE — inviolabili, nessun fingerprint le sovrascrive
 - Usa SEMPRE il passato prossimo per tutti gli eventi del ricovero ("ha eseguito", "è stata avviata", "ha presentato", "è stato sottoposto", "è stata documentata"). MAI il passato remoto ("fu ricoverato") e MAI l'imperfetto narrativo ("veniva ricoverato", "si procedeva"). Unica eccezione: il presente per lo stato alla dimissione ("deambula", "si alimenta").
 - Restituisci SOLO la lettera, senza testo prima o dopo.
 - FORMATTAZIONE: riproduci ESATTAMENTE la spaziatura del template. Una riga vuota di separazione tra ogni sezione (anamnesi, terapia domiciliare, motivo del ricovero, EON, EOG, esami, accertamenti, decorso, obiettività alla dimissione, terapia). Una riga vuota PRIMA e DOPO la diagnosi tra virgolette. MAI due o più righe vuote consecutive. NON aggiungere righe vuote dentro le sezioni (es. dentro il decorso clinico o dentro gli esami). Il risultato deve avere la stessa densità del template.
+- GRASSETTO: ogni intestazione di sezione deve essere in grassetto con asterischi correttamente aperti e chiusi: **Intestazione:** (due asterischi prima, due dopo, seguiti da due punti). MAI lasciare asterischi spaiati. La diagnosi tra virgolette NON va in grassetto.
+- ELENCHI: usa sempre il trattino lungo (–) come bullet per esami di laboratorio, accertamenti strumentali e raccomandazioni. MAI mescolare – e > nello stesso elenco.
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 GERARCHIA DELLE ISTRUZIONI
@@ -1161,6 +1163,7 @@ ACCERTAMENTI STRUMENTALI
 - Non omettere mai la data se presente nell'input.
 - Se il referto non è disponibile: "**Nome esame (DD/MM):** *in corso di refertazione*"
 - Includi tutti gli accertamenti eseguiti, anche quelli non elencati nel template.
+- CONSULENZE SPECIALISTICHE (cardiologica, fisiatrica, neuropsicologica, assistente sociale, etc.): riportare testualmente le conclusioni e le indicazioni del consulente così come scritte nel referto. MAI riformulare, parafrasare o riassumere con parole proprie. Se il consulente ha scritto "si consiglia solo monitoraggio clinico-strumentale", riportare esattamente quella frase.
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 TERAPIA DOMICILIARE
@@ -3464,21 +3467,20 @@ Genera la lettera seguendo ESATTAMENTE questa struttura. Il paziente NON viene d
 Padova, ${today}
 
 Egregi Colleghi,
-
         trasferiamo in data odierna il Sig. [PAZIENTE_NOME], di anni [ETA'], nato il [DATA_NASCITA], ricoverato presso il nostro Reparto in data [DATA_RICOVERO] u.s., presso ${ward} con diagnosi di:
 
 "${diagnosi}"
 
 **In anamnesi:** [APR dall'input — prosa continua]
 
-**Terapia domiciliare:** [farmaci pre-ricovero dall'input]
+mRS pre-evento = [valore se presente].
 
-**Motivo del ricovero:**
-[esordio sintomatologico dall'input — passato prossimo — MAI passato remoto]
+**Terapia domiciliare:** [farmaci pre-ricovero dall'input]
 
 [farmacoallergie se documentate, altrimenti: Non farmacoallergie note.]
 
-mRS pre-evento = [valore se presente].
+**Motivo del ricovero:**
+[esordio sintomatologico dall'input — passato prossimo — MAI passato remoto]
 
 Presso il Pronto Soccorso AOUP è stato sottoposto a:
 **> Esami ematochimici:** [dall'input]
@@ -3549,21 +3551,20 @@ Genera la lettera seguendo ESATTAMENTE questa struttura. Per dati assenti: "Non 
 Padova, ${today}
 
 Egregi Colleghi,
-
         dimettiamo in data odierna il Sig. [PAZIENTE_NOME], di anni [ETA'], nato il [DATA_NASCITA], ricoverato presso il nostro Reparto in data [DATA_RICOVERO] u.s. con diagnosi di:
 
 "${diagnosi}"
 
 **In anamnesi:** [APR dall'input — prosa continua]
 
-**Terapia domiciliare:** [farmaci pre-ricovero dall'input]
+mRS pre-evento = [valore se presente].
 
-**Motivo del ricovero:**
-[esordio sintomatologico dall'input — passato prossimo — MAI passato remoto]
+**Terapia domiciliare:** [farmaci pre-ricovero dall'input]
 
 [farmacoallergie se documentate, altrimenti: Non farmacoallergie note.]
 
-mRS pre-evento = [valore se presente].
+**Motivo del ricovero:**
+[esordio sintomatologico dall'input — passato prossimo — MAI passato remoto]
 
 Presso il Pronto Soccorso AOUP è stato sottoposto a:
 **> Esami ematochimici:** [dall'input]
@@ -4286,13 +4287,16 @@ function copyLetter(){
   const lines = text.split('\n');
   let html = '<div style="font-family:\'Times New Roman\',serif;font-size:12pt;line-height:1.8;">';
 
-  // Detect signature block: lines containing [FIRMA_] or "(medici in formazione" / "(Dirigente"
-  function isSignatureLine(l){ return /\[FIRMA_|\(medici in formazione|\(Dirigente medico\)/i.test(l); }
+  // Detect signature block: lines containing [FIRMA_] or "(medici in formazione" / "(Dirigente/i"
+  function isSignatureLine(l){ return /\[FIRMA_|\(medici in formazione|\(Dirigent[ei]\s+medic[oi]\)/i.test(l); }
+  function isHrLine(l){ return /^\s*[-–—]{3,}\s*$/.test(l); }
 
   // Process lines: right-align date, convert **bold**, format signatures
   let i = 0;
   while(i < lines.length){
     let line = esc(lines[i]);
+    // Skip HR lines
+    if(isHrLine(lines[i])){ i++; continue; }
     // Right-align first line if it's the date
     if(i === 0 && /^\s*\S+,\s*\d{2}\/\d{2}\/\d{4}/.test(lines[0])){
       html += '<p style="text-align:right;margin:0;">' + line.trim() + '</p>';
@@ -4301,19 +4305,19 @@ function copyLetter(){
     // Signature block: collect consecutive signature lines
     if(isSignatureLine(lines[i])){
       const sigLines = [];
-      while(i < lines.length && (isSignatureLine(lines[i]) || lines[i].trim() === '')){
-        if(lines[i].trim()) sigLines.push(esc(lines[i]).replace(/\*\*(.+?)\*\*/g,'<b>$1</b>'));
+      while(i < lines.length && (isSignatureLine(lines[i]) || isHrLine(lines[i]) || lines[i].trim() === '')){
+        if(lines[i].trim() && !isHrLine(lines[i])) sigLines.push(esc(lines[i]).replace(/\*\*(.+?)\*\*/g,'<b>$1</b>'));
         i++;
       }
-      // Render as two-column table: left = formazione, right = dirigente
-      if(sigLines.length >= 2){
-        html += '<table style="width:100%;border:none;margin-top:12px;"><tr>';
-        html += '<td style="text-align:left;vertical-align:top;border:none;padding:0;">' + sigLines.filter(l=>/FORMAZIONE|medici in formazione/i.test(l)).map(l=>l.trim()).join('<br>') + '</td>';
-        html += '<td style="text-align:right;vertical-align:top;border:none;padding:0;">' + sigLines.filter(l=>/DIRIGENTE|Dirigente medico/i.test(l)).map(l=>l.trim()).join('<br>') + '</td>';
-        html += '</tr></table>';
-      } else {
-        sigLines.forEach(l => { html += '<p style="margin:0;">' + l + '</p>'; });
-      }
+      // Add placeholders if missing
+      const leftLines = sigLines.filter(l=>/FORMAZIONE|medici in formazione/i.test(l));
+      const rightLines = sigLines.filter(l=>/DIRIGENTE|Dirigent[ei]\s+medic/i.test(l));
+      if(!leftLines.some(l=>/\[FIRMA_/i.test(l))) leftLines.unshift('[FIRMA_MEDICO_FORMAZIONE]');
+      if(!rightLines.some(l=>/\[FIRMA_/i.test(l))) rightLines.unshift('[FIRMA_DIRIGENTE]');
+      html += '<table style="width:100%;border:none;margin-top:12px;"><tr>';
+      html += '<td style="text-align:left;vertical-align:top;border:none;padding:0;">' + leftLines.map(l=>l.trim()).join('<br>') + '</td>';
+      html += '<td style="text-align:right;vertical-align:top;border:none;padding:0;">' + rightLines.map(l=>l.trim()).join('<br>') + '</td>';
+      html += '</tr></table>';
       continue;
     }
     // Convert **bold** markers to <b>
@@ -4339,16 +4343,43 @@ function copyLetter(){
 }
 
 // Helper: detect signature lines
-function _isSignatureLine(l){ return /\[FIRMA_|\(medici in formazione|\(Dirigente medico\)/i.test(l); }
+function _isSignatureLine(l){ return /\[FIRMA_|\(medici in formazione|\(Dirigent[ei]\s+medic[oi]\)/i.test(l); }
+function _isHrLine(l){ return /^\s*[-–—]{3,}\s*$/.test(l); }
 
 // Build signature HTML block (shared by renderLetterToEl and renderLetterPrintHtml)
 function _renderSignatureHtml(sigLines){
-  const left = sigLines.filter(l=>/FORMAZIONE|medici in formazione/i.test(l)).map(l=>l.trim());
-  const right = sigLines.filter(l=>/DIRIGENTE|Dirigente medico/i.test(l)).map(l=>l.trim());
+  let left = sigLines.filter(l=>/FORMAZIONE|medici in formazione/i.test(l)).map(l=>l.trim());
+  let right = sigLines.filter(l=>/DIRIGENTE|Dirigent[ei]\s+medic/i.test(l)).map(l=>l.trim());
+  // If no [FIRMA_] placeholder, add one
+  if(!left.some(l=>/\[FIRMA_/i.test(l))) left.unshift('[FIRMA_MEDICO_FORMAZIONE]');
+  if(!right.some(l=>/\[FIRMA_/i.test(l))) right.unshift('[FIRMA_DIRIGENTE]');
   return '<div style="display:flex;justify-content:space-between;margin-top:8px;">' +
     '<div>' + left.join('<br>') + '</div>' +
     '<div style="text-align:right;">' + right.join('<br>') + '</div>' +
   '</div>';
+}
+
+// Convert markdown table lines to HTML table
+function _renderMarkdownTable(tableLines){
+  const rows = tableLines.filter(l => !/^\s*\|[-\s|]+\|\s*$/.test(l)); // skip separator row
+  if(rows.length < 1) return tableLines.join('\n');
+  let html = '<table style="width:100%;border-collapse:collapse;margin:8px 0;font-size:inherit;line-height:1.5;">';
+  rows.forEach((row, idx) => {
+    const cells = row.split('|').filter((_,i,a) => i > 0 && i < a.length - 1).map(c => c.trim());
+    const tag = idx === 0 ? 'th' : 'td';
+    const style = idx === 0
+      ? 'border-bottom:2px solid var(--border);padding:4px 8px;text-align:left;font-weight:600;'
+      : 'border-bottom:1px solid var(--border);padding:4px 8px;text-align:left;';
+    html += '<tr>';
+    cells.forEach((cell, ci) => {
+      // Last column (Note) gets more width
+      const extra = ci === cells.length - 1 ? 'min-width:180px;' : '';
+      html += `<${tag} style="${style}${extra}">${cell}</${tag}>`;
+    });
+    html += '</tr>';
+  });
+  html += '</table>';
+  return html;
 }
 
 // Render letter into .paper element with date right-aligned and signatures left/right
@@ -4358,10 +4389,22 @@ function renderLetterToEl(text, el){
   const processed = [];
   let i = 0;
   while(i < lines.length){
+    // Skip --- HR lines
+    if(_isHrLine(lines[i])){ i++; continue; }
+    // Detect markdown table (lines starting with |)
+    if(/^\s*\|/.test(lines[i])){
+      const tableLines = [];
+      while(i < lines.length && /^\s*\|/.test(lines[i])){
+        tableLines.push(lines[i]);
+        i++;
+      }
+      processed.push(_renderMarkdownTable(tableLines));
+      continue;
+    }
     if(_isSignatureLine(lines[i])){
       const sigLines = [];
-      while(i < lines.length && (_isSignatureLine(lines[i]) || lines[i].trim() === '')){
-        if(lines[i].trim()) sigLines.push(lines[i]);
+      while(i < lines.length && (_isSignatureLine(lines[i]) || _isHrLine(lines[i]) || lines[i].trim() === '')){
+        if(lines[i].trim() && !_isHrLine(lines[i])) sigLines.push(lines[i]);
         i++;
       }
       processed.push(_renderSignatureHtml(sigLines));
@@ -4389,11 +4432,12 @@ function renderLetterPrintHtml(text){
   // Collect pre content and signature
   let preLines = [];
   while(i < lines.length){
+    if(_isHrLine(lines[i])){ i++; continue; }
     if(_isSignatureLine(lines[i])){
       if(preLines.length) { parts.push('<pre>' + preLines.join('\n') + '</pre>'); preLines = []; }
       const sigLines = [];
-      while(i < lines.length && (_isSignatureLine(lines[i]) || lines[i].trim() === '')){
-        if(lines[i].trim()) sigLines.push(lines[i]);
+      while(i < lines.length && (_isSignatureLine(lines[i]) || _isHrLine(lines[i]) || lines[i].trim() === '')){
+        if(lines[i].trim() && !_isHrLine(lines[i])) sigLines.push(lines[i]);
         i++;
       }
       parts.push(_renderSignatureHtml(sigLines));
@@ -5036,8 +5080,10 @@ function extractDischargeLetter(anonText) {
     /^\s*Ai\s+Colleghi\s+del/i,
     /^\s*Egregi\s+Colleghi/i,
     /^\s*Gentili\s+Colleghi/i,
+    /^\s*Gentile\s+Collega/i,
     /^\s*Alla\s+cortese\s+attenzione/i,
-    /^\s*All['']attenzione\s+de[li]/i,
+    /^\s*All['\u2019]attenzione\s+de[li]/i,
+    /^\s*All['\u2019]att\.?ne\s+de[li]/i,
   ];
 
   const END_RE = [
