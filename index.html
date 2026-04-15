@@ -3742,7 +3742,7 @@ async function generateLetter(){
     // Replace [CITTA] and [REPARTO] with resolved values
     const resolvedWard=getActiveWardName();
     S.letter=S.letter.replace(/\[CITTA\]/g,'Padova');
-    if(resolvedWard) S.letter=S.letter.replace(/\[REPARTO\]/g,resolvedWard);
+    S.letter=S.letter.replace(/\[REPARTO\]/g, resolvedWard || 'reparto');
     const u=data.usage||{};
     const price=PRICING[document.getElementById('modelSelect').value]||PRICING['claude-sonnet-4-6'];
     const inCost=((u.input_tokens||0)/1e6)*price.in;
@@ -4115,6 +4115,10 @@ function formatPastedLetter(){
   S.letter=S.letter.replace(/\n{3,}/g,'\n\n').trim();
   // Apply patient data placeholders
   S.letter=applyPatientData(S.letter, S.patientData);
+  // Replace [CITTA] and [REPARTO]
+  const resolvedWard2=getActiveWardName();
+  S.letter=S.letter.replace(/\[CITTA\]/g,'Padova');
+  S.letter=S.letter.replace(/\[REPARTO\]/g, resolvedWard2 || 'reparto');
   renderLetterToEl(S.letter, document.getElementById('letterOut'));
   document.getElementById('nav3').classList.add('done');
   document.getElementById('nav4').classList.add('done');
@@ -4274,6 +4278,10 @@ function finalizzaLettera(){
   if(edited) S.letter = edited;
   // Replace patient placeholders with real data extracted from raw text
   S.letter = applyPatientData(S.letter, S.patientData);
+  // Replace [CITTA] and [REPARTO]
+  const resolvedWard3=getActiveWardName();
+  S.letter=S.letter.replace(/\[CITTA\]/g,'Padova');
+  S.letter=S.letter.replace(/\[REPARTO\]/g, resolvedWard3 || 'reparto');
   // Clean up excessive blank lines
   S.letter = S.letter.replace(/\n{3,}/g,'\n\n').trim();
   renderLetterToEl(S.letter, document.getElementById('letterOut'));
