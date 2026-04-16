@@ -53,7 +53,7 @@ select{width:100%;background:var(--surface2);border:1px solid var(--border);bord
 .btn-g:hover{background:var(--surface2);color:var(--text);border-color:var(--border-hi)}
 .btn-row{display:flex;gap:10px;margin-top:20px;flex-wrap:wrap;align-items:center}
 .card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:16px;margin-bottom:14px}
-.ctitle{font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--dim);text-transform:uppercase;letter-spacing:.1em;margin-bottom:11px}
+.ctitle{font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--accent);text-transform:uppercase;letter-spacing:.1em;margin-bottom:11px}
 .ib{background:var(--surface2);border:1px solid var(--border);border-left:3px solid var(--accent-d);border-radius:0 var(--r) var(--r) 0;padding:10px 13px;font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--dim);line-height:1.65;margin-bottom:13px}
 .ib.red{border-left-color:var(--red)} .ib.green{border-left-color:var(--green)}
 .ib.acc{border-left-color:var(--accent)} .ib.blue{border-left-color:var(--blue)}
@@ -189,6 +189,9 @@ hr.div{border:none;border-top:1px solid var(--border);margin:18px 0}
 <header>
   <div class="logo">Lettera<span>.</span>AI</div>
   <div style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--dim);">Generatore Lettera di Dimissione</div>
+  <div style="margin-left:auto;display:flex;gap:8px;align-items:center;">
+    <button class="btn btn-g" style="font-size:10px;padding:4px 10px;color:var(--red);" onclick="doLogout()" title="Esci e cancella i dati locali">Esci</button>
+  </div>
 </header>
 
 <button id="scrollDownBtn" onclick="scrollToBottom()" title="Vai in fondo" style="position:fixed;bottom:28px;left:calc(210px + (100vw - 210px)/2);transform:translateX(-50%);z-index:999;width:44px;height:44px;border-radius:50%;background:var(--accent);border:none;cursor:pointer;box-shadow:0 2px 12px rgba(0,0,0,.4);display:none;align-items:center;justify-content:center;transition:opacity .2s;">
@@ -343,53 +346,79 @@ hr.div{border:none;border-top:1px solid var(--border);margin:18px 0}
       <input type="text" id="transferWard" placeholder="es. Riabilitazione Neurologica, Ospedale di Vicenza" oninput="updateTokenPanel();refreshPrompt()">
     </div>
   </div>
-  <div class="card">
-    <div class="ctitle">Modello & Temperatura</div>
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
-      <div>
-        <label>Modello</label>
-        <select id="modelSelect" onchange="updateTokenPanel()">
-          <option value="claude-haiku-4-5-20251001">claude-haiku-4-5 — economico, veloce</option>
-          <option value="claude-sonnet-4-6" selected>claude-sonnet-4-6 — migliore qualità</option>
-        </select>
+  <div class="card" id="tempPrefsCard">
+    <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;cursor:pointer;" onclick="toggleTempPrefsPanel()">
+      <div class="ctitle" style="margin:0;">Preferenze Lettera <span id="tempPrefsSummary" style="color:var(--dim);font-size:9px;margin-left:8px;text-transform:none;letter-spacing:0;"></span></div>
+      <span id="tempPrefsToggleArrow" style="color:var(--dim);font-size:12px;">▶</span>
+    </div>
+    <div id="tempPrefsPanel" style="display:none;margin-top:14px;">
+      <div class="ib" style="margin-bottom:12px;font-size:10px;line-height:1.6;">
+        Modifica le preferenze solo per questa lettera. Le impostazioni non vengono salvate — per modifiche permanenti usa Impostazioni Avanzate.
       </div>
-      <div>
-        <label>Token output massimi</label>
-        <select id="maxTokensSelect" onchange="updateTokenPanel()">
-          <option value="4000">4 000 — lettera breve</option>
-          <option value="8000" selected>8 000 — standard</option>
-          <option value="12000">12 000 — lettera lunga</option>
-          <option value="16000">16 000 — massimo</option>
-        </select>
-        <div id="maxTokensHint" style="font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--dim);margin-top:4px;">aumenta se la lettera viene troncata</div>
+      <div style="display:flex;flex-direction:column;gap:14px;">
+        <div>
+          <label style="margin-bottom:6px;">Esami di Laboratorio</label>
+          <div class="tabs">
+            <button class="tab" id="tempLabBtn_all" onclick="setTempPref('lab','all')">Tutti i valori</button>
+            <button class="tab" id="tempLabBtn_altered" onclick="setTempPref('lab','altered')">Solo patologici</button>
+          </div>
+        </div>
+        <div>
+          <label style="margin-bottom:6px;">Accertamenti Strumentali</label>
+          <div class="tabs">
+            <button class="tab" id="tempAccBtn_brief" onclick="setTempPref('acc','brief')">Sintetici</button>
+            <button class="tab" id="tempAccBtn_extended" onclick="setTempPref('acc','extended')">Estesi</button>
+          </div>
+        </div>
+        <div>
+          <label style="margin-bottom:6px;">Decorso Clinico</label>
+          <div class="tabs">
+            <button class="tab" id="tempDecBtn_short" onclick="setTempPref('dec','short')">Conciso</button>
+            <button class="tab" id="tempDecBtn_standard" onclick="setTempPref('dec','standard')">Standard</button>
+            <button class="tab" id="tempDecBtn_long" onclick="setTempPref('dec','long')">Dettagliato</button>
+          </div>
+        </div>
+        <div>
+          <label style="margin-bottom:6px;">Anamnesi</label>
+          <div class="tabs">
+            <button class="tab" id="tempAnBtn_essential" onclick="setTempPref('an','essential')">Essenziale</button>
+            <button class="tab" id="tempAnBtn_complete" onclick="setTempPref('an','complete')">Completa</button>
+          </div>
+        </div>
+        <div>
+          <label style="margin-bottom:6px;">Raccomandazioni</label>
+          <div class="tabs">
+            <button class="tab" id="tempRacBtn_main" onclick="setTempPref('rac','main')">Principali</button>
+            <button class="tab" id="tempRacBtn_all" onclick="setTempPref('rac','all')">Tutte</button>
+          </div>
+        </div>
+        <div>
+          <label style="margin-bottom:6px;">Terapia alla Dimissione</label>
+          <div class="tabs">
+            <button class="tab" id="tempTerBtn_active" onclick="setTempPref('ter','active')">Solo attivi</button>
+            <button class="tab" id="tempTerBtn_withSuspended" onclick="setTempPref('ter','withSuspended')">Includi sospesi</button>
+          </div>
+        </div>
+        <div>
+          <label style="margin-bottom:6px;">Altre Preferenze <span style="color:var(--dim);font-size:9px;text-transform:none;letter-spacing:0;margin-left:6px;">testo libero</span></label>
+          <textarea id="tempPrefCustomText" rows="3" placeholder="Aggiungi qui preferenze aggiuntive solo per questa lettera..." style="font-size:11px;" oninput="setTempPrefCustom(this.value)"></textarea>
+        </div>
       </div>
-      <div>
-        <label>Temperatura — <span id="tempLabel">0.0</span></label>
-        <input type="range" id="tempSlider" min="0" max="5" value="0" step="1" style="width:100%;accent-color:var(--accent);margin-top:10px;">
-        <div style="font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--dim);display:flex;justify-content:space-between;margin-top:2px;"><span>preciso</span><span>creativo</span></div>
+      <div style="margin-top:14px;">
+        <button class="btn btn-g" style="font-size:10px;padding:5px 11px;" onclick="resetTempPrefs()" title="Ripristina le preferenze salvate">↺ Ripristina salvate</button>
       </div>
     </div>
-  </div>
-  <div class="tok-panel" id="tokPanel">
-    <div class="ctitle" style="margin-bottom:14px;">Stima Token & Costo</div>
-    <div id="tokRows"><div style="font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--dim);">Completa gli Step 1–2 per vedere la stima.</div></div>
-    <div id="genUsageInfo" style="display:none;margin-top:12px;" class="ib green"></div>
-  </div>
-  <div class="card">
-    <div class="ctitle">Prompt di Sistema — modificabile</div>
-    <textarea id="systemPrompt" rows="8" style="font-size:11px;"></textarea>
   </div>
   <div class="card" id="refCaseCard">
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;flex-wrap:wrap;gap:8px;">
       <div class="ctitle" style="margin:0;">Caso di Riferimento</div>
       <div style="display:flex;align-items:center;gap:8px;">
-        <button class="btn btn-g" style="font-size:9px;padding:4px 10px;" onclick="pullLibraryFromGeneration()" title="Scarica i casi dalla libreria GitHub">↓ Pull Libreria</button>
         <span id="lastPullTime" style="font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--dim);"></span>
       </div>
     </div>
     <!-- No cases warning -->
     <div id="refCaseNoCases" style="display:none;margin-bottom:10px;" class="ib acc">
-      Nessun caso nella libreria locale. Premi "↓ Pull Libreria" per scaricare i casi da GitHub.
+      Nessun caso nella libreria. La libreria viene scaricata automaticamente al login: verifica la connessione nelle impostazioni.
     </div>
     <div class="tabs">
       <button class="tab active" id="refModeBtn_auto" onclick="setRefMode('auto')" title="Seleziona automaticamente il caso più simile dalla libreria tramite TF-IDF sulla cartella anonimizzata">Automatico</button>
@@ -423,6 +452,10 @@ hr.div{border:none;border-top:1px solid var(--border);margin:18px 0}
     <div id="refCaseStatus" style="margin-top:10px;font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--dim);display:none;"></div>
   </div>
   <div class="card">
+    <div class="ctitle">Prompt di Sistema — modificabile</div>
+    <textarea id="systemPrompt" rows="8" style="font-size:11px;"></textarea>
+  </div>
+  <div class="card">
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;flex-wrap:wrap;gap:8px;">
       <div class="ctitle" style="margin:0;">Prompt Completo</div>
       <div style="display:flex;gap:7px;flex-wrap:wrap;">
@@ -439,9 +472,44 @@ hr.div{border:none;border-top:1px solid var(--border);margin:18px 0}
       <div class="cc" id="copyConfirm" style="position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);z-index:999;">✓ Copiato!</div>
     </div>
   </div>
+  <!-- Model, Temperature, Token panel — hidden by default, shown when generating -->
+  <div id="genSettingsPanel" style="display:none;">
+    <div class="card">
+      <div class="ctitle">Modello & Temperatura</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+        <div>
+          <label>Modello</label>
+          <select id="modelSelect" onchange="updateTokenPanel()">
+            <option value="claude-haiku-4-5-20251001">claude-haiku-4-5 — economico, veloce</option>
+            <option value="claude-sonnet-4-6" selected>claude-sonnet-4-6 — migliore qualità</option>
+          </select>
+        </div>
+        <div>
+          <label>Token output massimi</label>
+          <select id="maxTokensSelect" onchange="updateTokenPanel()">
+            <option value="4000">4 000 — lettera breve</option>
+            <option value="8000" selected>8 000 — standard</option>
+            <option value="12000">12 000 — lettera lunga</option>
+            <option value="16000">16 000 — massimo</option>
+          </select>
+          <div id="maxTokensHint" style="font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--dim);margin-top:4px;">aumenta se la lettera viene troncata</div>
+        </div>
+        <div>
+          <label>Temperatura — <span id="tempLabel">0.0</span></label>
+          <input type="range" id="tempSlider" min="0" max="5" value="0" step="1" style="width:100%;accent-color:var(--accent);margin-top:10px;">
+          <div style="font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--dim);display:flex;justify-content:space-between;margin-top:2px;"><span>preciso</span><span>creativo</span></div>
+        </div>
+      </div>
+    </div>
+    <div class="tok-panel" id="tokPanel">
+      <div class="ctitle" style="margin-bottom:14px;">Stima Token & Costo</div>
+      <div id="tokRows"><div style="font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--dim);">Completa gli Step 1–2 per vedere la stima.</div></div>
+      <div id="genUsageInfo" style="display:none;margin-top:12px;" class="ib green"></div>
+    </div>
+  </div>
   <div class="btn-row">
     <button class="btn btn-g" onclick="goTo(1)">← Indietro</button>
-    <button class="btn btn-p" id="genBtn" onclick="generateLetter()">
+    <button class="btn btn-p" id="genBtn" onclick="showGenSettingsAndGenerate()">
       <span class="spin" id="genSpin" style="display:none;"></span>
       ✦ Genera Lettera con AI
     </button>
@@ -570,7 +638,7 @@ hr.div{border:none;border-top:1px solid var(--border);margin:18px 0}
   <div class="card" style="border-color:var(--red);border-width:1px;">
     <div class="ctitle">Gestione Dati Locali</div>
     <div class="ib red" style="margin-bottom:12px;font-size:10px;line-height:1.6;">
-      ⚠ La libreria casi è salvata nel <strong>localStorage</strong> del browser. I dati persistono tra le sessioni ma possono essere persi cancellando i dati del browser. Usa le opzioni qui sotto per esportare un backup o cancellare i dati quando hai finito.
+      ⚠ La libreria casi è salvata nel <strong>sessionStorage</strong> del browser. I dati sono disponibili solo per la durata della sessione e vengono cancellati automaticamente alla chiusura della tab/browser. Usa le opzioni qui sotto per esportare un backup se necessario.
     </div>
     <div style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--dim);margin-bottom:12px;" id="localStorageStats"></div>
     <div style="display:flex;gap:8px;flex-wrap:wrap;">
@@ -592,6 +660,75 @@ hr.div{border:none;border-top:1px solid var(--border);margin:18px 0}
       ▶ Impostazioni Avanzate
     </button>
     <div id="advSettingsBody" style="display:none;margin-top:14px;">
+
+      <div class="card">
+        <div class="ctitle">Preferenze Generazione Lettera</div>
+        <div class="ib" style="margin-bottom:12px;font-size:10px;line-height:1.6;">
+          Personalizza stile e contenuto delle lettere generate. Le preferenze sono associate al tuo username e sincronizzate via GitHub.
+        </div>
+        <div style="display:flex;flex-direction:column;gap:14px;">
+
+          <div>
+            <label style="margin-bottom:6px;">Esami di Laboratorio</label>
+            <div class="tabs">
+              <button class="tab active" id="prefLabBtn_all" onclick="setPref('lab','all')" title="Riporta tutti i valori degli esami di laboratorio con il range di normalità">Tutti i valori</button>
+              <button class="tab" id="prefLabBtn_altered" onclick="setPref('lab','altered')" title="Riporta solo i valori alterati (fuori range) + i 6 obbligatori (colesterolo, HDL, LDL, trigliceridi, HbA1c, creatinina)">Solo patologici</button>
+            </div>
+          </div>
+
+          <div>
+            <label style="margin-bottom:6px;">Accertamenti Strumentali</label>
+            <div class="tabs">
+              <button class="tab active" id="prefAccBtn_brief" onclick="setPref('acc','brief')" title="Solo conclusioni sintetiche in 1-2 frasi">Sintetici</button>
+              <button class="tab" id="prefAccBtn_extended" onclick="setPref('acc','extended')" title="Conclusioni estese con dettagli clinicamente rilevanti">Estesi</button>
+            </div>
+          </div>
+
+          <div>
+            <label style="margin-bottom:6px;">Decorso Clinico</label>
+            <div class="tabs">
+              <button class="tab" id="prefDecBtn_short" onclick="setPref('dec','short')" title="150-250 parole — solo eventi principali e decisioni terapeutiche">Conciso</button>
+              <button class="tab active" id="prefDecBtn_standard" onclick="setPref('dec','standard')" title="250-400 parole — racconto clinico equilibrato">Standard</button>
+              <button class="tab" id="prefDecBtn_long" onclick="setPref('dec','long')" title="400-600 parole — dettagliato con eventi intermedi e ragionamento clinico">Dettagliato</button>
+            </div>
+          </div>
+
+          <div>
+            <label style="margin-bottom:6px;">Anamnesi</label>
+            <div class="tabs">
+              <button class="tab" id="prefAnBtn_essential" onclick="setPref('an','essential')" title="Solo fattori di rischio rilevanti per la patologia attuale">Essenziale</button>
+              <button class="tab active" id="prefAnBtn_complete" onclick="setPref('an','complete')" title="Tutte le comorbilità e gli eventi anamnestici presenti nella cartella">Completa</button>
+            </div>
+          </div>
+
+          <div>
+            <label style="margin-bottom:6px;">Raccomandazioni</label>
+            <div class="tabs">
+              <button class="tab" id="prefRacBtn_main" onclick="setPref('rac','main')" title="Solo le raccomandazioni principali (terapia, follow-up clinico)">Principali</button>
+              <button class="tab active" id="prefRacBtn_all" onclick="setPref('rac','all')" title="Tutte le raccomandazioni, inclusi follow-up di riscontri incidentali">Tutte</button>
+            </div>
+          </div>
+
+          <div>
+            <label style="margin-bottom:6px;">Terapia alla Dimissione</label>
+            <div class="tabs">
+              <button class="tab active" id="prefTerBtn_active" onclick="setPref('ter','active')" title="Solo farmaci attivi alla dimissione">Solo attivi</button>
+              <button class="tab" id="prefTerBtn_withSuspended" onclick="setPref('ter','withSuspended')" title="Includi anche farmaci sospesi con motivazione indicata nel decorso">Includi sospesi</button>
+            </div>
+          </div>
+
+          <div>
+            <label style="margin-bottom:6px;">Altre Preferenze <span style="color:var(--dim);font-size:9px;text-transform:none;letter-spacing:0;margin-left:6px;">testo libero</span></label>
+            <textarea id="prefCustomText" rows="4" placeholder="Aggiungi qui eventuali preferenze aggiuntive in linguaggio naturale&#10;es: preferisco usare abbreviazioni mediche standard senza spiegarle&#10;es: nelle raccomandazioni includi sempre la frase 'Restiamo a disposizione per ulteriori chiarimenti'" style="font-size:11px;" oninput="setPrefCustom(this.value)"></textarea>
+          </div>
+
+        </div>
+        <div style="display:flex;gap:8px;margin-top:16px;align-items:center;">
+          <button class="btn btn-p" style="font-size:10px;padding:6px 13px;" onclick="saveUserPreferences()" title="Salva le preferenze sul tuo profilo GitHub">✓ Salva Preferenze</button>
+          <button class="btn btn-g" style="font-size:10px;padding:6px 13px;" onclick="resetUserPreferences()" title="Ripristina i valori di default">↺ Reset</button>
+          <span id="prefStatus" style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--dim);"></span>
+        </div>
+      </div>
 
       <div class="card">
         <div class="ctitle">API Key Anthropic</div>
@@ -619,17 +756,6 @@ hr.div{border:none;border-top:1px solid var(--border);margin:18px 0}
         <div id="dictStatusSettings" style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--dim);margin-top:8px;"></div>
       </div>
 
-      <div class="card">
-        <div class="ctitle">Esportazione HTML</div>
-        <div class="ib" style="margin-bottom:10px;font-size:10px;">Scarica o copia il file HTML di Lettera.AI con le configurazioni GitHub incorporate. Utile per usare l'app su un altro browser senza riconfigurare.</div>
-        <div style="display:flex;gap:8px;flex-wrap:wrap;">
-          <button class="btn btn-p" style="font-size:10px;padding:6px 13px;" onclick="downloadPreConfigured()" title="Scarica una copia del file con token e repo già incorporati — aprila su qualsiasi browser senza riconfigurare">⬇ Scarica pre-configurata</button>
-          <button class="btn btn-g" style="font-size:10px;padding:6px 13px;" onclick="copyPreConfigured(true)" title="Copia HTML completo con token incorporato">⎘ Copia con token</button>
-          <button class="btn btn-g" style="font-size:10px;padding:6px 13px;" onclick="copyPreConfigured(false)" title="Copia HTML senza token — per condividere o incollare in un'AI">⎘ Copia senza token</button>
-        </div>
-        <div class="ib" style="margin-top:10px;font-size:10px;background:rgba(255,180,0,0.08);border-color:var(--accent);">⚠ La versione pre-configurata contiene il token in chiaro nel file HTML. Conservala come un file privato — non condividerla e non caricarla su repo pubblici.</div>
-      </div>
-
     </div>
   </div>
 </div>
@@ -639,7 +765,7 @@ hr.div{border:none;border-top:1px solid var(--border);margin:18px 0}
   <div class="ptitle">Libreria Casi</div>
   <div class="card">
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;flex-wrap:wrap;gap:8px;">
-      <div class="ctitle" style="margin:0;">Casi Salvati</div>
+      <div class="ctitle" style="margin:0;">Casi Salvati <span title="I casi salvati vengono scaricati automaticamente al login. Puoi aggiungerne di nuovi nella sezione Aggiungi Caso." style="display:inline-flex;align-items:center;justify-content:center;width:16px;height:16px;border-radius:50%;border:1px solid var(--dim);font-size:10px;color:var(--dim);cursor:help;vertical-align:middle;margin-left:4px;text-transform:none;letter-spacing:0;">?</span></div>
       <div style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--dim);" id="libStats"></div>
     </div>
 
@@ -654,7 +780,7 @@ hr.div{border:none;border-top:1px solid var(--border);margin:18px 0}
 
     <!-- Scrollable case list -->
     <div id="tplGrid" style="max-height:420px;overflow-y:auto;display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:10px;padding-right:4px;"></div>
-    <div id="noTplMsg" class="ib" style="margin:0;">Nessun caso ancora. Aggiungine uno qui sotto.</div>
+    <div id="noTplMsg" class="ib" style="margin:0;display:none;"></div>
   </div>
   <!-- ── Edit Case Panel ──────────────────────────────────────────── -->
   <div class="card" id="caseEditPanel" style="display:none;border-color:var(--accent);">
@@ -708,7 +834,7 @@ hr.div{border:none;border-top:1px solid var(--border);margin:18px 0}
   <div class="card" id="wardFpCard">
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;flex-wrap:wrap;gap:8px;">
       <div style="display:flex;align-items:center;gap:8px;">
-        <div class="ctitle" style="margin:0;">Reparti</div>
+        <div class="ctitle" style="margin:0;">Reparti <span title="Puoi aggiungere un nuovo reparto usando il pulsante + Nuovo Reparto. I reparti servono per organizzare i casi della libreria." style="display:inline-flex;align-items:center;justify-content:center;width:16px;height:16px;border-radius:50%;border:1px solid var(--dim);font-size:10px;color:var(--dim);cursor:help;vertical-align:middle;margin-left:4px;text-transform:none;letter-spacing:0;">?</span></div>
       </div>
       <button class="btn btn-p" style="font-size:10px;padding:5px 12px;" onclick="openNewWardForm()">+ Nuovo Reparto</button>
     </div>
@@ -725,22 +851,16 @@ hr.div{border:none;border-top:1px solid var(--border);margin:18px 0}
 
     <!-- Ward list -->
     <div id="wardGrid" style="display:flex;flex-direction:column;gap:8px;margin-bottom:4px;"></div>
-    <div id="noWardMsg" style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--dim);">Nessun reparto. Creane uno con il pulsante qui sopra.</div>
+    <div id="noWardMsg" style="display:none;"></div>
   </div>
   <div id="ragPreview" style="display:none;" class="card">
     <div class="ctitle">Casi Recuperati <span class="chip c-blue" style="margin-left:6px;">RAG</span></div>
     <div id="ragMatches"></div>
   </div>
   <div class="card">
-    <div class="ctitle">Aggiungi Caso</div>
+    <div class="ctitle">Aggiungi Caso <span title="Carica la cartella clinica completa (PDF) e il referto di laboratorio (XLS). Il testo viene estratto offline, anonimizzato con la stessa pipeline dello Step 1–2, e la lettera di dimissione viene individuata automaticamente (se presente più di una, viene usata l'ultima)." style="display:inline-flex;align-items:center;justify-content:center;width:16px;height:16px;border-radius:50%;border:1px solid var(--dim);font-size:10px;color:var(--dim);cursor:help;vertical-align:middle;margin-left:4px;">?</span></div>
 
     <!-- ── PDF + XLS import zone ──────────────────────────────────────── -->
-    <div class="ib blue" style="margin-bottom:12px;font-size:10px;line-height:1.6;">
-      <strong style="color:var(--text);">Import rapido da PDF + XLS:</strong> carica la cartella clinica completa (PDF)
-      e il referto di laboratorio (XLS). Il testo viene estratto offline, anonimizzato con la stessa pipeline
-      dello Step 1–2, e la lettera di dimissione viene individuata automaticamente
-      (se presente più di una, viene usata l'ultima).
-    </div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px;">
       <!-- PDF drop -->
       <div id="caseImportDropPdf" onclick="document.getElementById('caseImportPdfInput').click()"
@@ -788,7 +908,6 @@ hr.div{border:none;border-top:1px solid var(--border);margin:18px 0}
     </select>
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:5px;margin-top:16px;">
       <label style="margin:0;">Cartella Clinica Anonimizzata</label>
-      <button class="btn btn-g" style="font-size:9px;padding:3px 9px;" onclick="autoFillCaseFolder()">⟳ Da sessione</button>
     </div>
     <textarea id="newCaseFolder" rows="8" placeholder="Incolla la cartella anonimizzata...&#10;&#10;oppure usa il PDF import qui sopra ↑"></textarea>
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:5px;margin-top:16px;">
@@ -800,7 +919,7 @@ hr.div{border:none;border-top:1px solid var(--border);margin:18px 0}
     <!-- ── Fingerprint section ───────────────────────────────────────── -->
     <div style="margin-top:18px;padding-top:14px;border-top:1px solid var(--border);">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;flex-wrap:wrap;gap:8px;">
-        <div style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--accent);text-transform:uppercase;letter-spacing:.1em;">Fingerprint</div>
+        <div style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--accent);text-transform:uppercase;letter-spacing:.1em;">Fingerprint <span title="Analizza il ragionamento clinico della lettera e genera una lettera-modello sintetica con annotazioni. Auto-estrai lo genera con Sonnet (~30s, richiede cartella + lettera). Copia prompt esterno per generarlo manualmente in Claude.ai." style="display:inline-flex;align-items:center;justify-content:center;width:14px;height:14px;border-radius:50%;border:1px solid var(--dim);font-size:9px;color:var(--dim);cursor:help;vertical-align:middle;margin-left:4px;text-transform:none;letter-spacing:0;">?</span></div>
         <div style="display:flex;gap:8px;flex-wrap:wrap;">
           <button class="btn btn-g" style="font-size:9px;padding:4px 10px;" onclick="copyFingerprintPrompt()" title="Copia il prompt da incollare in Claude.ai per generare il fingerprint manualmente">⎘ Copia prompt esterno</button>
           <button class="btn btn-g" onclick="autoExtractTemplate()" style="font-size:9px;padding:4px 10px;" title="Genera il fingerprint automaticamente con Sonnet — richiede cartella + lettera compilate sopra">
@@ -808,9 +927,6 @@ hr.div{border:none;border-top:1px solid var(--border);margin:18px 0}
             ✦ Auto-estrai
           </button>
         </div>
-      </div>
-      <div class="ib" style="margin-bottom:10px;font-size:10px;line-height:1.6;">
-        Analizza il ragionamento clinico della lettera e genera una lettera-modello sintetica con annotazioni. <strong>Auto-estrai</strong> lo genera con Sonnet (~30s, richiede cartella + lettera). <strong>Copia prompt esterno</strong> per generarlo manualmente in Claude.ai.
       </div>
       <!-- Manual fingerprint textarea -->
       <label style="margin-bottom:4px;">JSON Fingerprint <span style="color:var(--dim);font-size:9px;text-transform:none;letter-spacing:0;">(incolla JSON da AI esterna e importa)</span></label>
@@ -897,6 +1013,7 @@ async function doLogin(){
       document.getElementById('loginScreen').style.display='none';
       document.getElementById('loginUser').value='';
       document.getElementById('loginPass').value='';
+      resetIdleTimer();
       return;
     }
     // Scarica users.json dal repo privato hospital-assistant-auth
@@ -924,6 +1041,8 @@ async function doLogin(){
     document.getElementById('loginScreen').style.display='none';
     document.getElementById('loginUser').value='';
     document.getElementById('loginPass').value='';
+    // Store current user for preferences
+    S.currentUser = user;
     // Trigger auto-pull (usa i valori dai campi, non da localStorage)
     const cfg=await getGitHubCfg();
     if(cfg.token&&cfg.repo){
@@ -938,10 +1057,14 @@ async function doLogin(){
             const localOnly=local.filter(c=>!remoteIds.has(c.id));
             const merged=[...remote,...localOnly];
             saveLibrary(merged);renderLibrary();
+            sessionStorage.setItem('letteraai_lastpull',new Date().toISOString());
           }
         }
       }catch(e){console.warn('Auto-pull dopo login fallito:',e.message);}
+      // Load user preferences
+      try{ await loadUserPreferences(); }catch(e){console.warn('Load preferences fallito:',e.message);}
     }
+    resetIdleTimer();
   }catch(e){
     errEl.style.display='block';
     errEl.textContent=e.message;
@@ -978,7 +1101,16 @@ const PRICING = {
 // ═══════════════════════════════════════════════════
 // STATE
 // ═══════════════════════════════════════════════════
-const S    = { rawText:'', cleanText:'', anonText:'', letter:'', strippedBlocks:[], activeTemplateId:null, activeWardId:null, patientData:{nome:'',cognome:'',dataNascita:''} };
+const S    = { rawText:'', cleanText:'', anonText:'', letter:'', strippedBlocks:[], activeTemplateId:null, activeWardId:null, patientData:{nome:'',cognome:'',dataNascita:''}, currentUser:null, userPrefs:null, tempPrefs:null };
+const DEFAULT_USER_PREFS = {
+  lab: 'all',       // 'all' | 'altered'
+  acc: 'brief',     // 'brief' | 'extended'
+  dec: 'standard',  // 'short' | 'standard' | 'long'
+  an: 'complete',   // 'essential' | 'complete'
+  rac: 'all',       // 'main' | 'all'
+  ter: 'active',    // 'active' | 'withSuspended'
+  custom: ''        // free-text additional preferences
+};
 const S_XLS = { text:'', filename:'' };
 let newTplSections = [];
 let newTplFingerprintJson = ''; // stores V2 JSON string when set
@@ -1025,8 +1157,8 @@ REGOLE ASSOLUTE — inviolabili, nessun fingerprint le sovrascrive
 - Usa SEMPRE il passato prossimo per tutti gli eventi del ricovero ("ha eseguito", "è stata avviata", "ha presentato", "è stato sottoposto", "è stata documentata"). MAI il passato remoto ("fu ricoverato") e MAI l'imperfetto narrativo ("veniva ricoverato", "si procedeva"). Unica eccezione: il presente per lo stato alla dimissione ("deambula", "si alimenta").
 - Restituisci SOLO la lettera, senza testo prima o dopo.
 - FORMATTAZIONE: riproduci ESATTAMENTE la spaziatura del template. Una riga vuota di separazione tra ogni sezione (anamnesi, terapia domiciliare, motivo del ricovero, EON, EOG, esami, accertamenti, decorso, obiettività alla dimissione, terapia). Una riga vuota PRIMA e DOPO la diagnosi tra virgolette. MAI due o più righe vuote consecutive. NON aggiungere righe vuote dentro le sezioni (es. dentro il decorso clinico o dentro gli esami). Il risultato deve avere la stessa densità del template.
-- GRASSETTO: ogni intestazione di sezione deve essere in grassetto con asterischi correttamente aperti e chiusi: **Intestazione:** (due asterischi prima, due dopo, seguiti da due punti). MAI lasciare asterischi spaiati. La diagnosi tra virgolette NON va in grassetto.
-- ELENCHI: usa sempre il trattino lungo (–) come bullet per esami di laboratorio, accertamenti strumentali e raccomandazioni. MAI mescolare – e > nello stesso elenco.
+- GRASSETTO: ogni intestazione di sezione deve essere in grassetto con asterischi correttamente aperti e chiusi: **Intestazione:** (due asterischi prima, due dopo, seguiti da due punti). MAI lasciare asterischi spaiati. La diagnosi tra virgolette VA in grassetto: **"diagnosi"**.
+- ELENCHI: usa sempre il trattino lungo (–) come bullet per TUTTI gli elenchi: esami del Pronto Soccorso, esami di laboratorio, accertamenti strumentali, consulenze e raccomandazioni. MAI usare il simbolo > in nessun punto della lettera.
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 GERARCHIA DELLE ISTRUZIONI
@@ -1101,10 +1233,10 @@ ESAME OBIETTIVO NEUROLOGICO (EON)
 - Se non è riportato esplicitamente: ricostruiscilo dall'ultima valutazione neurologica disponibile nei diari clinici, usando come base lo schema di normalità del fingerprint (eon_schema) se presente, altrimenti lo schema default sotto.
 - Sostituisci le voci dello schema solo dove l'input documenta esplicitamente un deficit o un'anomalia.
 - Non inventare deficit non documentati. Non omettere deficit documentati.
-- Includi sempre NIHSS e mRS all'ultimo punteggio disponibile nell'input.
+- Includi NIHSS e mRS SOLO se il ricovero è per stroke/TIA; per altre patologie (epilessia, encefalite, etc.) ometti entrambi.
 
 SCHEMA DEFAULT (usato solo se eon_schema non è presente nel fingerprint):
-"paziente vigile, orientato s/p/t, collaborante. Eloquio fluente, non disartria. Esegue ordini semplici. Capo e sguardo in asse. Marcia autonoma senza caratteri patologici, possibile su punte, talloni e in tandem. Non oscillazioni in Romberg. Raggiunge e mantiene la posizione di Mingazzini I e II senza slivellamenti. Forza conservata ai quattro arti. ROT normovivaci e simmetrici ai quattro arti. Sensibilità tattile integra, nega parestesie. Pallestesia nella norma. Manovre I/N e T/G correttamente eseguite. Non segni di eminegligenza. Ai nervi cranici: pupille isocoriche, isocicliche, normofotoreagenti. CV integro per confronto. MOE integra. Non deficit sensitivi in territorio trigeminale. Non deficit VII. Lingua normosporta, spinta validamente contro le guance bilateralmente. Velo palatino mobile e simmetrico. NIHSS: X. mRS: X."
+"paziente vigile, orientato s/p/t, collaborante. Eloquio fluente, non disartria. Esegue ordini semplici. Capo e sguardo in asse. Marcia autonoma senza caratteri patologici, possibile su punte, talloni e in tandem. Non oscillazioni in Romberg. Raggiunge e mantiene la posizione di Mingazzini I e II senza slivellamenti. Forza conservata ai quattro arti. ROT normovivaci e simmetrici ai quattro arti. Sensibilità tattile integra, nega parestesie. Pallestesia nella norma. Manovre I/N e T/G correttamente eseguite. Non segni di eminegligenza. Ai nervi cranici: pupille isocoriche, isocicliche, normofotoreagenti. CV integro per confronto. MOE integra. Non deficit sensitivi in territorio trigeminale. Non deficit VII. Lingua normosporta, spinta validamente contro le guance bilateralmente. Velo palatino mobile e simmetrico. NIHSS: X. mRS: X. (solo se stroke/TIA — omettere entrambi per altre patologie)"
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 ESAMI DI LABORATORIO
@@ -1134,6 +1266,7 @@ FORMATO DEFAULT — una riga per categoria:
 
 - Prima gli esami nella norma (ultimo valore) separati da virgola + "nella norma".
 - Poi, separati da punto e virgola, gli esami alterati con valore esatto e range di normalità se presente nell'input.
+- I valori alterati (fuori range) vanno sottolineati: usare il tag <u> attorno al nome dell'esame e al valore (es. "<u>Emoglobina 102 g/L (v.n. 140-175)</u>").
 - Se tutti nella norma: "[Nome categoria]: nella norma."
 - Se una categoria non è stata eseguita: ometti la riga completamente.
 - Includi tutte le categorie presenti nell'input, anche quelle non elencate nel template.
@@ -1163,7 +1296,8 @@ ACCERTAMENTI STRUMENTALI
 - Non omettere mai la data se presente nell'input.
 - Se il referto non è disponibile: "**Nome esame (DD/MM):** *in corso di refertazione*"
 - Includi tutti gli accertamenti eseguiti, anche quelli non elencati nel template.
-- CONSULENZE SPECIALISTICHE (cardiologica, fisiatrica, neuropsicologica, assistente sociale, etc.): riportare testualmente le conclusioni e le indicazioni del consulente così come scritte nel referto. MAI riformulare, parafrasare o riassumere con parole proprie. Se il consulente ha scritto "si consiglia solo monitoraggio clinico-strumentale", riportare esattamente quella frase.
+- CONSULENZE SPECIALISTICHE (cardiologica, diabetologica, fisiatrica, neuropsicologica, assistente sociale, etc.): riportare SOLO le conclusioni e le indicazioni/consigli del consulente, NON l'anamnesi o il riassunto clinico che il consulente fa all'inizio del referto. Se il referto inizia con un riassunto del caso ("paziente di X anni con...ricoverato per..."), OMETTI quella parte e riporta solo da dove iniziano le indicazioni operative ("Si consiglia...", "Si imposta...", "Si suggerisce..."). MAI riformulare le indicazioni con parole proprie.
+- EEG: riportare SOLO le conclusioni finali del referto. NON riportare la descrizione tecnica del tracciato (ritmo di fondo, burst, SLI, artefatti). Se il referto ha una sezione "Conclusioni:", copia solo quella.
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 TERAPIA DOMICILIARE
@@ -1183,11 +1317,17 @@ Tabella markdown obbligatoria a 4 colonne:
 | Farmaco | Posologia | Orario | Note |
 |---------|-----------|--------|------|
 
-- Farmaco: nome commerciale + dosaggio (es. "Apixaban 5 mg")
-- Posologia: numero unità + forma (es. "1 compressa", "1 cp")
-- Orario: orario/i di somministrazione (es. "8.00" oppure "8.00 - 20.00")
-- Note: "terapia domiciliare" / "nuova terapia" / "dose modificata" / "fino al GG/MM poi stop" / "sospeso" — la scelta dipende dal contesto clinico e dalle convenzioni del fingerprint
-- Ordina per orario mattutino crescente.
+- Farmaco: nome commerciale O principio attivo + dosaggio disponibile (es. "Apixaban 5 mg", "Torvast 40 mg", "Apidra 100 U/ml")
+- Posologia: numero di unità + forma + via di somministrazione. Forme: "cp" (compresse), "mezza cp" (metà compressa), "fl" (fiale), "U" (unità insulina), "gtt" (gocce). Via: "per os", "e.v.", "s.c.", "i.m.". Usare SEMPRE "cp", MAI "compressa", "compresse", "cpr" o "cps". Esempi: "1 cp per os", "mezza cp per os", "4 U s.c.", "1 fl e.v."
+- Orario: se lo stesso farmaco va assunto in più orari, usare UNA SOLA RIGA con orari separati da "e" (es. "9.00 e 21.00", "8.00 e 20.00"). MAI duplicare righe per lo stesso farmaco.
+- Note: "terapia domiciliare" / "nuova terapia" / "dose modificata" / "fino al GG/MM poi stop" / "sospeso"
+
+ORDINAMENTO delle righe:
+1. Prima i farmaci e.v. (endovenosi)
+2. Poi s.c. e i.m. (sottocute, intramuscolo)
+3. Poi per os (orali)
+All'interno di ogni gruppo, ordinare per categoria farmacologica, poi alfabetico se più farmaci nella stessa categoria.
+
 - Motivazioni di switch terapeutico: nel decorso clinico, non nella tabella.
 - Nella tabella solo la terapia attiva alla dimissione.
 
@@ -1199,7 +1339,7 @@ GESTIONE DELL'INCERTEZZA
 - Esame in corso: "*in corso di refertazione*"
 - Dato assente dall'input: "Non documentato."
 - Non lasciare mai una sezione vuota.
-- Data di ricovero assente o "Non documentato": usa il placeholder letterale **[DATA_RICOVERO]** (non scrivere "Non documentato" per le date nei template di apertura lettera).
+- Data di ricovero assente o "Non documentato": usa il placeholder letterale **[DD/MM]** (non scrivere "Non documentato" per le date nei template di apertura lettera). La data di ricovero va scritta solo come giorno/mese (DD/MM) perché seguita da "u.s." (ultimo scorso).
 - Ora assente o "Non documentato": usa il placeholder letterale **[HH:MM]**.
 
 DECORSO CLINICO:
@@ -2840,8 +2980,8 @@ async function processPdf(file){
 // ═══════════════════════════════════════════════════
 // TEMPLATE LIBRARY
 // ═══════════════════════════════════════════════════
-function loadLibrary(){try{return JSON.parse(localStorage.getItem('letteraai_lib')||'[]');}catch(e){return[];}}
-function saveLibrary(lib){localStorage.setItem('letteraai_lib',JSON.stringify(lib));}
+function loadLibrary(){try{return JSON.parse(sessionStorage.getItem('letteraai_lib')||'[]');}catch(e){return[];}}
+function saveLibrary(lib){sessionStorage.setItem('letteraai_lib',JSON.stringify(lib));}
 
 // ═══════════════════════════════════════════════════
 // LOCAL DATA MANAGEMENT
@@ -2853,7 +2993,7 @@ function updateLocalStorageStats(){
   const cases=lib.filter(t=>t.type!=='ward');
   const bytes=new Blob([JSON.stringify(lib)]).size;
   const kb=(bytes/1024).toFixed(1);
-  el.textContent=`📦 ${cases.length} casi · ${kb} KB in localStorage`;
+  el.textContent=`📦 ${cases.length} casi · ${kb} KB in sessione`;
 }
 
 function exportLibraryJson(){
@@ -2906,8 +3046,8 @@ function clearLocalData(){
   const lib=loadLibrary();
   if(!lib.length){alert('Nessun dato locale da cancellare.');return;}
   if(!confirm('Sei sicuro di voler cancellare tutti i dati locali?\n\nQuesta azione è irreversibile.'))return;
-  localStorage.removeItem('letteraai_lib');
-  localStorage.removeItem('letteraai_settings');
+  sessionStorage.removeItem('letteraai_lib');
+  sessionStorage.removeItem('letteraai_settings');
   S.activeTemplateId=null;S.activeWardId=null;
   renderLibrary();updateLocalStorageStats();
   const st=document.getElementById('localDataStatus');
@@ -2915,6 +3055,39 @@ function clearLocalData(){
   st.textContent='✓ Tutti i dati locali cancellati.';
   setTimeout(()=>st.style.display='none',4000);
 }
+
+function doLogout(){
+  // Remove all letteraai_* keys from localStorage (including all user prefs)
+  const toRemove = [];
+  for(let i = 0; i < sessionStorage.length; i++){
+    const key = sessionStorage.key(i);
+    if(key && key.startsWith('letteraai_')) toRemove.push(key);
+  }
+  toRemove.forEach(k => sessionStorage.removeItem(k));
+  S.rawText=S.cleanText=S.anonText=S.letter='';
+  S.activeTemplateId=null;S.activeWardId=null;
+  S.currentUser=null;S.userPrefs=null;S.tempPrefs=null;
+  document.getElementById('loginScreen').style.display='flex';
+}
+
+// ═══════════════════════════════════════════════════
+// SESSION IDLE TIMEOUT — auto-logout after 30min of inactivity
+// ═══════════════════════════════════════════════════
+const IDLE_TIMEOUT_MS = 30 * 60 * 1000; // 30 minutes
+let _idleTimer = null;
+function resetIdleTimer(){
+  if(_idleTimer) clearTimeout(_idleTimer);
+  // Only arm timer if actually logged in (login screen hidden)
+  const loginScreen = document.getElementById('loginScreen');
+  if(!loginScreen || loginScreen.style.display === 'flex') return;
+  _idleTimer = setTimeout(() => {
+    alert('Sessione scaduta per inattività. Effettua nuovamente il login.');
+    doLogout();
+  }, IDLE_TIMEOUT_MS);
+}
+['mousedown','keydown','touchstart','scroll'].forEach(evt => {
+  document.addEventListener(evt, resetIdleTimer, {passive:true});
+});
 
 function renderLibrary(){
   const lib=loadLibrary();
@@ -3001,10 +3174,6 @@ function renderLibrary(){
   updateRagPreview();
   if(getRefMode()==='manual') populateRefCaseDropdown();
 }
-function selectWard(id){
-  S.activeWardId=(S.activeWardId===id)?null:id;
-  renderLibrary();updateTokenPanel();updateWardBadge();
-}
 function deleteWard(id){
   if(!confirm('Eliminare questo reparto? I casi assegnati non verranno eliminati.'))return;
   if(S.activeWardId===id)S.activeWardId=null;
@@ -3028,19 +3197,6 @@ function createWard(){
   closeNewWardForm();
   renderLibrary();
 }
-function openWardSynthPanel(wardId){
-  // Close any other open synth panels first
-  document.querySelectorAll('[id^="wardSynthPanel_"]').forEach(el=>el.style.display='none');
-  const p=document.getElementById('wardSynthPanel_'+wardId);
-  if(p) p.style.display='block';
-}
-function closeWardSynthPanel(wardId){
-  const p=document.getElementById('wardSynthPanel_'+wardId);
-  if(p) p.style.display='none';
-}
-function toggleWardFpPanel(){ /* legacy no-op */ }
-document.addEventListener('DOMContentLoaded',()=>{
-});
 
 function selectTemplate(id){
   S.activeTemplateId=(S.activeTemplateId===id)?null:id;
@@ -3052,21 +3208,12 @@ function deleteTemplate(id){
   if(S.activeTemplateId===id)S.activeTemplateId=null;
   saveLibrary(loadLibrary().filter(t=>t.id!==id));renderLibrary();updateTokenPanel();
 }
-function getActiveFingerprint(){
-  if(!S.activeTemplateId)return'';
-  const t=loadLibrary().find(x=>x.id===S.activeTemplateId);
-  return t?(t.fingerprint||''):'';
-}
-// Returns {caseFp, wardFp} objects (parsed V2 JSON or null)
+// Returns {caseFpObj} object (parsed V2 JSON or null)
 function getActiveFpObjects(){
   const lib=loadLibrary();
-  const active=S.activeTemplateId?lib.find(x=>x.id===S.activeTemplateId):null;
-  const caseFpObj=active?parseFpJson(active.fingerprint||''):null;
-  // Ward fingerprint: library entry with type='ward' whose tag matches active case name prefix
-  // Also allow manual selection — any library entry with type='ward' that user has selected
-  const wardEntry=lib.find(x=>x.type==='ward'&&x.id===S.activeWardId);
-  const wardFpObj=wardEntry?parseFpJson(wardEntry.fingerprint||''):null;
-  return{caseFpObj,wardFpObj};
+  const caseEntry=lib.find(x=>x.id===S.activeTemplateId);
+  const caseFpObj=caseEntry?parseFpJson(caseEntry.fingerprint||''):null;
+  return{caseFpObj, wardFpObj:null};
 }
 
 // TF-IDF RAG
@@ -3148,66 +3295,6 @@ function buildFingerprintFromSections(sections){
 // ═══════════════════════════════════════════════════
 // WARD FINGERPRINT SYNTHESIS
 // ═══════════════════════════════════════════════════
-async function synthesizeWardFp(wardId){
-  const key=document.getElementById('apiKeyInput').value.trim();
-  if(!key){alert('Inserisci la API key nella sezione Generazione.');return;}
-  const lib=loadLibrary();
-  const ward=lib.find(x=>x.id===wardId&&x.type==='ward');
-  if(!ward){alert('Reparto non trovato.');return;}
-  const cases=lib.filter(t=>t.type!=='ward'&&t.wardId===wardId);
-  if(cases.length<2){alert(`Servono almeno 2 casi nel reparto "${ward.name}" per sintetizzare un fingerprint.`);return;}
-  const spin=document.getElementById('wardFpSpin_'+wardId);
-  const status=document.getElementById('wardFpStatus_'+wardId);
-  if(spin) spin.style.display='inline-block';
-  if(status){status.style.display='block';status.style.color='var(--mid)';status.textContent=`Sintetizzando fingerprint da ${cases.length} casi con Sonnet...`;}
-  try{
-    let casesText='';
-    cases.forEach((c,i)=>{
-      casesText+=`\n\n===== CASO ${i+1}: ${c.name} =====\n`;
-      if(c.folder) casesText+=`--- CARTELLA CLINICA ---\n${c.folder.slice(0,3000)}\n`;
-      if(c.letter) casesText+=`--- LETTERA DI DIMISSIONE ---\n${c.letter.slice(0,3000)}\n`;
-      if(c.fingerprint){
-        const fpObj=parseFpJson(c.fingerprint);
-        if(fpObj?.ragionamento) casesText+=`--- FINGERPRINT INDIVIDUALE ---\n${JSON.stringify(fpObj.ragionamento)}\n`;
-      }
-    });
-    const wardPrompt=FINGERPRINT_PROMPT_V2
-      .replace('Ti fornisco due documenti:\n1. Una cartella clinica anonimizzata (diari, esami, referti)\n2. La lettera di dimissione effettivamente scritta da un neurologo basandosi su quella cartella',
-        `Ti fornisco ${cases.length} casi clinici del reparto "${ward.name}": cartelle anonimizzate, lettere di dimissione, e fingerprint individuali se disponibili.`)
-      .replace('Il tuo compito è duplice: capire il RAGIONAMENTO CLINICO che ha guidato la scrittura della lettera, e estrarne un MODELLO SINTETICO riutilizzabile.',
-        'Il tuo compito è sintetizzare un fingerprint di REPARTO che catturi il ragionamento clinico condiviso, lo stile redazionale comune, e un modello sintetico rappresentativo dello standard del reparto.')
-      .replace('[INCOLLA QUI LA CARTELLA CLINICA ANONIMIZZATA]\n\n===== LETTERA DI DIMISSIONE =====\n[INCOLLA QUI LA LETTERA DI DIMISSIONE]', casesText);
-    const resp=await fetch('https://api.anthropic.com/v1/messages',{
-      method:'POST',
-      headers:{'Content-Type':'application/json','x-api-key':key,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
-      body:JSON.stringify({
-        model:'claude-sonnet-4-6',
-        max_tokens:4000,
-        system:'Sei un esperto di comunicazione clinica neurologica italiana. Sintetizza un fingerprint di reparto da più casi. Restituisci SOLO JSON valido, senza testo prima o dopo, senza backtick.',
-        messages:[{role:'user',content:wardPrompt}]
-      }),
-    });
-    if(!resp.ok) await handleApiError(resp);
-    const rawText=(await resp.json()).content[0].text;
-    const parsed=JSON.parse(rawText.replace(/```json[\s\S]*?```|```/g,'').trim());
-    if(!parsed.lettera_modello) throw new Error('Risposta non contiene lettera_modello — riprova');
-    // Update the existing ward entry (don't create a new one)
-    const lib2=loadLibrary();
-    const idx=lib2.findIndex(x=>x.id===wardId);
-    if(idx!==-1){
-      lib2[idx]={...lib2[idx],fingerprint:JSON.stringify(parsed),sourceCount:cases.length,updatedAt:new Date().toISOString()};
-      saveLibrary(lib2);
-    }
-    if(status){status.style.color='var(--green)';status.textContent=`✓ Fingerprint sintetizzato da ${cases.length} casi.`;}
-    renderLibrary();updateTokenPanel();updateWardBadge();
-    if(status){
-      const q=parsed.qualita||{};
-      const lowFields=Object.entries(q).filter(([,v])=>v?.livello==='bassa').map(([k])=>k);
-      status.textContent=`✓ Salvato · ${cases.length} casi · ~${tok(JSON.stringify(parsed))} tok${lowFields.length?' · ⚠ '+lowFields.join(', '):''}`;
-    }
-  }catch(err){if(status){status.style.color='var(--red)';status.textContent='✗ '+err.message;}}
-  finally{if(spin) spin.style.display='none';}
-}
 
 async function autoExtractTemplate(){
   const key=document.getElementById('apiKeyInput').value.trim();
@@ -3402,16 +3489,7 @@ function getLetterTemplateType(){
 }
 
 function updateWardBadge(){
-  const el=document.getElementById('activeWardBadge');
-  if(!el) return;
-  const name=getActiveWardName();
-  if(name){
-    el.textContent=name;
-    el.style.color='var(--accent)';
-  } else {
-    el.textContent='— verrà usato [REPARTO] come placeholder';
-    el.style.color='var(--dim)';
-  }
+  // Legacy no-op — ward fingerprint feature removed
 }
 
 // Derive ward name from clinical text, then fallback to ward fingerprint
@@ -3467,13 +3545,13 @@ Genera la lettera seguendo ESATTAMENTE questa struttura. Il paziente NON viene d
 Padova, ${today}
 
 Egregi Colleghi,
-        trasferiamo in data odierna il Sig. [PAZIENTE_NOME], di anni [ETA'], nato il [DATA_NASCITA], ricoverato presso il nostro Reparto in data [DATA_RICOVERO] u.s., presso ${ward} con diagnosi di:
+        trasferiamo in data odierna il Sig. **[PAZIENTE_NOME]**, di anni [ETA'] (nato il [DATA_NASCITA]), ricoverato presso il nostro Reparto in data [DD/MM] u.s., presso ${ward} con diagnosi di:
 
 "${diagnosi}"
 
 **In anamnesi:** [APR dall'input — prosa continua]
 
-mRS pre-evento = [valore se presente].
+mRS pre-evento = [valore se presente — solo per stroke/TIA, altrimenti ometti].
 
 **Terapia domiciliare:** [farmaci pre-ricovero dall'input]
 
@@ -3483,10 +3561,10 @@ mRS pre-evento = [valore se presente].
 [esordio sintomatologico dall'input — passato prossimo — MAI passato remoto]
 
 Presso il Pronto Soccorso AOUP è stato sottoposto a:
-**> Esami ematochimici:** [dall'input]
-**> TC encefalo:** [dall'input]
-**> AngioTC dei vasi intracranici:** [se eseguita — altrimenti ometti]
-**> Valutazione neurologica:** [EON verbatim — NIHSS — dall'input]
+– **Esami ematochimici:** [dall'input]
+– **TC encefalo:** [dall'input]
+– **AngioTC dei vasi intracranici:** [se eseguita — altrimenti ometti]
+– **Valutazione neurologica:** [EON verbatim — NIHSS — dall'input]
 
 **Esame obiettivo neurologico all'ingresso in [REPARTO]:**
 [EON verbatim dall'input — NIHSS X]
@@ -3521,7 +3599,7 @@ e alle seguenti **indagini diagnostico-strumentali e valutazioni specialistiche:
 [Prosa clinica unica 150-300 parole, passato prossimo, MAI passato remoto, NESSUNA riga vuota interna — sintesi decisioni terapeutiche e andamento. Includere il motivo del trasferimento presso ${ward}.]
 
 **L'obiettività al trasferimento mostra:**
-[condizioni neurologiche e generali al trasferimento. NIHSS: XX. mRS: XX.]
+[condizioni neurologiche e generali al trasferimento. NIHSS: XX. mRS: XX. (solo per stroke/TIA — omettere entrambi per altre patologie)]
 
 **Terapia al trasferimento:**
 
@@ -3551,13 +3629,13 @@ Genera la lettera seguendo ESATTAMENTE questa struttura. Per dati assenti: "Non 
 Padova, ${today}
 
 Egregi Colleghi,
-        dimettiamo in data odierna il Sig. [PAZIENTE_NOME], di anni [ETA'], nato il [DATA_NASCITA], ricoverato presso il nostro Reparto in data [DATA_RICOVERO] u.s. con diagnosi di:
+        dimettiamo in data odierna il Sig. **[PAZIENTE_NOME]**, di anni [ETA'] (nato il [DATA_NASCITA]), ricoverato presso il nostro Reparto in data [DD/MM] u.s. con diagnosi di:
 
 "${diagnosi}"
 
 **In anamnesi:** [APR dall'input — prosa continua]
 
-mRS pre-evento = [valore se presente].
+mRS pre-evento = [valore se presente — solo per stroke/TIA, altrimenti ometti].
 
 **Terapia domiciliare:** [farmaci pre-ricovero dall'input]
 
@@ -3567,10 +3645,10 @@ mRS pre-evento = [valore se presente].
 [esordio sintomatologico dall'input — passato prossimo — MAI passato remoto]
 
 Presso il Pronto Soccorso AOUP è stato sottoposto a:
-**> Esami ematochimici:** [dall'input]
-**> TC encefalo:** [dall'input]
-**> AngioTC dei vasi intracranici:** [se eseguita — altrimenti ometti]
-**> Valutazione neurologica:** [EON verbatim — NIHSS — dall'input]
+– **Esami ematochimici:** [dall'input]
+– **TC encefalo:** [dall'input]
+– **AngioTC dei vasi intracranici:** [se eseguita — altrimenti ometti]
+– **Valutazione neurologica:** [EON verbatim — NIHSS — dall'input]
 
 **Esame obiettivo neurologico all'ingresso in [REPARTO]:**
 [EON verbatim dall'input — NIHSS X]
@@ -3605,7 +3683,7 @@ e alle seguenti **indagini diagnostico-strumentali e valutazioni specialistiche:
 [Prosa clinica unica 150-300 parole, passato prossimo, MAI passato remoto, NESSUNA riga vuota interna — sintesi decisioni terapeutiche e andamento]
 
 **L'obiettività alla dimissione mostra:**
-[condizioni neurologiche e generali alla dimissione. NIHSS: XX. mRS: XX.]
+[condizioni neurologiche e generali alla dimissione. NIHSS: XX. mRS: XX. (solo per stroke/TIA — omettere entrambi per altre patologie)]
 
 **Terapia alla dimissione:**
 
@@ -3706,6 +3784,11 @@ function hideGenOverlay(){
   if(_genTimerInterval){clearInterval(_genTimerInterval);_genTimerInterval=null;}
 }
 
+function showGenSettingsAndGenerate(){
+  document.getElementById('genSettingsPanel').style.display='block';
+  updateTokenPanel();
+  generateLetter();
+}
 async function generateLetter(){
   const key=document.getElementById('apiKeyInput').value.trim();
   if(!key){showErr('Inserisci la API key Anthropic.');return;}
@@ -3723,6 +3806,7 @@ async function generateLetter(){
   let fullSystem=baseSystem;
   if(wardFpObj) fullSystem+=buildWardFpSystemAddendum(wardFpObj);
   if(refFpObj)  fullSystem+=buildFpSystemAddendum(refFpObj);
+  fullSystem+=buildPreferencesPromptBlock();
   try{
     const resp=await fetch('https://api.anthropic.com/v1/messages',{
       method:'POST',headers,
@@ -3801,6 +3885,7 @@ function refreshPrompt(){
   let pSysLocal=baseSystem;
   if(wardFpObj) pSysLocal+=buildWardFpSystemAddendum(wardFpObj);
   if(refFpObj)  pSysLocal+=buildFpSystemAddendum(refFpObj);
+  pSysLocal+=buildPreferencesPromptBlock();
   pSys=pSysLocal;
   pUsr=buildUserPromptStr();
   renderPromptView();updateTokenPanel();
@@ -4714,7 +4799,13 @@ function newLetter(){
   S.strippedBlocks=[];
   S.patientData={nome:'',cognome:'',dataNascita:''};
   S.activeTemplateId=null;
+  S.tempPrefs=null;
   S_verifFlags=[];
+
+  // Collapse temp prefs panel
+  const tempPanel=document.getElementById('tempPrefsPanel');if(tempPanel)tempPanel.style.display='none';
+  const tempArrow=document.getElementById('tempPrefsToggleArrow');if(tempArrow)tempArrow.textContent='▶';
+  updateTempPrefsSummary();
 
   // Panel 0 — Input
   document.getElementById('inp_raw').value='';
@@ -4769,9 +4860,222 @@ function toggleAdvancedSettings(){
   btn.textContent=open?'▼ Impostazioni Avanzate':'▶ Impostazioni Avanzate';
 }
 
+// ═══════════════════════════════════════════════════
+// USER PREFERENCES — per-user, synced via GitHub
+// ═══════════════════════════════════════════════════
+const USER_PREFS_PATH = 'user_preferences.json';
+
+function applyPrefsToUI(prefs){
+  const categories = ['lab','acc','dec','an','rac','ter'];
+  categories.forEach(cat => {
+    // Remove 'active' from all buttons in this category
+    document.querySelectorAll(`[id^="pref${cat.charAt(0).toUpperCase()+cat.slice(1)}Btn_"]`).forEach(btn => btn.classList.remove('active'));
+    // Set active on selected value
+    const val = prefs[cat];
+    const btn = document.getElementById(`pref${cat.charAt(0).toUpperCase()+cat.slice(1)}Btn_${val}`);
+    if(btn) btn.classList.add('active');
+  });
+  const customEl = document.getElementById('prefCustomText');
+  if(customEl) customEl.value = prefs.custom || '';
+}
+
+function setPref(category, value){
+  if(!S.userPrefs) S.userPrefs = {...DEFAULT_USER_PREFS};
+  S.userPrefs[category] = value;
+  applyPrefsToUI(S.userPrefs);
+  // Save locally
+  sessionStorage.setItem('letteraai_prefs_'+(S.currentUser||'default'), JSON.stringify(S.userPrefs));
+  updateTempPrefsSummary();
+}
+
+function setPrefCustom(text){
+  if(!S.userPrefs) S.userPrefs = {...DEFAULT_USER_PREFS};
+  S.userPrefs.custom = text;
+  sessionStorage.setItem('letteraai_prefs_'+(S.currentUser||'default'), JSON.stringify(S.userPrefs));
+  updateTempPrefsSummary();
+}
+
+async function loadUserPreferences(){
+  if(!S.currentUser) return;
+  // First try localStorage (fast)
+  const local = sessionStorage.getItem('letteraai_prefs_'+S.currentUser);
+  if(local){
+    try{ S.userPrefs = JSON.parse(local); applyPrefsToUI(S.userPrefs); }
+    catch(e){ S.userPrefs = {...DEFAULT_USER_PREFS}; }
+  } else {
+    S.userPrefs = {...DEFAULT_USER_PREFS};
+    applyPrefsToUI(S.userPrefs);
+  }
+  updateTempPrefsSummary();
+  // Then try GitHub (sync)
+  try{
+    const cfg = await getGitHubCfg();
+    if(!cfg.token || !cfg.repo) return;
+    const url = `https://api.github.com/repos/${cfg.repo}/contents/${USER_PREFS_PATH}`;
+    const resp = await fetch(url, { headers: { Accept:'application/vnd.github.v3+json', Authorization:`token ${cfg.token}` } });
+    if(!resp.ok) return; // 404 = no prefs file yet
+    const file = await resp.json();
+    const decoded = decodeURIComponent(escape(atob(file.content.replace(/\n/g,''))));
+    const allPrefs = JSON.parse(decoded);
+    if(allPrefs[S.currentUser]){
+      S.userPrefs = {...DEFAULT_USER_PREFS, ...allPrefs[S.currentUser]};
+      sessionStorage.setItem('letteraai_prefs_'+S.currentUser, JSON.stringify(S.userPrefs));
+      applyPrefsToUI(S.userPrefs);
+    }
+  }catch(e){ console.warn('GitHub prefs load failed:', e.message); }
+}
+
+async function saveUserPreferences(){
+  if(!S.currentUser){ alert('Non loggato. Le preferenze verranno salvate solo localmente.'); return; }
+  if(!S.userPrefs) S.userPrefs = {...DEFAULT_USER_PREFS};
+  // Save locally first
+  sessionStorage.setItem('letteraai_prefs_'+S.currentUser, JSON.stringify(S.userPrefs));
+  const statusEl = document.getElementById('prefStatus');
+  statusEl.textContent = '⟳ Salvataggio...'; statusEl.style.color = 'var(--dim)';
+  try{
+    const cfg = await getGitHubCfg();
+    if(!cfg.token || !cfg.repo) throw new Error('GitHub non configurato.');
+    // Fetch existing prefs file
+    const url = `https://api.github.com/repos/${cfg.repo}/contents/${USER_PREFS_PATH}`;
+    let existing = {};
+    let sha = null;
+    const respGet = await fetch(url, { headers: { Accept:'application/vnd.github.v3+json', Authorization:`token ${cfg.token}` } });
+    if(respGet.ok){
+      const file = await respGet.json();
+      sha = file.sha;
+      const decoded = decodeURIComponent(escape(atob(file.content.replace(/\n/g,''))));
+      try{ existing = JSON.parse(decoded); }catch(e){ existing = {}; }
+    }
+    existing[S.currentUser] = S.userPrefs;
+    const newContent = btoa(unescape(encodeURIComponent(JSON.stringify(existing, null, 2))));
+    const body = {
+      message: `Update preferences for ${S.currentUser}`,
+      content: newContent
+    };
+    if(sha) body.sha = sha;
+    const respPut = await fetch(url, { method:'PUT', headers:{ Accept:'application/vnd.github.v3+json', Authorization:`token ${cfg.token}`, 'Content-Type':'application/json' }, body: JSON.stringify(body) });
+    if(!respPut.ok){ const err = await respPut.text(); throw new Error('HTTP '+respPut.status+': '+err.substring(0,100)); }
+    statusEl.textContent = '✓ Preferenze salvate'; statusEl.style.color = 'var(--green)';
+    setTimeout(()=>{ statusEl.textContent = ''; }, 3000);
+  }catch(e){
+    statusEl.textContent = '✗ Errore: '+e.message; statusEl.style.color = 'var(--red)';
+  }
+}
+
+function resetUserPreferences(){
+  if(!confirm('Ripristinare le preferenze ai valori di default?')) return;
+  S.userPrefs = {...DEFAULT_USER_PREFS};
+  applyPrefsToUI(S.userPrefs);
+  if(S.currentUser) sessionStorage.setItem('letteraai_prefs_'+S.currentUser, JSON.stringify(S.userPrefs));
+  const statusEl = document.getElementById('prefStatus');
+  statusEl.textContent = '↺ Default ripristinati (clicca Salva per sincronizzare)'; statusEl.style.color = 'var(--dim)';
+}
+
+// ── Temporary preferences (for current letter only) ──
+function applyTempPrefsToUI(prefs){
+  const categories = ['lab','acc','dec','an','rac','ter'];
+  categories.forEach(cat => {
+    document.querySelectorAll(`[id^="temp${cat.charAt(0).toUpperCase()+cat.slice(1)}Btn_"]`).forEach(btn => btn.classList.remove('active'));
+    const val = prefs[cat];
+    const btn = document.getElementById(`temp${cat.charAt(0).toUpperCase()+cat.slice(1)}Btn_${val}`);
+    if(btn) btn.classList.add('active');
+  });
+  const customEl = document.getElementById('tempPrefCustomText');
+  if(customEl) customEl.value = prefs.custom || '';
+  updateTempPrefsSummary();
+}
+
+function updateTempPrefsSummary(){
+  const el = document.getElementById('tempPrefsSummary');
+  if(!el) return;
+  const prefs = S.tempPrefs || S.userPrefs || DEFAULT_USER_PREFS;
+  const labels = {
+    lab: { all:'tutti esami', altered:'solo patologici' },
+    acc: { brief:'accertamenti sintetici', extended:'accertamenti estesi' },
+    dec: { short:'decorso conciso', standard:'decorso standard', long:'decorso dettagliato' },
+    an: { essential:'anamnesi essenziale', complete:'anamnesi completa' },
+    rac: { main:'raccomandazioni principali', all:'tutte raccomandazioni' },
+    ter: { active:'solo farmaci attivi', withSuspended:'incluso sospesi' },
+  };
+  // Show only non-default values to keep summary short
+  const parts = [];
+  ['lab','acc','dec','an','rac','ter'].forEach(cat => {
+    if(prefs[cat] !== DEFAULT_USER_PREFS[cat]){
+      parts.push(labels[cat][prefs[cat]]);
+    }
+  });
+  if(prefs.custom && prefs.custom.trim()) parts.push('custom');
+  el.textContent = parts.length ? '· ' + parts.join(' · ') : '(default)';
+}
+
+function toggleTempPrefsPanel(){
+  const panel = document.getElementById('tempPrefsPanel');
+  const arrow = document.getElementById('tempPrefsToggleArrow');
+  const open = panel.style.display === 'none';
+  panel.style.display = open ? 'block' : 'none';
+  arrow.textContent = open ? '▼' : '▶';
+  if(open){
+    // Initialize temp prefs from saved prefs when opening
+    if(!S.tempPrefs) S.tempPrefs = {...(S.userPrefs || DEFAULT_USER_PREFS)};
+    applyTempPrefsToUI(S.tempPrefs);
+  }
+}
+
+function setTempPref(category, value){
+  if(!S.tempPrefs) S.tempPrefs = {...(S.userPrefs || DEFAULT_USER_PREFS)};
+  S.tempPrefs[category] = value;
+  applyTempPrefsToUI(S.tempPrefs);
+  refreshPrompt();
+}
+
+function setTempPrefCustom(text){
+  if(!S.tempPrefs) S.tempPrefs = {...(S.userPrefs || DEFAULT_USER_PREFS)};
+  S.tempPrefs.custom = text;
+  updateTempPrefsSummary();
+  refreshPrompt();
+}
+
+function resetTempPrefs(){
+  S.tempPrefs = {...(S.userPrefs || DEFAULT_USER_PREFS)};
+  applyTempPrefsToUI(S.tempPrefs);
+  refreshPrompt();
+}
+
+function buildPreferencesPromptBlock(){
+  const prefs = S.tempPrefs || S.userPrefs;
+  if(!prefs) return '';
+  const blocks = [];
+  // Only add preference if different from default
+  if(prefs.lab !== DEFAULT_USER_PREFS.lab){
+    if(prefs.lab === 'altered') blocks.push('- ESAMI DI LABORATORIO: riporta SOLO i valori alterati (fuori range) e i 6 obbligatori (Colesterolo totale, HDL, LDL, Trigliceridi, HbA1c, Creatinina). Per ogni categoria, se tutti nella norma scrivi solo "[Categoria]: nella norma" senza elencare i singoli esami.');
+    else blocks.push('- ESAMI DI LABORATORIO: riporta tutti i valori disponibili con range di normalità.');
+  }
+  if(prefs.acc !== DEFAULT_USER_PREFS.acc){
+    if(prefs.acc === 'extended') blocks.push('- ACCERTAMENTI STRUMENTALI: riporta conclusioni estese con tutti i dettagli clinicamente rilevanti del referto.');
+    else blocks.push('- ACCERTAMENTI STRUMENTALI: riporta conclusioni sintetiche in 1-2 frasi per ogni accertamento.');
+  }
+  if(prefs.dec !== DEFAULT_USER_PREFS.dec){
+    if(prefs.dec === 'short') blocks.push('- DECORSO CLINICO: sintesi concisa 150-250 parole, solo eventi principali e decisioni terapeutiche.');
+    else if(prefs.dec === 'long') blocks.push('- DECORSO CLINICO: racconto dettagliato 400-600 parole con eventi intermedi e ragionamento clinico.');
+  }
+  if(prefs.an !== DEFAULT_USER_PREFS.an){
+    if(prefs.an === 'essential') blocks.push('- ANAMNESI: essenziale, solo fattori di rischio rilevanti per la patologia attuale.');
+  }
+  if(prefs.rac !== DEFAULT_USER_PREFS.rac){
+    if(prefs.rac === 'main') blocks.push('- RACCOMANDAZIONI: solo le principali (terapia, follow-up clinico).');
+  }
+  if(prefs.ter !== DEFAULT_USER_PREFS.ter){
+    if(prefs.ter === 'withSuspended') blocks.push('- TERAPIA: includi anche i farmaci sospesi con motivazione indicata nel decorso.');
+  }
+  if(prefs.custom && prefs.custom.trim()){
+    blocks.push('- ALTRE PREFERENZE: ' + prefs.custom.trim());
+  }
+  return blocks.length ? '\n\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\nPREFERENZE UTENTE — applicare SEMPRE\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n' + blocks.join('\n') : '';
+}
+
 function saveBaseSettings(){
   _ghOwnerCache=null;
-  localStorage.setItem('letteraai_cfg',JSON.stringify({
+  sessionStorage.setItem('letteraai_cfg',JSON.stringify({
     citta:'Padova',
     regex:document.getElementById('cfg_regex').value,
     surnamesUrl:document.getElementById('cfg_surnames_url').value,
@@ -4781,7 +5085,7 @@ function saveBaseSettings(){
 }
 function loadBaseSettings(){
   try{
-    const c=JSON.parse(localStorage.getItem('letteraai_cfg')||'{}');
+    const c=JSON.parse(sessionStorage.getItem('letteraai_cfg')||'{}');
     if(c.regex)document.getElementById('cfg_regex').value=c.regex;
     if(c.surnamesUrl)document.getElementById('cfg_surnames_url').value=c.surnamesUrl;
     if(c.firstNamesUrl)document.getElementById('cfg_firstnames_url').value=c.firstNamesUrl;
@@ -4792,7 +5096,7 @@ function loadBaseSettings(){
     if(c.ghToken||c.ghRepo){
       delete c.ghToken;
       delete c.ghRepo;
-      localStorage.setItem('letteraai_cfg',JSON.stringify(c));
+      sessionStorage.setItem('letteraai_cfg',JSON.stringify(c));
     }
   }catch(e){}
 }
@@ -4856,7 +5160,7 @@ async function resolveGitHubOwner(token){
 }
 
 function getGitHubCfgSync(){
-  const c=JSON.parse(localStorage.getItem('letteraai_cfg')||'{}');
+  const c=JSON.parse(sessionStorage.getItem('letteraai_cfg')||'{}');
   const token=document.getElementById('cfg_gh_token')?.value?.trim() || DEFAULT_GH_TOKEN;
   let repo=document.getElementById('cfg_gh_repo')?.value?.trim() || DEFAULT_GH_REPO;
   if(repo && !repo.includes('/') && _ghOwnerCache){
@@ -4866,7 +5170,7 @@ function getGitHubCfgSync(){
 }
 
 async function getGitHubCfg(){
-  const c=JSON.parse(localStorage.getItem('letteraai_cfg')||'{}');
+  const c=JSON.parse(sessionStorage.getItem('letteraai_cfg')||'{}');
   const token=document.getElementById('cfg_gh_token')?.value?.trim() || DEFAULT_GH_TOKEN;
   let repo=document.getElementById('cfg_gh_repo')?.value?.trim() || DEFAULT_GH_REPO;
   const path=c.ghPath || DEFAULT_GH_PATH || 'cases.json';
@@ -4954,46 +5258,16 @@ async function pullLibraryFromGitHub(){
     const lib=JSON.parse(decoded);
     if(!Array.isArray(lib))throw new Error('Formato non valido — atteso array JSON');
     saveLibrary(lib);renderLibrary();
-    localStorage.setItem('letteraai_lastpull',new Date().toISOString());
+    sessionStorage.setItem('letteraai_lastpull',new Date().toISOString());
     updateLastPullTime();updateRefCaseNoCases();
     ghStatus(`✓ ${lib.filter(x=>x.type!=='ward').length} casi · ${lib.filter(x=>x.type==='ward').length} reparti ← ${cfg.repo}/${cfg.path}`,'var(--green)');
   }catch(e){ghStatus('✗ '+e.message,'var(--red)');}
 }
 
-async function pullLibraryFromGeneration(){
-  const cfg=await getGitHubCfg();
-  if(!cfg.token||!cfg.repo){
-    const el=document.getElementById('lastPullTime');
-    el.textContent='✗ Configura GitHub nelle impostazioni';el.style.color='var(--red)';
-    return;
-  }
-  const el=document.getElementById('lastPullTime');
-  el.textContent='⟳ Pull...';el.style.color='var(--dim)';
-  try{
-    const file=await ghApiGet(cfg);
-    if(!file){el.textContent='✗ File non trovato';el.style.color='var(--red)';return;}
-    let decoded;
-    if(file._rawText) {
-      decoded = file._rawText;
-    } else if(file.content) {
-      decoded=decodeURIComponent(escape(atob(file.content.replace(/\n/g,''))));
-    } else {
-      throw new Error('Contenuto vuoto');
-    }
-    if(!decoded || !decoded.trim()) throw new Error('File vuoto');
-    const lib=JSON.parse(decoded);
-    if(!Array.isArray(lib))throw new Error('Formato non valido');
-    saveLibrary(lib);renderLibrary();
-    localStorage.setItem('letteraai_lastpull',new Date().toISOString());
-    updateLastPullTime();updateRefCaseNoCases();
-    updateTokenPanel();refreshPrompt();
-  }catch(e){el.textContent='✗ '+e.message;el.style.color='var(--red)';}
-}
-
 function updateLastPullTime(){
   const el=document.getElementById('lastPullTime');
   if(!el) return;
-  const ts=localStorage.getItem('letteraai_lastpull');
+  const ts=sessionStorage.getItem('letteraai_lastpull');
   if(!ts){el.textContent='mai sincronizzato';el.style.color='var(--dim)';return;}
   const d=new Date(ts);
   const now=new Date();
@@ -5018,48 +5292,6 @@ const EXPORT_PASSWORD = 'admin';
 function checkExportAuth(){
   const pwd=prompt('Inserisci la password per esportare:');
   return pwd===EXPORT_PASSWORD;
-}
-function downloadPreConfigured(){
-  if(!checkExportAuth()) return;
-  const token=document.getElementById('cfg_gh_token').value.trim();
-  const repo=document.getElementById('cfg_gh_repo').value.trim();
-  const path=document.getElementById('cfg_gh_path').value.trim()||'cases.json';
-  if(!token||!repo){
-    ghStatus('✗ Inserisci token e repo prima di scaricare.','var(--red)');return;
-  }
-  const src=document.documentElement.outerHTML;
-  const patched=src
-    .replace(/^const DEFAULT_GH_TOKEN = '';/m, `const DEFAULT_GH_TOKEN = '${token}';`)
-    .replace(/^const DEFAULT_GH_REPO  = '';/m, `const DEFAULT_GH_REPO  = '${repo}';`)
-    .replace(/^const DEFAULT_GH_PATH  = 'cases\.json';/m, `const DEFAULT_GH_PATH  = '${path}';`);
-  const blob=new Blob([patched],{type:'text/html'});
-  const url=URL.createObjectURL(blob);
-  const a=document.createElement('a');
-  a.href=url;a.download='Lettera.AI_configured.html';a.click();
-  URL.revokeObjectURL(url);
-  ghStatus('✓ File scaricato — aprilo su qualsiasi browser, si connetterà automaticamente a GitHub.','var(--green)');
-}
-function copyPreConfigured(withToken){
-  if(!checkExportAuth()) return;
-  const token=document.getElementById('cfg_gh_token').value.trim();
-  const repo=document.getElementById('cfg_gh_repo').value.trim();
-  const path=document.getElementById('cfg_gh_path').value.trim()||'cases.json';
-  if(withToken&&(!token||!repo)){
-    ghStatus('✗ Inserisci token e repo prima di copiare.','var(--red)');return;
-  }
-  const src=document.documentElement.outerHTML;
-  let patched=src
-    .replace(/^const DEFAULT_GH_REPO  = '';/m, `const DEFAULT_GH_REPO  = '${repo}';`)
-    .replace(/^const DEFAULT_GH_PATH  = 'cases\.json';/m, `const DEFAULT_GH_PATH  = '${path}';`);
-  if(withToken){
-    patched=patched.replace(/^const DEFAULT_GH_TOKEN = '';/m, `const DEFAULT_GH_TOKEN = '${token}';`);
-  }
-  navigator.clipboard.writeText(patched).then(()=>{
-    ghStatus(withToken
-      ? '✓ Copiato con token — incolla in un file .html e aprilo in qualsiasi browser.'
-      : '✓ Copiato senza token — sicuro da condividere o incollare in un\'AI.',
-      'var(--green)');
-  }).catch(e=>ghStatus('✗ Copia fallita: '+e.message,'var(--red)'));
 }
 
 // ═══════════════════════════════════════════════════
@@ -5444,11 +5676,6 @@ function setCaseImportStatus(msg, pct, color) {
 }
 
 // ═══════════════════════════════════════════════════
-function autoFillCaseFolder(){
-  if(!S.anonText){alert('Nessun testo anonimizzato in sessione. Completa prima lo Step 2.');return;}
-  document.getElementById('newCaseFolder').value=S.anonText;
-}
-
 // ═══════════════════════════════════════════════════
 // FINGERPRINT V2 — 3-phase reasoning + synthetic model
 // ═══════════════════════════════════════════════════
@@ -5593,19 +5820,9 @@ function buildFpSystemAddendum(fpObj){
   return out;
 }
 
-// Build ward fingerprint addendum — same as case but labeled as ward-level
+// Ward fingerprint addendum (legacy — not currently used, kept for compatibility)
 function buildWardFpSystemAddendum(fpObj){
-  if(!fpObj) return '';
-  return buildFpSystemAddendum(fpObj).replace(
-    '## MODELLO DI RAGIONAMENTO CLINICO (fingerprint di riferimento)',
-    '## MODELLO DI RAGIONAMENTO CLINICO — REPARTO (sintetizzato da più casi)'
-  );
-}
-
-// Build user-turn block from V2 fp (lettera_modello with → annotations)
-function buildFpUserBlock(fpObj){
-  if(!fpObj?.lettera_modello) return '';
-  return `## LETTERA-MODELLO DI RIFERIMENTO\n\nQuesta lettera sintetica (con annotazioni →) mostra struttura, ragionamento e stile del reparto. Usala come guida strutturale — NON copiare i placeholder, adatta ogni sezione al caso corrente.\n\n${fpObj.lettera_modello}\n\n---\n\n`;
+  return '';
 }
 
 // ── Copy prompt button ───────────────────────────────────────────────
@@ -6088,7 +6305,7 @@ updateRefCaseNoCases();
     const merged=[...remote,...localOnly];
     saveLibrary(merged);
     renderLibrary();
-    localStorage.setItem('letteraai_lastpull',new Date().toISOString());
+    sessionStorage.setItem('letteraai_lastpull',new Date().toISOString());
     updateLastPullTime();updateRefCaseNoCases();
     if(merged.length!==remote.length){
       ghStatus(`↓ Auto-sync: ${remote.length} casi da GitHub + ${localOnly.length} locali non ancora pushati`,'var(--blue)');
