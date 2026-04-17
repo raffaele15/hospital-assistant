@@ -93,6 +93,9 @@ select{width:100%;background:var(--surface2);border:1px solid var(--border);bord
 mark.flag-contradict{background:rgba(220,53,53,.28);border-bottom:2px solid rgba(220,53,53,.7);border-radius:2px;cursor:help;padding:0 1px}
 mark.flag-unsupported{background:rgba(220,140,30,.28);border-bottom:2px solid rgba(220,140,30,.7);border-radius:2px;cursor:help;padding:0 1px}
 mark.flag-inferred{background:rgba(210,190,0,.25);border-bottom:2px solid rgba(210,190,0,.6);border-radius:2px;cursor:help;padding:0 1px}
+/* Mobile-friendly tooltip popover */
+#tipPopover{position:fixed;max-width:280px;background:var(--surface2);color:var(--text);border:1px solid var(--border-hi);border-radius:var(--r);padding:10px 12px;font-family:'JetBrains Mono',monospace;font-size:11px;line-height:1.5;letter-spacing:0;text-transform:none;box-shadow:0 6px 24px rgba(0,0,0,.5);z-index:9999;pointer-events:none;white-space:normal;opacity:0;transition:opacity .12s}
+#tipPopover.visible{opacity:1}
 mark.flag-active{outline:2px solid var(--accent);outline-offset:1px}
 .vflag-row{padding:8px 12px;border-radius:var(--r);margin-bottom:6px;display:flex;gap:10px;align-items:flex-start;cursor:pointer;transition:background .15s}
 .vflag-row:hover{background:var(--surface2)}
@@ -132,9 +135,10 @@ hr.div{border:none;border-top:1px solid var(--border);margin:18px 0}
 @media(max-width:640px){
   .app{grid-template-columns:1fr}
   aside{display:none}.diff-grid{grid-template-columns:1fr}
-  aside.mobile-open{display:flex;position:fixed;top:0;left:0;height:100%;width:220px;z-index:1001;box-shadow:4px 0 24px rgba(0,0,0,.5);padding-top:52px}
-  #mobileNavOverlay.visible{display:block}
-  #mobileNavTab{display:flex}
+  aside.mobile-open{display:flex!important;position:fixed;top:0;left:0;height:100%;width:220px;z-index:1001;box-shadow:4px 0 24px rgba(0,0,0,.5);padding-top:52px}
+  aside.mobile-open #mobileNavClose{display:block!important}
+  #mobileNavOverlay.visible{display:block!important}
+  #mobileHamburger{display:inline-flex!important;align-items:center;justify-content:center}
   .panel.active{padding-bottom:80px}
   #panel1.active{padding-bottom:80px}
   #scrollDownBtn{left:50vw!important}
@@ -142,6 +146,8 @@ hr.div{border:none;border-top:1px solid var(--border);margin:18px 0}
 </style>
 </head>
 <body>
+<!-- Tooltip popover (mobile-friendly) -->
+<div id="tipPopover"></div>
 <!-- Toast notification -->
 <div id="toastOverlay" style="display:none;position:fixed;inset:0;z-index:3500;background:rgba(15,15,15,0.6);backdrop-filter:blur(2px);align-items:center;justify-content:center;" onclick="hideToast()">
   <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:24px 36px;text-align:center;box-shadow:0 8px 40px rgba(0,0,0,.5);max-width:320px;" onclick="event.stopPropagation()">
@@ -156,7 +162,7 @@ hr.div{border:none;border-top:1px solid var(--border);margin:18px 0}
   <div style="width:300px;max-width:90vw;">
     <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:24px;">
       <label style="display:block;font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--dim);letter-spacing:.1em;text-transform:uppercase;margin-bottom:5px;">Username</label>
-      <input type="text" id="loginUser" autocomplete="username" style="width:100%;margin-bottom:12px;" onkeydown="if(event.key==='Enter')doLogin()">
+      <input type="text" id="loginUser" autocomplete="username" inputmode="text" autocapitalize="off" autocorrect="off" spellcheck="false" style="width:100%;margin-bottom:12px;" onkeydown="if(event.key==='Enter'){event.preventDefault();document.getElementById('loginPass').focus();}">
       <label style="display:block;font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--dim);letter-spacing:.1em;text-transform:uppercase;margin-bottom:5px;">Password</label>
       <input type="password" id="loginPass" autocomplete="current-password" style="width:100%;margin-bottom:16px;" onkeydown="if(event.key==='Enter')doLogin()">
       <button class="btn btn-p" style="width:100%;justify-content:center;" onclick="doLogin()" id="loginBtn">
@@ -179,14 +185,14 @@ hr.div{border:none;border-top:1px solid var(--border);margin:18px 0}
 <!-- Mobile nav overlay (tap to close) -->
 <div id="mobileNavOverlay" onclick="closeMobileNav()" style="display:none;position:fixed;inset:0;z-index:1000;background:rgba(0,0,0,.45);"></div>
 
-<!-- Mobile nav tab — half-circle on left edge, mobile only -->
-<button id="mobileNavTab" onclick="toggleMobileNav()" title="Navigazione" style="display:none;position:fixed;left:0;top:50%;transform:translateY(-50%);z-index:1002;width:28px;height:56px;border-radius:0 28px 28px 0;background:var(--accent);border:none;cursor:pointer;box-shadow:2px 0 12px rgba(0,0,0,.4);align-items:center;justify-content:center;padding:0;">
-  <svg id="mobileNavArrow" width="14" height="14" viewBox="0 0 14 14" fill="none">
-    <path d="M5 2l5 5-5 5" stroke="#000" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-  </svg>
-</button>
-
 <header>
+  <button id="mobileHamburger" onclick="toggleMobileNav()" title="Menu di navigazione" style="display:none;background:none;border:none;cursor:pointer;padding:6px 8px;margin-right:4px;">
+    <svg width="22" height="18" viewBox="0 0 22 18" fill="none">
+      <rect y="0" width="22" height="2.5" rx="1.25" fill="var(--text)"/>
+      <rect y="7.75" width="22" height="2.5" rx="1.25" fill="var(--text)"/>
+      <rect y="15.5" width="22" height="2.5" rx="1.25" fill="var(--text)"/>
+    </svg>
+  </button>
   <div class="logo">Lettera<span>.</span>AI</div>
   <div style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--dim);">Generatore Lettera di Dimissione</div>
   <div style="margin-left:auto;display:flex;gap:8px;align-items:center;">
@@ -201,6 +207,7 @@ hr.div{border:none;border-top:1px solid var(--border);margin:18px 0}
 </button>
 
 <aside>
+  <button id="mobileNavClose" onclick="closeMobileNav()" title="Chiudi menu" style="display:none;position:absolute;top:12px;right:12px;background:none;border:none;cursor:pointer;padding:4px;color:var(--text);font-size:22px;line-height:1;z-index:2;">✕</button>
   <div class="ns">Flusso</div>
   <button class="ni active" onclick="goTo(0)" id="nav0"><span class="sn">1</span>Carica Cartella</button>
   <button class="ni" onclick="goTo(1)" id="nav1"><span class="sn">2</span>Anonimizza Dati</button>
@@ -348,13 +355,10 @@ hr.div{border:none;border-top:1px solid var(--border);margin:18px 0}
   </div>
   <div class="card" id="tempPrefsCard">
     <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;cursor:pointer;" onclick="toggleTempPrefsPanel()">
-      <div class="ctitle" style="margin:0;">Preferenze Lettera <span id="tempPrefsSummary" style="color:var(--dim);font-size:9px;margin-left:8px;text-transform:none;letter-spacing:0;"></span></div>
+      <div class="ctitle" style="margin:0;">Preferenze Lettera <span title="Modifica le preferenze per questa lettera." style="display:inline-flex;align-items:center;justify-content:center;width:16px;height:16px;border-radius:50%;border:1px solid var(--dim);font-size:10px;color:var(--dim);cursor:help;vertical-align:middle;margin-left:4px;text-transform:none;letter-spacing:0;" onclick="event.stopPropagation()">?</span> <span id="tempPrefsSummary" style="color:var(--dim);font-size:9px;margin-left:8px;text-transform:none;letter-spacing:0;"></span></div>
       <span id="tempPrefsToggleArrow" style="color:var(--dim);font-size:12px;">▶</span>
     </div>
     <div id="tempPrefsPanel" style="display:none;margin-top:14px;">
-      <div class="ib" style="margin-bottom:12px;font-size:10px;line-height:1.6;">
-        Modifica le preferenze solo per questa lettera. Le impostazioni non vengono salvate — per modifiche permanenti usa Impostazioni Avanzate.
-      </div>
       <div style="display:flex;flex-direction:column;gap:14px;">
         <div>
           <label style="margin-bottom:6px;">Esami di Laboratorio</label>
@@ -400,8 +404,8 @@ hr.div{border:none;border-top:1px solid var(--border);margin:18px 0}
           </div>
         </div>
         <div>
-          <label style="margin-bottom:6px;">Altre Preferenze <span style="color:var(--dim);font-size:9px;text-transform:none;letter-spacing:0;margin-left:6px;">testo libero</span></label>
-          <textarea id="tempPrefCustomText" rows="3" placeholder="Aggiungi qui preferenze aggiuntive solo per questa lettera..." style="font-size:11px;" oninput="setTempPrefCustom(this.value)"></textarea>
+          <label style="margin-bottom:6px;">Altre Preferenze</label>
+          <textarea id="tempPrefCustomText" rows="3" placeholder="Aggiungi preferenze..." style="font-size:11px;" oninput="setTempPrefCustom(this.value)"></textarea>
         </div>
       </div>
       <div style="margin-top:14px;">
@@ -522,6 +526,7 @@ hr.div{border:none;border-top:1px solid var(--border);margin:18px 0}
       <textarea id="pasteAIInput" rows="10" placeholder="Incolla qui il testo della lettera copiato dalla chat AI..." style="font-size:12px;font-family:'Times New Roman',serif;line-height:1.6;"></textarea>
       <div style="display:flex;gap:8px;margin-top:8px;">
         <button class="btn btn-p" onclick="formatPastedLetter()" style="font-size:11px;">Avanti → Verifica</button>
+        <button class="btn btn-g" onclick="readClipboardInto('pasteAIInput')" style="font-size:11px;" title="Incolla automaticamente dagli appunti (richiede permesso del browser la prima volta)">📋 Incolla dagli appunti</button>
         <button class="btn btn-g" onclick="togglePasteAI()" style="font-size:11px;">✗ Annulla</button>
       </div>
     </div>
@@ -569,6 +574,7 @@ hr.div{border:none;border-top:1px solid var(--border);margin:18px 0}
       <textarea id="pasteVerificaInput" rows="8" placeholder="Incolla qui il JSON generato dall'AI esterna (array di oggetti con quote, severity, reason)..." style="font-size:11px;font-family:'JetBrains Mono',monospace;line-height:1.5;"></textarea>
       <div style="display:flex;gap:8px;margin-top:8px;">
         <button class="btn btn-p" onclick="applyPastedVerifica()" style="font-size:11px;">Applica evidenziazione</button>
+        <button class="btn btn-g" onclick="readClipboardInto('pasteVerificaInput')" style="font-size:11px;" title="Incolla automaticamente dagli appunti (richiede permesso del browser la prima volta)">📋 Incolla dagli appunti</button>
         <button class="btn btn-g" onclick="togglePasteVerifica()" style="font-size:11px;">✗ Annulla</button>
       </div>
     </div>
@@ -617,143 +623,117 @@ hr.div{border:none;border-top:1px solid var(--border);margin:18px 0}
 <div class="panel" id="panel5">
   <div class="ptitle">Impostazioni</div>
 
-  <!-- ── 1. Archiviazione Casi — GitHub ─────────────────────────── -->
+  <!-- ── 1. Preferenze Generazione Lettera ──────────────────────── -->
   <div class="card">
-    <div class="ctitle">Archiviazione Casi — GitHub</div>
-    <label>Personal Access Token (PAT)</label>
-    <input type="password" id="cfg_gh_token" placeholder="ghp_xxxxxxxxxxxxxxxxxxxx">
-    <label>Nome Repository</label>
-    <input type="text" id="cfg_gh_repo" placeholder="Es: hospital-assistant-data" value="hospital-assistant-data">
-    <label>Percorso file JSON nel repo</label>
-    <input type="text" id="cfg_gh_path" placeholder="cases.json" value="cases.json">
-    <div style="display:flex;gap:8px;margin-top:12px;flex-wrap:wrap;">
-      <button class="btn btn-g" style="font-size:10px;padding:6px 13px;" onclick="testGitHubConnection()" title="Verifica che token, repository e percorso siano corretti">⚡&nbsp;Testa Connessione</button>
-      <button class="btn btn-g" style="font-size:10px;padding:6px 13px;" onclick="pullLibraryFromGitHub()" title="Scarica la libreria da GitHub e la unisce con quella locale">↓&nbsp;Pull Libreria</button>
-      <button class="btn btn-g" style="font-size:10px;padding:6px 13px;" onclick="syncLibraryToGitHub()" title="Carica la libreria locale su GitHub, sovrascrivendo il file remoto">↑&nbsp;Push Libreria</button>
+    <div class="ctitle">Preferenze Generazione Lettera <span title="Personalizza stile e contenuto delle lettere generate." style="display:inline-flex;align-items:center;justify-content:center;width:16px;height:16px;border-radius:50%;border:1px solid var(--dim);font-size:10px;color:var(--dim);cursor:help;vertical-align:middle;margin-left:4px;text-transform:none;letter-spacing:0;">?</span></div>
+    <div style="display:flex;flex-direction:column;gap:14px;">
+
+      <div>
+        <label style="margin-bottom:6px;">Esami di Laboratorio</label>
+        <div class="tabs">
+          <button class="tab active" id="prefLabBtn_all" onclick="setPref('lab','all')" title="Riporta tutti i valori degli esami di laboratorio con il range di normalità">Tutti i valori</button>
+          <button class="tab" id="prefLabBtn_altered" onclick="setPref('lab','altered')" title="Riporta solo i valori alterati (fuori range) + i 6 obbligatori (colesterolo, HDL, LDL, trigliceridi, HbA1c, creatinina)">Solo patologici</button>
+        </div>
+      </div>
+
+      <div>
+        <label style="margin-bottom:6px;">Accertamenti Strumentali</label>
+        <div class="tabs">
+          <button class="tab active" id="prefAccBtn_brief" onclick="setPref('acc','brief')" title="Solo conclusioni sintetiche in 1-2 frasi">Sintetici</button>
+          <button class="tab" id="prefAccBtn_extended" onclick="setPref('acc','extended')" title="Conclusioni estese con dettagli clinicamente rilevanti">Estesi</button>
+        </div>
+      </div>
+
+      <div>
+        <label style="margin-bottom:6px;">Decorso Clinico</label>
+        <div class="tabs">
+          <button class="tab" id="prefDecBtn_short" onclick="setPref('dec','short')" title="150-250 parole — solo eventi principali e decisioni terapeutiche">Conciso</button>
+          <button class="tab active" id="prefDecBtn_standard" onclick="setPref('dec','standard')" title="250-400 parole — racconto clinico equilibrato">Standard</button>
+          <button class="tab" id="prefDecBtn_long" onclick="setPref('dec','long')" title="400-600 parole — dettagliato con eventi intermedi e ragionamento clinico">Dettagliato</button>
+        </div>
+      </div>
+
+      <div>
+        <label style="margin-bottom:6px;">Anamnesi</label>
+        <div class="tabs">
+          <button class="tab" id="prefAnBtn_essential" onclick="setPref('an','essential')" title="Solo fattori di rischio rilevanti per la patologia attuale">Essenziale</button>
+          <button class="tab active" id="prefAnBtn_complete" onclick="setPref('an','complete')" title="Tutte le comorbilità e gli eventi anamnestici presenti nella cartella">Completa</button>
+        </div>
+      </div>
+
+      <div>
+        <label style="margin-bottom:6px;">Raccomandazioni</label>
+        <div class="tabs">
+          <button class="tab" id="prefRacBtn_main" onclick="setPref('rac','main')" title="Solo le raccomandazioni principali (terapia, follow-up clinico)">Principali</button>
+          <button class="tab active" id="prefRacBtn_all" onclick="setPref('rac','all')" title="Tutte le raccomandazioni, inclusi follow-up di riscontri incidentali">Tutte</button>
+        </div>
+      </div>
+
+      <div>
+        <label style="margin-bottom:6px;">Terapia alla Dimissione</label>
+        <div class="tabs">
+          <button class="tab active" id="prefTerBtn_active" onclick="setPref('ter','active')" title="Solo farmaci attivi alla dimissione">Solo attivi</button>
+          <button class="tab" id="prefTerBtn_withSuspended" onclick="setPref('ter','withSuspended')" title="Includi anche farmaci sospesi con motivazione indicata nel decorso">Includi sospesi</button>
+        </div>
+      </div>
+
+      <div>
+        <label style="margin-bottom:6px;">Altre Preferenze</label>
+        <textarea id="prefCustomText" rows="4" placeholder="Aggiungi altre preferenze..." style="font-size:11px;" oninput="setPrefCustom(this.value)"></textarea>
+      </div>
+
     </div>
-    <div id="ghStatus" style="font-family:'JetBrains Mono',monospace;font-size:10px;margin-top:8px;color:var(--dim);"></div>
+    <div style="display:flex;gap:8px;margin-top:16px;align-items:center;">
+      <button class="btn btn-p" style="font-size:10px;padding:6px 13px;" onclick="saveUserPreferences()" title="Salva le preferenze sul tuo profilo">✓ Salva Preferenze</button>
+      <button class="btn btn-g" style="font-size:10px;padding:6px 13px;" onclick="resetUserPreferences()" title="Ripristina i valori di default">↺ Reset</button>
+      <span id="prefStatus" style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--dim);"></span>
+    </div>
   </div>
 
-  <!-- ── 2. Gestione Dati Locali ────────────────────────────────── -->
-  <div class="card" style="border-color:var(--red);border-width:1px;">
-    <div class="ctitle">Gestione Dati Locali</div>
-    <div class="ib red" style="margin-bottom:12px;font-size:10px;line-height:1.6;">
-      ⚠ La libreria casi è salvata nel <strong>sessionStorage</strong> del browser. I dati sono disponibili solo per la durata della sessione e vengono cancellati automaticamente alla chiusura della tab/browser. Usa le opzioni qui sotto per esportare un backup se necessario.
-    </div>
-    <div style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--dim);margin-bottom:12px;" id="localStorageStats"></div>
-    <div style="display:flex;gap:8px;flex-wrap:wrap;">
-      <button class="btn btn-g" style="font-size:10px;padding:6px 13px;" onclick="exportLibraryJson()" title="Scarica un file JSON con tutti i casi e reparti salvati nel browser">⬇ Esporta Libreria (JSON)</button>
-      <button class="btn btn-g" style="font-size:10px;padding:6px 13px;" onclick="document.getElementById('importLibInput').click()" title="Carica un file JSON esportato in precedenza — i duplicati vengono ignorati">⬆ Importa Libreria (JSON)</button>
-      <input type="file" id="importLibInput" accept=".json" style="display:none;" onchange="importLibraryJson(event)">
-      <button class="btn btn-g" style="font-size:10px;padding:6px 13px;color:var(--red);border-color:var(--red);" onclick="clearLocalData()" title="Elimina tutti i casi, reparti e configurazioni salvati nel browser">🗑 Cancella tutti i dati locali</button>
-    </div>
-    <div id="localDataStatus" style="font-family:'JetBrains Mono',monospace;font-size:10px;margin-top:8px;color:var(--dim);display:none;"></div>
-  </div>
-
-  <div class="btn-row">
-    <button class="btn btn-p" onclick="saveBaseSettings()" title="Salva le impostazioni correnti (regex custom, URL dizionari, configurazione GitHub)">✓ Salva</button>
-  </div>
-
-  <!-- ── 3. Impostazioni Avanzate (collassabile) ────────────────── -->
+  <!-- ── 2. Impostazioni Avanzate (collassabile) ────────────────── -->
   <div style="margin-top:18px;">
-    <button class="btn btn-g" onclick="toggleAdvancedSettings()" id="advSettingsToggle" style="width:100%;justify-content:center;" title="Mostra o nascondi le impostazioni avanzate (regex, dizionari, esportazione HTML)">
+    <button class="btn btn-g" onclick="toggleAdvancedSettings()" id="advSettingsToggle" style="width:100%;justify-content:center;" title="Mostra o nascondi le impostazioni avanzate">
       ▶ Impostazioni Avanzate
     </button>
     <div id="advSettingsBody" style="display:none;margin-top:14px;">
 
+      <!-- Archiviazione Casi — GitHub -->
       <div class="card">
-        <div class="ctitle">Preferenze Generazione Lettera</div>
-        <div class="ib" style="margin-bottom:12px;font-size:10px;line-height:1.6;">
-          Personalizza stile e contenuto delle lettere generate. Le preferenze sono associate al tuo username e sincronizzate via GitHub.
+        <div class="ctitle">Archiviazione Casi — GitHub</div>
+        <label>Personal Access Token (PAT)</label>
+        <input type="password" id="cfg_gh_token" placeholder="ghp_xxxxxxxxxxxxxxxxxxxx">
+        <label>Nome Repository</label>
+        <input type="text" id="cfg_gh_repo" placeholder="Es: hospital-assistant-data" value="hospital-assistant-data">
+        <label>Percorso file JSON nel repo</label>
+        <input type="text" id="cfg_gh_path" placeholder="cases.json" value="cases.json">
+        <div style="display:flex;gap:8px;margin-top:12px;flex-wrap:wrap;">
+          <button class="btn btn-g" style="font-size:10px;padding:6px 13px;" onclick="testGitHubConnection()" title="Verifica che token, repository e percorso siano corretti">⚡&nbsp;Testa Connessione</button>
+          <button class="btn btn-g" style="font-size:10px;padding:6px 13px;" onclick="pullLibraryFromGitHub()" title="Scarica la libreria da GitHub e la unisce con quella locale">↓&nbsp;Pull Libreria</button>
+          <button class="btn btn-g" style="font-size:10px;padding:6px 13px;" onclick="syncLibraryToGitHub()" title="Carica la libreria locale su GitHub, sovrascrivendo il file remoto">↑&nbsp;Push Libreria</button>
         </div>
-        <div style="display:flex;flex-direction:column;gap:14px;">
+        <div id="ghStatus" style="font-family:'JetBrains Mono',monospace;font-size:10px;margin-top:8px;color:var(--dim);"></div>
+      </div>
 
-          <div>
-            <label style="margin-bottom:6px;">Esami di Laboratorio</label>
-            <div class="tabs">
-              <button class="tab active" id="prefLabBtn_all" onclick="setPref('lab','all')" title="Riporta tutti i valori degli esami di laboratorio con il range di normalità">Tutti i valori</button>
-              <button class="tab" id="prefLabBtn_altered" onclick="setPref('lab','altered')" title="Riporta solo i valori alterati (fuori range) + i 6 obbligatori (colesterolo, HDL, LDL, trigliceridi, HbA1c, creatinina)">Solo patologici</button>
-            </div>
-          </div>
-
-          <div>
-            <label style="margin-bottom:6px;">Accertamenti Strumentali</label>
-            <div class="tabs">
-              <button class="tab active" id="prefAccBtn_brief" onclick="setPref('acc','brief')" title="Solo conclusioni sintetiche in 1-2 frasi">Sintetici</button>
-              <button class="tab" id="prefAccBtn_extended" onclick="setPref('acc','extended')" title="Conclusioni estese con dettagli clinicamente rilevanti">Estesi</button>
-            </div>
-          </div>
-
-          <div>
-            <label style="margin-bottom:6px;">Decorso Clinico</label>
-            <div class="tabs">
-              <button class="tab" id="prefDecBtn_short" onclick="setPref('dec','short')" title="150-250 parole — solo eventi principali e decisioni terapeutiche">Conciso</button>
-              <button class="tab active" id="prefDecBtn_standard" onclick="setPref('dec','standard')" title="250-400 parole — racconto clinico equilibrato">Standard</button>
-              <button class="tab" id="prefDecBtn_long" onclick="setPref('dec','long')" title="400-600 parole — dettagliato con eventi intermedi e ragionamento clinico">Dettagliato</button>
-            </div>
-          </div>
-
-          <div>
-            <label style="margin-bottom:6px;">Anamnesi</label>
-            <div class="tabs">
-              <button class="tab" id="prefAnBtn_essential" onclick="setPref('an','essential')" title="Solo fattori di rischio rilevanti per la patologia attuale">Essenziale</button>
-              <button class="tab active" id="prefAnBtn_complete" onclick="setPref('an','complete')" title="Tutte le comorbilità e gli eventi anamnestici presenti nella cartella">Completa</button>
-            </div>
-          </div>
-
-          <div>
-            <label style="margin-bottom:6px;">Raccomandazioni</label>
-            <div class="tabs">
-              <button class="tab" id="prefRacBtn_main" onclick="setPref('rac','main')" title="Solo le raccomandazioni principali (terapia, follow-up clinico)">Principali</button>
-              <button class="tab active" id="prefRacBtn_all" onclick="setPref('rac','all')" title="Tutte le raccomandazioni, inclusi follow-up di riscontri incidentali">Tutte</button>
-            </div>
-          </div>
-
-          <div>
-            <label style="margin-bottom:6px;">Terapia alla Dimissione</label>
-            <div class="tabs">
-              <button class="tab active" id="prefTerBtn_active" onclick="setPref('ter','active')" title="Solo farmaci attivi alla dimissione">Solo attivi</button>
-              <button class="tab" id="prefTerBtn_withSuspended" onclick="setPref('ter','withSuspended')" title="Includi anche farmaci sospesi con motivazione indicata nel decorso">Includi sospesi</button>
-            </div>
-          </div>
-
-          <div>
-            <label style="margin-bottom:6px;">Altre Preferenze <span style="color:var(--dim);font-size:9px;text-transform:none;letter-spacing:0;margin-left:6px;">testo libero</span></label>
-            <textarea id="prefCustomText" rows="4" placeholder="Aggiungi qui eventuali preferenze aggiuntive in linguaggio naturale&#10;es: preferisco usare abbreviazioni mediche standard senza spiegarle&#10;es: nelle raccomandazioni includi sempre la frase 'Restiamo a disposizione per ulteriori chiarimenti'" style="font-size:11px;" oninput="setPrefCustom(this.value)"></textarea>
-          </div>
-
+      <!-- Gestione Dati Locali -->
+      <div class="card" style="border-color:var(--red);border-width:1px;">
+        <div class="ctitle">Gestione Dati Locali</div>
+        <div class="ib red" style="margin-bottom:12px;font-size:10px;line-height:1.6;">
+          ⚠ La libreria casi è salvata nel <strong>sessionStorage</strong> del browser. I dati sono disponibili solo per la durata della sessione e vengono cancellati automaticamente alla chiusura della tab/browser. Usa le opzioni qui sotto per esportare un backup se necessario.
         </div>
-        <div style="display:flex;gap:8px;margin-top:16px;align-items:center;">
-          <button class="btn btn-p" style="font-size:10px;padding:6px 13px;" onclick="saveUserPreferences()" title="Salva le preferenze sul tuo profilo GitHub">✓ Salva Preferenze</button>
-          <button class="btn btn-g" style="font-size:10px;padding:6px 13px;" onclick="resetUserPreferences()" title="Ripristina i valori di default">↺ Reset</button>
-          <span id="prefStatus" style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--dim);"></span>
+        <div style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--dim);margin-bottom:12px;" id="localStorageStats"></div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;">
+          <button class="btn btn-g" style="font-size:10px;padding:6px 13px;" onclick="exportLibraryJson()" title="Scarica un file JSON con tutti i casi e reparti salvati nel browser">⬇ Esporta Libreria (JSON)</button>
+          <button class="btn btn-g" style="font-size:10px;padding:6px 13px;" onclick="document.getElementById('importLibInput').click()" title="Carica un file JSON esportato in precedenza — i duplicati vengono ignorati">⬆ Importa Libreria (JSON)</button>
+          <input type="file" id="importLibInput" accept=".json" style="display:none;" onchange="importLibraryJson(event)">
+          <button class="btn btn-g" style="font-size:10px;padding:6px 13px;color:var(--red);border-color:var(--red);" onclick="clearLocalData()" title="Elimina tutti i casi, reparti e configurazioni salvati nel browser">🗑 Cancella tutti i dati locali</button>
         </div>
+        <div id="localDataStatus" style="font-family:'JetBrains Mono',monospace;font-size:10px;margin-top:8px;color:var(--dim);display:none;"></div>
       </div>
 
       <div class="card">
         <div class="ctitle">API Key Anthropic</div>
         <input type="password" id="apiKeyInput" placeholder="sk-ant-... (solo in memoria di sessione, mai su disco)">
         <div class="an"><span>ℹ</span><span>Usata solo per questa sessione. Mai salvata. Ottenibile su console.anthropic.com.</span></div>
-      </div>
-
-      <div class="card">
-        <div class="ctitle">Pattern Regex Custom</div>
-        <div class="ib" style="margin-bottom:10px;">Pattern aggiuntivi in JSON. I pattern base sono già inclusi.</div>
-        <textarea id="cfg_regex" rows="5" placeholder='[
-  {"pattern": "NHI:\\s*[A-Z]{3}\\d{4}", "replace": "[ID_PAZIENTE]"},
-  {"pattern": "cartella\\s*n\\.?\\s*\\d+", "replace": "[CARTELLA]"}
-]'></textarea>
-      </div>
-
-      <div class="card">
-        <div class="ctitle">Dizionario Nomi <span style="color:var(--dim);font-size:9px;text-transform:none;letter-spacing:0;margin-left:6px;">opzionale</span></div>
-        <div class="ib" style="margin-bottom:10px;">Abilita il fuzzy matching per rilevare nomi/cognomi con errori di battitura. Inserisci URL raw GitHub. Se vuoto, l'anonimizzazione usa solo i pattern regex (sufficiente nella maggior parte dei casi).</div>
-        <label>URL Cognomi (testo, uno per riga)</label>
-        <input type="text" id="cfg_surnames_url" placeholder="https://raw.githubusercontent.com/PaoloSarti/lista_cognomi_italiani/master/cognomi.txt">
-        <label>URL Nomi propri (CSV, prima colonna = nome)</label>
-        <input type="text" id="cfg_firstnames_url" placeholder="https://raw.githubusercontent.com/mrblasco/genderNamesITA/master/gender_firstnames_ITA.csv">
-        <button class="btn btn-g" style="margin-top:12px;" onclick="reloadNameDictionary()" title="Scarica i dizionari cognomi/nomi dalle URL configurate">↺ Carica dizionario</button>
-        <div id="dictStatusSettings" style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--dim);margin-top:8px;"></div>
       </div>
 
     </div>
@@ -1049,15 +1029,25 @@ async function doLogin(){
       try{
         const fileData=await ghApiGet(cfg);
         if(fileData){
-          const content=decodeURIComponent(escape(atob(fileData.content.replace(/\n/g,''))));
-          const remote=JSON.parse(content);
-          if(Array.isArray(remote)){
-            const local=loadLibrary();
-            const remoteIds=new Set(remote.map(c=>c.id));
-            const localOnly=local.filter(c=>!remoteIds.has(c.id));
-            const merged=[...remote,...localOnly];
-            saveLibrary(merged);renderLibrary();
-            sessionStorage.setItem('letteraai_lastpull',new Date().toISOString());
+          let content;
+          if(fileData._rawText){
+            content = fileData._rawText;
+          } else if(fileData.content && fileData.content.trim()){
+            content=decodeURIComponent(escape(atob(fileData.content.replace(/\n/g,''))));
+          } else {
+            console.warn('Auto-pull: contenuto vuoto');
+            content = null;
+          }
+          if(content){
+            const remote=JSON.parse(content);
+            if(Array.isArray(remote)){
+              const local=loadLibrary();
+              const remoteIds=new Set(remote.map(c=>c.id));
+              const localOnly=local.filter(c=>!remoteIds.has(c.id));
+              const merged=[...remote,...localOnly];
+              saveLibrary(merged);renderLibrary();
+              sessionStorage.setItem('letteraai_lastpull',new Date().toISOString());
+            }
           }
         }
       }catch(e){console.warn('Auto-pull dopo login fallito:',e.message);}
@@ -2073,12 +2063,6 @@ function applyRegex(text) {
   const reps = [];
   let result = text;
   const rules = [...ANON_CONFIG.regexRules];
-  try {
-    const raw = document.getElementById('cfg_regex').value.trim();
-    if (raw) JSON.parse(raw).forEach(cp => {
-      rules.push({ pattern: new RegExp(cp.pattern, 'gi'), label: cp.replace, type: 'id' });
-    });
-  } catch(e) {}
   for (const rule of rules) {
     const re = new RegExp(rule.pattern.source, rule.pattern.flags);
     if (re.global) re.lastIndex = 0;
@@ -2115,22 +2099,7 @@ function applyRegex(text) {
 // ═══════════════════════════════════════════════════
 // EXTERNAL NAME DICTIONARY + FUZZY ENGINE
 // ═══════════════════════════════════════════════════
-const NAME_SOURCES = {
-  firstNames: '',
-  surnames:   '',
-};
 const NAMES_DB = { firstNames:[], surnames:[], loaded:false, loading:false, error:null };
-
-async function reloadNameDictionary() {
-  NAMES_DB.loaded=false; NAMES_DB.loading=false;
-  NAMES_DB.firstNames=[]; NAMES_DB.surnames=[];
-  bkSurnames=new BKTree(); bkFirstNames=new BKTree();
-  const el=document.getElementById('dictStatusSettings');
-  if(el) el.textContent='⏳ Ricaricamento...';
-  await loadNameDictionary();
-  const statusEl=document.getElementById('dictStatus');
-  if(el&&statusEl) el.textContent=statusEl.textContent;
-}
 
 function levenshtein(a,b) {
   const m=a.length,n=b.length;
@@ -2180,54 +2149,12 @@ async function loadNameDictionary() {
   if(NAMES_DB.loaded||NAMES_DB.loading)return;
   NAMES_DB.loading=true;
   const statusEl=document.getElementById('dictStatus');
-  const customSurnamesUrl=document.getElementById('cfg_surnames_url')?.value.trim();
-  const customFirstNamesUrl=document.getElementById('cfg_firstnames_url')?.value.trim();
-  const surnamesUrl=customSurnamesUrl||NAME_SOURCES.surnames;
-  const firstNamesUrl=customFirstNamesUrl||NAME_SOURCES.firstNames;
-  // Se nessuna URL configurata, usa solo fallback locale
-  if(!surnamesUrl&&!firstNamesUrl){
-    const fb=ANON_CONFIG.nameDict_fallback;
-    fb.forEach(n=>{bkSurnames.add(n.toLowerCase());bkFirstNames.add(n.toLowerCase());});
-    NAMES_DB.surnames=fb.map(n=>n.toLowerCase());
-    NAMES_DB.loaded=true;
-    const msg=fb.length?`Dizionario locale (${fb.length} nomi)`:'';
-    if(statusEl)statusEl.textContent=msg;
-    NAMES_DB.loading=false;
-    return;
-  }
-  if(statusEl)statusEl.textContent='⏳ Caricamento dizionario nomi...';
-  try{
-    const fetches=[];
-    if(surnamesUrl)fetches.push(fetch(surnamesUrl)); else fetches.push(Promise.resolve(null));
-    if(firstNamesUrl)fetches.push(fetch(firstNamesUrl)); else fetches.push(Promise.resolve(null));
-    const [surnameResp,firstNameResp]=await Promise.all(fetches);
-    if(surnameResp?.ok){
-      const text=await surnameResp.text();
-      const names=text.split('\n').map(l=>l.trim().toLowerCase()).filter(l=>l.length>=3&&l.length<=30&&/^[a-zàèéìòùäöü'\- ]+$/.test(l));
-      NAMES_DB.surnames=names; names.forEach(n=>bkSurnames.add(n));
-    }
-    if(firstNameResp?.ok){
-      const text=await firstNameResp.text();
-      const lines=text.split('\n').slice(1);
-      const names=lines.map(l=>l.split(',')[0].replace(/['"]/g,'').trim().toLowerCase()).filter(n=>n.length>=3&&n.length<=20&&/^[a-zàèéìòùäöü'\- ]+$/.test(n));
-      NAMES_DB.firstNames=names; names.forEach(n=>bkFirstNames.add(n));
-    }
-    NAMES_DB.loaded=true; NAMES_DB.error=null;
-    const msg=`✓ Dizionario: ${NAMES_DB.surnames.length.toLocaleString()} cognomi · ${NAMES_DB.firstNames.length.toLocaleString()} nomi`;
-    if(statusEl)statusEl.textContent=msg;
-    const settingsEl=document.getElementById('dictStatusSettings');
-    if(settingsEl)settingsEl.textContent=msg;
-  }catch(e){
-    NAMES_DB.error=e.message;
-    const fb=ANON_CONFIG.nameDict_fallback;
-    fb.forEach(n=>{bkSurnames.add(n.toLowerCase());bkFirstNames.add(n.toLowerCase());});
-    NAMES_DB.surnames=fb.map(n=>n.toLowerCase());
-    NAMES_DB.loaded=true;
-    const errMsg=`⚠ Rete non disponibile — dizionario locale (${fb.length} nomi)`;
-    if(statusEl)statusEl.textContent=errMsg;
-    const settingsEl=document.getElementById('dictStatusSettings');
-    if(settingsEl)settingsEl.textContent=errMsg;
-  }
+  const fb=ANON_CONFIG.nameDict_fallback;
+  fb.forEach(n=>{bkSurnames.add(n.toLowerCase());bkFirstNames.add(n.toLowerCase());});
+  NAMES_DB.surnames=fb.map(n=>n.toLowerCase());
+  NAMES_DB.loaded=true;
+  const msg=fb.length?`Dizionario locale (${fb.length} nomi)`:'';
+  if(statusEl)statusEl.textContent=msg;
   NAMES_DB.loading=false;
 }
 
@@ -4160,9 +4087,41 @@ ${tick3}`;
 }
 
 // ── Paste verifica result from external AI ──
-function togglePasteVerifica(){
+async function togglePasteVerifica(){
   const panel=document.getElementById('pasteVerificaPanel');
-  panel.style.display=panel.style.display==='none'?'block':'none';
+  const opening = panel.style.display==='none';
+  panel.style.display = opening ? 'block' : 'none';
+  if(opening){
+    const input = document.getElementById('pasteVerificaInput');
+    input.focus();
+    try{
+      // Only auto-paste if permission already granted (avoids popup)
+      if(navigator.permissions){
+        const perm = await navigator.permissions.query({name:'clipboard-read'});
+        if(perm.state === 'granted'){
+          const clip = await navigator.clipboard.readText();
+          if(clip && clip.trim()) input.value = clip;
+        }
+      }
+    }catch(e){ /* unsupported or error — user can Ctrl+V manually */ }
+  }
+}
+
+// Read clipboard into specified textarea — triggers permission prompt if needed
+async function readClipboardInto(inputId){
+  const input = document.getElementById(inputId);
+  if(!input) return;
+  try{
+    const clip = await navigator.clipboard.readText();
+    if(clip && clip.trim()){
+      input.value = clip;
+      input.focus();
+    } else {
+      alert('Gli appunti sono vuoti. Copia prima il testo dall\'AI esterna.');
+    }
+  }catch(e){
+    alert('Impossibile leggere gli appunti: permesso negato.\n\nPuoi incollare manualmente con Ctrl+V nella casella di testo.');
+  }
 }
 
 function applyPastedVerifica(){
@@ -4187,9 +4146,24 @@ function applyPastedVerifica(){
 // ═══════════════════════════════════════════════════
 // PASTE FROM EXTERNAL AI — local formatting
 // ═══════════════════════════════════════════════════
-function togglePasteAI(){
+async function togglePasteAI(){
   const panel=document.getElementById('pasteAIPanel');
-  panel.style.display=panel.style.display==='none'?'block':'none';
+  const opening = panel.style.display==='none';
+  panel.style.display = opening ? 'block' : 'none';
+  if(opening){
+    const input = document.getElementById('pasteAIInput');
+    input.focus();
+    try{
+      // Only auto-paste if permission already granted (avoids popup)
+      if(navigator.permissions){
+        const perm = await navigator.permissions.query({name:'clipboard-read'});
+        if(perm.state === 'granted'){
+          const clip = await navigator.clipboard.readText();
+          if(clip && clip.trim()) input.value = clip;
+        }
+      }
+    }catch(e){ /* unsupported or error — user can Ctrl+V manually */ }
+  }
 }
 
 function formatPastedLetter(){
@@ -5073,32 +5047,10 @@ function buildPreferencesPromptBlock(){
   return blocks.length ? '\n\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\nPREFERENZE UTENTE — applicare SEMPRE\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n' + blocks.join('\n') : '';
 }
 
-function saveBaseSettings(){
-  _ghOwnerCache=null;
-  sessionStorage.setItem('letteraai_cfg',JSON.stringify({
-    citta:'Padova',
-    regex:document.getElementById('cfg_regex').value,
-    surnamesUrl:document.getElementById('cfg_surnames_url').value,
-    firstNamesUrl:document.getElementById('cfg_firstnames_url').value,
-    ghPath:document.getElementById('cfg_gh_path').value,
-  }));showToast('Impostazioni salvate.');
-}
 function loadBaseSettings(){
-  try{
-    const c=JSON.parse(sessionStorage.getItem('letteraai_cfg')||'{}');
-    if(c.regex)document.getElementById('cfg_regex').value=c.regex;
-    if(c.surnamesUrl)document.getElementById('cfg_surnames_url').value=c.surnamesUrl;
-    if(c.firstNamesUrl)document.getElementById('cfg_firstnames_url').value=c.firstNamesUrl;
-    // Repo: sempre dal default hardcoded, mai da localStorage
-    document.getElementById('cfg_gh_repo').value=DEFAULT_GH_REPO;
-    if(c.ghPath)document.getElementById('cfg_gh_path').value=c.ghPath||'cases.json';
-    // Pulisci eventuali dati obsoleti da versioni precedenti
-    if(c.ghToken||c.ghRepo){
-      delete c.ghToken;
-      delete c.ghRepo;
-      sessionStorage.setItem('letteraai_cfg',JSON.stringify(c));
-    }
-  }catch(e){}
+  // Repo: sempre dal default hardcoded
+  const repoEl=document.getElementById('cfg_gh_repo');
+  if(repoEl) repoEl.value=DEFAULT_GH_REPO;
 }
 
 // ═══════════════════════════════════════════════════
@@ -5160,20 +5112,19 @@ async function resolveGitHubOwner(token){
 }
 
 function getGitHubCfgSync(){
-  const c=JSON.parse(sessionStorage.getItem('letteraai_cfg')||'{}');
   const token=document.getElementById('cfg_gh_token')?.value?.trim() || DEFAULT_GH_TOKEN;
   let repo=document.getElementById('cfg_gh_repo')?.value?.trim() || DEFAULT_GH_REPO;
+  const path=document.getElementById('cfg_gh_path')?.value?.trim() || DEFAULT_GH_PATH || 'cases.json';
   if(repo && !repo.includes('/') && _ghOwnerCache){
     repo=_ghOwnerCache+'/'+repo;
   }
-  return{ token, repo, path: c.ghPath || DEFAULT_GH_PATH || 'cases.json' };
+  return{ token, repo, path };
 }
 
 async function getGitHubCfg(){
-  const c=JSON.parse(sessionStorage.getItem('letteraai_cfg')||'{}');
   const token=document.getElementById('cfg_gh_token')?.value?.trim() || DEFAULT_GH_TOKEN;
   let repo=document.getElementById('cfg_gh_repo')?.value?.trim() || DEFAULT_GH_REPO;
-  const path=c.ghPath || DEFAULT_GH_PATH || 'cases.json';
+  const path=document.getElementById('cfg_gh_path')?.value?.trim() || DEFAULT_GH_PATH || 'cases.json';
   if(!token || !repo) return { token, repo, path };
   if(!repo.includes('/')){
     const owner=await resolveGitHubOwner(token);
@@ -5192,11 +5143,31 @@ async function ghApiGet(cfg){
     if(r.status===404)return null;
     if(!r.ok)throw new Error(`GitHub GET ${r.status}: ${await r.text()}`);
     const meta=await r.json();
-    if(!meta.content && meta.download_url){
-      try{
-        const dl=await fetch(meta.download_url);
-        if(dl.ok) meta._rawText = await dl.text();
-      }catch(e){ console.warn('download_url fallback failed:',e); }
+    // If no content (large file) or empty content, try download_url fallback
+    const hasContent = meta.content && meta.content.trim().length > 0;
+    if(!hasContent){
+      if(meta.download_url){
+        try{
+          const dl=await fetch(meta.download_url,{headers:{Authorization:`token ${cfg.token}`}});
+          if(dl.ok){
+            meta._rawText = await dl.text();
+          } else {
+            console.warn('download_url HTTP',dl.status);
+          }
+        }catch(e){ console.warn('download_url fallback failed:',e); }
+      }
+      // Try raw content API as last resort
+      if(!meta._rawText){
+        try{
+          const rawUrl=`https://api.github.com/repos/${cfg.repo}/contents/${cfg.path}`;
+          const raw=await fetch(rawUrl,{headers:{Authorization:`token ${cfg.token}`,'Accept':'application/vnd.github.v3.raw'}});
+          if(raw.ok){
+            meta._rawText = await raw.text();
+          } else {
+            console.warn('raw API HTTP',raw.status);
+          }
+        }catch(e){ console.warn('raw API fallback failed:',e); }
+      }
     }
     return meta;
   }catch(e){
@@ -5249,10 +5220,11 @@ async function pullLibraryFromGitHub(){
     let decoded;
     if(file._rawText) {
       decoded = file._rawText;
-    } else if(file.content) {
+    } else if(file.content && file.content.trim()) {
       decoded=decodeURIComponent(escape(atob(file.content.replace(/\n/g,''))));
     } else {
-      throw new Error('Contenuto vuoto dal server GitHub');
+      console.error('ghApiGet returned:',file);
+      throw new Error('Contenuto vuoto dal server. Il file potrebbe essere troppo grande: prova a ridurlo o controlla i log del browser (F12).');
     }
     if(!decoded || !decoded.trim()) throw new Error('File vuoto');
     const lib=JSON.parse(decoded);
@@ -6357,33 +6329,129 @@ updateRefCaseNoCases();
   window.goTo = function(i){ _goTo(i); if(i===1) requestAnimationFrame(updateDiffBoxes); };
 })();
 
+// ── Mobile-friendly tooltips ─────────────────────────────────────────────
+(function(){
+  const tip = document.getElementById('tipPopover');
+  if(!tip) return;
+  let currentTarget = null;
+
+  function showTip(target, x, y){
+    const text = target.getAttribute('title') || target.getAttribute('data-title');
+    if(!text) return;
+    // Move title to data-title so browser doesn't show native tooltip when re-hovering
+    if(target.hasAttribute('title')){
+      target.setAttribute('data-title', text);
+      target.removeAttribute('title');
+    }
+    tip.textContent = text;
+    tip.classList.add('visible');
+    // Position: prefer right-below; flip if out of viewport
+    const padding = 8;
+    tip.style.left = '0px'; tip.style.top = '0px'; // reset for measuring
+    const tipRect = tip.getBoundingClientRect();
+    const vw = window.innerWidth, vh = window.innerHeight;
+    let left = x + padding;
+    let top = y + padding;
+    if(left + tipRect.width + padding > vw) left = vw - tipRect.width - padding;
+    if(top + tipRect.height + padding > vh) top = y - tipRect.height - padding;
+    if(left < padding) left = padding;
+    if(top < padding) top = padding;
+    tip.style.left = left + 'px';
+    tip.style.top = top + 'px';
+    currentTarget = target;
+  }
+  function hideTip(){
+    tip.classList.remove('visible');
+    currentTarget = null;
+  }
+
+  function isHelpIcon(el){
+    if(!el || !el.style) return false;
+    return el.style.cursor === 'help' && (el.hasAttribute('title') || el.hasAttribute('data-title'));
+  }
+
+  // Find closest help-icon ancestor (for icons with inner svg/text)
+  function findHelpAncestor(el){
+    let cur = el;
+    while(cur && cur !== document.body){
+      if(isHelpIcon(cur)) return cur;
+      cur = cur.parentElement;
+    }
+    return null;
+  }
+
+  // Click/tap to toggle
+  document.addEventListener('click', (e)=>{
+    const target = findHelpAncestor(e.target);
+    if(target){
+      e.stopPropagation();
+      if(currentTarget === target){ hideTip(); return; }
+      const rect = target.getBoundingClientRect();
+      showTip(target, rect.left, rect.bottom);
+    } else {
+      if(currentTarget) hideTip();
+    }
+  }, true);
+
+  // Desktop hover: also show tooltip
+  document.addEventListener('mouseover', (e)=>{
+    const target = findHelpAncestor(e.target);
+    if(target && currentTarget !== target){
+      const rect = target.getBoundingClientRect();
+      showTip(target, rect.left, rect.bottom);
+    }
+  }, true);
+  document.addEventListener('mouseout', (e)=>{
+    const target = findHelpAncestor(e.target);
+    if(target && !e.relatedTarget?.closest?.('[data-title]')){
+      // Only hide on mouseout if we're not on mobile (touch devices keep it open till next tap)
+      if(!('ontouchstart' in window)) hideTip();
+    }
+  }, true);
+
+  // Scroll closes tooltip
+  window.addEventListener('scroll', ()=>{ if(currentTarget) hideTip(); }, {capture:true, passive:true});
+})();
+
 // ── Mobile nav toggle ────────────────────────────────────────────────────
 function toggleMobileNav(){
   const aside = document.querySelector('aside');
   const overlay = document.getElementById('mobileNavOverlay');
-  const arrow = document.getElementById('mobileNavArrow');
   const open = aside.classList.toggle('mobile-open');
   overlay.classList.toggle('visible', open);
-  // Flip arrow direction when open
-  arrow.innerHTML = open
-    ? '<path d="M9 2L4 7l5 5" stroke="#000" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>'
-    : '<path d="M5 2l5 5-5 5" stroke="#000" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>';
 }
 function closeMobileNav(){
   document.querySelector('aside').classList.remove('mobile-open');
   document.getElementById('mobileNavOverlay').classList.remove('visible');
-  document.getElementById('mobileNavArrow').innerHTML = '<path d="M5 2l5 5-5 5" stroke="#000" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>';
 }
 
-// Show tab only on mobile
+// Close nav on panel navigation (mobile)
 (function(){
-  const tab = document.getElementById('mobileNavTab');
-  function checkMobile(){ tab.style.display = window.innerWidth <= 640 ? 'flex' : 'none'; }
-  checkMobile();
-  window.addEventListener('resize', checkMobile);
-  // Close nav on panel navigation (mobile)
   const _goToMobile = window.goTo;
   window.goTo = function(i){ _goToMobile(i); closeMobileNav(); };
+})();
+
+// Close nav when tapping or scrolling outside the sidepanel (mobile)
+(function(){
+  function isNavOpen(){
+    return document.querySelector('aside')?.classList.contains('mobile-open');
+  }
+  function shouldCloseFor(target){
+    if(!isNavOpen()) return false;
+    const aside = document.querySelector('aside');
+    const hamburger = document.getElementById('mobileHamburger');
+    // Don't close if target is inside the aside (to allow interaction with nav buttons)
+    if(aside && aside.contains(target)) return false;
+    // Don't close if user taps the hamburger (toggle handles it)
+    if(hamburger && hamburger.contains(target)) return false;
+    return true;
+  }
+  document.addEventListener('touchstart', (e)=>{
+    if(shouldCloseFor(e.target)) closeMobileNav();
+  }, {passive:true, capture:true});
+  document.addEventListener('wheel', (e)=>{
+    if(shouldCloseFor(e.target)) closeMobileNav();
+  }, {passive:true, capture:true});
 })();
 function scrollToBottom(){
   const panel = document.querySelector('.panel.active');
