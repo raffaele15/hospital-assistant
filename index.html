@@ -5148,7 +5148,9 @@ async function ghApiGet(cfg){
     if(!hasContent){
       if(meta.download_url){
         try{
-          const dl=await fetch(meta.download_url,{headers:{Authorization:`token ${cfg.token}`}});
+          // NOTE: download_url contains a signed token in the URL — do NOT add Authorization header,
+          // as it triggers a CORS preflight that raw.githubusercontent.com doesn't support
+          const dl=await fetch(meta.download_url);
           if(dl.ok){
             const text = await dl.text();
             let looksLikeMetadata = false;
