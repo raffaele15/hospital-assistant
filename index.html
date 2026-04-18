@@ -353,66 +353,6 @@ hr.div{border:none;border-top:1px solid var(--border);margin:18px 0}
       <input type="text" id="transferWard" placeholder="es. Riabilitazione Neurologica, Ospedale di Vicenza" oninput="updateTokenPanel();refreshPrompt()">
     </div>
   </div>
-  <div class="card" id="tempPrefsCard">
-    <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;cursor:pointer;" onclick="toggleTempPrefsPanel()">
-      <div class="ctitle" style="margin:0;">Preferenze Lettera <span title="Modifica le preferenze per questa lettera." style="display:inline-flex;align-items:center;justify-content:center;width:16px;height:16px;border-radius:50%;border:1px solid var(--dim);font-size:10px;color:var(--dim);cursor:help;vertical-align:middle;margin-left:4px;text-transform:none;letter-spacing:0;" onclick="event.stopPropagation()">?</span> <span id="tempPrefsSummary" style="color:var(--dim);font-size:9px;margin-left:8px;text-transform:none;letter-spacing:0;"></span></div>
-      <span id="tempPrefsToggleArrow" style="color:var(--dim);font-size:12px;">▶</span>
-    </div>
-    <div id="tempPrefsPanel" style="display:none;margin-top:14px;">
-      <div style="display:flex;flex-direction:column;gap:14px;">
-        <div>
-          <label style="margin-bottom:6px;">Esami di Laboratorio</label>
-          <div class="tabs">
-            <button class="tab" id="tempLabBtn_all" onclick="setTempPref('lab','all')">Tutti i valori</button>
-            <button class="tab" id="tempLabBtn_altered" onclick="setTempPref('lab','altered')">Solo patologici</button>
-          </div>
-        </div>
-        <div>
-          <label style="margin-bottom:6px;">Accertamenti Strumentali</label>
-          <div class="tabs">
-            <button class="tab" id="tempAccBtn_brief" onclick="setTempPref('acc','brief')">Sintetici</button>
-            <button class="tab" id="tempAccBtn_extended" onclick="setTempPref('acc','extended')">Estesi</button>
-          </div>
-        </div>
-        <div>
-          <label style="margin-bottom:6px;">Decorso Clinico</label>
-          <div class="tabs">
-            <button class="tab" id="tempDecBtn_short" onclick="setTempPref('dec','short')">Conciso</button>
-            <button class="tab" id="tempDecBtn_standard" onclick="setTempPref('dec','standard')">Standard</button>
-            <button class="tab" id="tempDecBtn_long" onclick="setTempPref('dec','long')">Dettagliato</button>
-          </div>
-        </div>
-        <div>
-          <label style="margin-bottom:6px;">Anamnesi</label>
-          <div class="tabs">
-            <button class="tab" id="tempAnBtn_essential" onclick="setTempPref('an','essential')">Essenziale</button>
-            <button class="tab" id="tempAnBtn_complete" onclick="setTempPref('an','complete')">Completa</button>
-          </div>
-        </div>
-        <div>
-          <label style="margin-bottom:6px;">Raccomandazioni</label>
-          <div class="tabs">
-            <button class="tab" id="tempRacBtn_main" onclick="setTempPref('rac','main')">Principali</button>
-            <button class="tab" id="tempRacBtn_all" onclick="setTempPref('rac','all')">Tutte</button>
-          </div>
-        </div>
-        <div>
-          <label style="margin-bottom:6px;">Terapia alla Dimissione</label>
-          <div class="tabs">
-            <button class="tab" id="tempTerBtn_active" onclick="setTempPref('ter','active')">Solo attivi</button>
-            <button class="tab" id="tempTerBtn_withSuspended" onclick="setTempPref('ter','withSuspended')">Includi sospesi</button>
-          </div>
-        </div>
-        <div>
-          <label style="margin-bottom:6px;">Altre Preferenze</label>
-          <textarea id="tempPrefCustomText" rows="3" placeholder="Aggiungi preferenze..." style="font-size:11px;" oninput="setTempPrefCustom(this.value)"></textarea>
-        </div>
-      </div>
-      <div style="margin-top:14px;">
-        <button class="btn btn-g" style="font-size:10px;padding:5px 11px;" onclick="resetTempPrefs()" title="Ripristina le preferenze salvate">↺ Ripristina salvate</button>
-      </div>
-    </div>
-  </div>
   <div class="card" id="refCaseCard">
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;flex-wrap:wrap;gap:8px;">
       <div class="ctitle" style="margin:0;">Caso di Riferimento</div>
@@ -455,28 +395,84 @@ hr.div{border:none;border-top:1px solid var(--border);margin:18px 0}
     <!-- Status line -->
     <div id="refCaseStatus" style="margin-top:10px;font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--dim);display:none;"></div>
   </div>
-  <div class="card">
-    <div class="ctitle">Prompt di Sistema — modificabile</div>
-    <textarea id="systemPrompt" rows="8" style="font-size:11px;"></textarea>
-  </div>
-  <div class="card">
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;flex-wrap:wrap;gap:8px;">
-      <div class="ctitle" style="margin:0;">Prompt Completo</div>
-      <div style="display:flex;gap:7px;flex-wrap:wrap;">
-        <button class="btn btn-g" style="font-size:10px;padding:5px 11px;" onclick="refreshPrompt()" title="Ricostruisce il prompt con le impostazioni correnti (template, fingerprint, testo clinico)">↺ Aggiorna</button>
+  <div class="card" id="tempPrefsCard">
+    <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;cursor:pointer;" onclick="toggleTempPrefsPanel()">
+      <div class="ctitle" style="margin:0;display:flex;align-items:center;gap:8px;"><span id="tempPrefsToggleArrow" style="color:var(--accent);font-size:12px;">▶</span>Preferenze Lettera <span title="Modifica le preferenze per questa lettera." style="display:inline-flex;align-items:center;justify-content:center;width:16px;height:16px;border-radius:50%;border:1px solid var(--dim);font-size:10px;color:var(--dim);cursor:help;vertical-align:middle;margin-left:4px;text-transform:none;letter-spacing:0;" onclick="event.stopPropagation()">?</span> <span id="tempPrefsSummary" style="color:var(--dim);font-size:9px;margin-left:8px;text-transform:none;letter-spacing:0;"></span></div>
+    </div>
+    <div id="tempPrefsPanel" style="display:none;margin-top:14px;">
+      <div style="display:flex;flex-direction:column;gap:14px;">
+        <div>
+          <label style="margin-bottom:6px;cursor:help;" title="Scegli se includere tutti i valori degli esami ematochimici oppure solo quelli alterati, riducendo la lunghezza della sezione esami.">Esami di Laboratorio</label>
+          <div class="tabs">
+            <button class="tab" id="tempLabBtn_all" onclick="setTempPref('lab','all')" title="Riporta tutti i valori degli esami di laboratorio con il range di normalità">Tutti i valori</button>
+            <button class="tab" id="tempLabBtn_altered" onclick="setTempPref('lab','altered')" title="Riporta solo i valori alterati (fuori range) + i 6 obbligatori (colesterolo, HDL, LDL, trigliceridi, HbA1c, creatinina)">Solo patologici</button>
+          </div>
+        </div>
+        <div>
+          <label style="margin-bottom:6px;cursor:help;" title="Scegli quanto dettaglio riportare dei referti di accertamenti (TC, RM, EEG, ecografie, ecc.).">Accertamenti Strumentali</label>
+          <div class="tabs">
+            <button class="tab" id="tempAccBtn_brief" onclick="setTempPref('acc','brief')" title="Solo conclusioni sintetiche in 1-2 frasi">Sintetici</button>
+            <button class="tab" id="tempAccBtn_extended" onclick="setTempPref('acc','extended')" title="Conclusioni estese con dettagli clinicamente rilevanti">Estesi</button>
+          </div>
+        </div>
+        <div>
+          <label style="margin-bottom:6px;cursor:help;" title="Lunghezza del paragrafo che racconta l'andamento del ricovero: eventi clinici, decisioni terapeutiche, complicanze.">Decorso Clinico</label>
+          <div class="tabs">
+            <button class="tab" id="tempDecBtn_short" onclick="setTempPref('dec','short')" title="150-250 parole — solo eventi principali e decisioni terapeutiche">Conciso</button>
+            <button class="tab" id="tempDecBtn_standard" onclick="setTempPref('dec','standard')" title="250-400 parole — racconto clinico equilibrato">Standard</button>
+            <button class="tab" id="tempDecBtn_long" onclick="setTempPref('dec','long')" title="400-600 parole — dettagliato con eventi intermedi e ragionamento clinico">Dettagliato</button>
+          </div>
+        </div>
+        <div>
+          <label style="margin-bottom:6px;cursor:help;" title="Livello di dettaglio con cui vengono riportate le patologie pregresse e le comorbilità del paziente.">Anamnesi</label>
+          <div class="tabs">
+            <button class="tab" id="tempAnBtn_essential" onclick="setTempPref('an','essential')" title="Riporta tutte le patologie del paziente in forma sintetica (frasi brevi, senza dettagli superflui)">Essenziale</button>
+            <button class="tab" id="tempAnBtn_complete" onclick="setTempPref('an','complete')" title="Tutte le comorbilità e gli eventi anamnestici presenti nella cartella">Completa</button>
+          </div>
+        </div>
+        <div>
+          <label style="margin-bottom:6px;cursor:help;" title="Scegli se includere tutte le raccomandazioni dalla cartella oppure solo quelle principali per il follow-up clinico.">Raccomandazioni</label>
+          <div class="tabs">
+            <button class="tab" id="tempRacBtn_main" onclick="setTempPref('rac','main')" title="Solo le raccomandazioni principali (terapia, follow-up clinico)">Principali</button>
+            <button class="tab" id="tempRacBtn_all" onclick="setTempPref('rac','all')" title="Tutte le raccomandazioni, inclusi follow-up di riscontri incidentali">Tutte</button>
+          </div>
+        </div>
+        <div>
+          <label style="margin-bottom:6px;cursor:help;" title="Cosa inserire nella tabella della terapia alla dimissione: solo gli ultimi farmaci prescritti durante il ricovero, oppure aggiungere anche i farmaci domiciliari che il paziente dovrà riprendere.">Terapia alla Dimissione</label>
+          <div class="tabs">
+            <button class="tab" id="tempTerBtn_last" onclick="setTempPref('ter','last')" title="Solo la terapia effettivamente prescritta al momento della dimissione">Ultima terapia</button>
+            <button class="tab" id="tempTerBtn_lastPlusHome" onclick="setTempPref('ter','lastPlusHome')" title="Aggiunge alla terapia di dimissione i farmaci domiciliari sospesi solo per esigenze del ricovero (es. farmaci non disponibili in reparto)">Ultima terapia + domiciliare</button>
+          </div>
+        </div>
+        <div>
+          <label style="margin-bottom:6px;">Altre Preferenze</label>
+          <textarea id="tempPrefCustomText" rows="3" placeholder="Aggiungi preferenze..." style="font-size:11px;" oninput="setTempPrefCustom(this.value)"></textarea>
+        </div>
+      </div>
+      <div style="margin-top:14px;">
+        <button class="btn btn-g" style="font-size:10px;padding:5px 11px;" onclick="resetTempPrefs()" title="Ripristina le preferenze salvate">↺ Ripristina salvate</button>
       </div>
     </div>
+  </div>
+  <div class="card">
+    <div class="ctitle" style="margin:0;display:flex;align-items:center;gap:8px;cursor:pointer;" onclick="toggleSysPrompt()"><span id="sysPromptToggleArrow" style="color:var(--accent);font-size:12px;">▶</span>Istruzioni Generali — modificabili</div>
+    <div id="sysPromptWrap" style="display:none;margin-top:10px;">
+      <textarea id="systemPrompt" rows="8" style="font-size:11px;" oninput="clearTimeout(window._sysPromptTimer);window._sysPromptTimer=setTimeout(refreshPrompt,300);"></textarea>
+    </div>
+  </div>
+  <div class="card">
+    <div class="ctitle" style="margin:0 0 10px 0;">Prompt Completo</div>
     <div class="tabs">
       <button class="tab active" id="tabFull"   onclick="showTab('full')">Completo</button>
-      <button class="tab"        id="tabSystem" onclick="showTab('system')">System</button>
-      <button class="tab"        id="tabUser"   onclick="showTab('user')">User</button>
+      <button class="tab"        id="tabSystem" onclick="showTab('system')">Istruzioni</button>
+      <button class="tab"        id="tabUser"   onclick="showTab('user')">Caso Clinico</button>
     </div>
     <div>
       <textarea id="promptView" readonly rows="12" style="font-size:11px;background:var(--surface2);color:var(--dim);cursor:default;"></textarea>
       <div class="cc" id="copyConfirm" style="position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);z-index:999;">✓ Copiato!</div>
     </div>
   </div>
-  <!-- Model, Temperature, Token panel — hidden by default, shown when generating -->
+  <!-- Model, Temperature, Token panel — hidden by default, shown after generation -->
   <div id="genSettingsPanel" style="display:none;">
     <div class="card">
       <div class="ctitle">Modello & Temperatura</div>
@@ -513,7 +509,7 @@ hr.div{border:none;border-top:1px solid var(--border);margin:18px 0}
   </div>
   <div class="btn-row">
     <button class="btn btn-g" onclick="goTo(1)">← Indietro</button>
-    <button class="btn btn-p" id="genBtn" onclick="showGenSettingsAndGenerate()">
+    <button class="btn btn-p" id="genBtn" onclick="generateLetter()">
       <span class="spin" id="genSpin" style="display:none;"></span>
       ✦ Genera Lettera con AI
     </button>
@@ -579,8 +575,8 @@ hr.div{border:none;border-top:1px solid var(--border);margin:18px 0}
       </div>
     </div>
   </div>
-  <!-- Modello & Stima costi verifica -->
-  <div class="card" style="margin-bottom:14px;">
+  <!-- Modello & Stima costi verifica — hidden by default, shown after verifica click -->
+  <div id="verifSettingsPanel" class="card" style="display:none;margin-bottom:14px;">
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;align-items:end;">
       <div>
         <div class="ctitle">Modello Verifica</div>
@@ -629,7 +625,7 @@ hr.div{border:none;border-top:1px solid var(--border);margin:18px 0}
     <div style="display:flex;flex-direction:column;gap:14px;">
 
       <div>
-        <label style="margin-bottom:6px;">Esami di Laboratorio</label>
+        <label style="margin-bottom:6px;cursor:help;" title="Scegli se includere tutti i valori degli esami ematochimici oppure solo quelli alterati, riducendo la lunghezza della sezione esami.">Esami di Laboratorio</label>
         <div class="tabs">
           <button class="tab active" id="prefLabBtn_all" onclick="setPref('lab','all')" title="Riporta tutti i valori degli esami di laboratorio con il range di normalità">Tutti i valori</button>
           <button class="tab" id="prefLabBtn_altered" onclick="setPref('lab','altered')" title="Riporta solo i valori alterati (fuori range) + i 6 obbligatori (colesterolo, HDL, LDL, trigliceridi, HbA1c, creatinina)">Solo patologici</button>
@@ -637,7 +633,7 @@ hr.div{border:none;border-top:1px solid var(--border);margin:18px 0}
       </div>
 
       <div>
-        <label style="margin-bottom:6px;">Accertamenti Strumentali</label>
+        <label style="margin-bottom:6px;cursor:help;" title="Scegli quanto dettaglio riportare dei referti di accertamenti (TC, RM, EEG, ecografie, ecc.).">Accertamenti Strumentali</label>
         <div class="tabs">
           <button class="tab active" id="prefAccBtn_brief" onclick="setPref('acc','brief')" title="Solo conclusioni sintetiche in 1-2 frasi">Sintetici</button>
           <button class="tab" id="prefAccBtn_extended" onclick="setPref('acc','extended')" title="Conclusioni estese con dettagli clinicamente rilevanti">Estesi</button>
@@ -645,7 +641,7 @@ hr.div{border:none;border-top:1px solid var(--border);margin:18px 0}
       </div>
 
       <div>
-        <label style="margin-bottom:6px;">Decorso Clinico</label>
+        <label style="margin-bottom:6px;cursor:help;" title="Lunghezza del paragrafo che racconta l'andamento del ricovero: eventi clinici, decisioni terapeutiche, complicanze.">Decorso Clinico</label>
         <div class="tabs">
           <button class="tab" id="prefDecBtn_short" onclick="setPref('dec','short')" title="150-250 parole — solo eventi principali e decisioni terapeutiche">Conciso</button>
           <button class="tab active" id="prefDecBtn_standard" onclick="setPref('dec','standard')" title="250-400 parole — racconto clinico equilibrato">Standard</button>
@@ -654,15 +650,15 @@ hr.div{border:none;border-top:1px solid var(--border);margin:18px 0}
       </div>
 
       <div>
-        <label style="margin-bottom:6px;">Anamnesi</label>
+        <label style="margin-bottom:6px;cursor:help;" title="Livello di dettaglio con cui vengono riportate le patologie pregresse e le comorbilità del paziente.">Anamnesi</label>
         <div class="tabs">
-          <button class="tab" id="prefAnBtn_essential" onclick="setPref('an','essential')" title="Solo fattori di rischio rilevanti per la patologia attuale">Essenziale</button>
+          <button class="tab" id="prefAnBtn_essential" onclick="setPref('an','essential')" title="Riporta tutte le patologie del paziente in forma sintetica (frasi brevi, senza dettagli superflui)">Essenziale</button>
           <button class="tab active" id="prefAnBtn_complete" onclick="setPref('an','complete')" title="Tutte le comorbilità e gli eventi anamnestici presenti nella cartella">Completa</button>
         </div>
       </div>
 
       <div>
-        <label style="margin-bottom:6px;">Raccomandazioni</label>
+        <label style="margin-bottom:6px;cursor:help;" title="Scegli se includere tutte le raccomandazioni dalla cartella oppure solo quelle principali per il follow-up clinico.">Raccomandazioni</label>
         <div class="tabs">
           <button class="tab" id="prefRacBtn_main" onclick="setPref('rac','main')" title="Solo le raccomandazioni principali (terapia, follow-up clinico)">Principali</button>
           <button class="tab active" id="prefRacBtn_all" onclick="setPref('rac','all')" title="Tutte le raccomandazioni, inclusi follow-up di riscontri incidentali">Tutte</button>
@@ -670,10 +666,10 @@ hr.div{border:none;border-top:1px solid var(--border);margin:18px 0}
       </div>
 
       <div>
-        <label style="margin-bottom:6px;">Terapia alla Dimissione</label>
+        <label style="margin-bottom:6px;cursor:help;" title="Cosa inserire nella tabella della terapia alla dimissione: solo gli ultimi farmaci prescritti durante il ricovero, oppure aggiungere anche i farmaci domiciliari che il paziente dovrà riprendere.">Terapia alla Dimissione</label>
         <div class="tabs">
-          <button class="tab active" id="prefTerBtn_active" onclick="setPref('ter','active')" title="Solo farmaci attivi alla dimissione">Solo attivi</button>
-          <button class="tab" id="prefTerBtn_withSuspended" onclick="setPref('ter','withSuspended')" title="Includi anche farmaci sospesi con motivazione indicata nel decorso">Includi sospesi</button>
+          <button class="tab active" id="prefTerBtn_last" onclick="setPref('ter','last')" title="Solo la terapia effettivamente prescritta al momento della dimissione">Ultima terapia</button>
+          <button class="tab" id="prefTerBtn_lastPlusHome" onclick="setPref('ter','lastPlusHome')" title="Aggiunge alla terapia di dimissione i farmaci domiciliari sospesi solo per esigenze del ricovero (es. farmaci non disponibili in reparto)">Ultima terapia + domiciliare</button>
         </div>
       </div>
 
@@ -1098,7 +1094,7 @@ const DEFAULT_USER_PREFS = {
   dec: 'standard',  // 'short' | 'standard' | 'long'
   an: 'complete',   // 'essential' | 'complete'
   rac: 'all',       // 'main' | 'all'
-  ter: 'active',    // 'active' | 'withSuspended'
+  ter: 'last',      // 'last' | 'lastPlusHome'
   custom: ''        // free-text additional preferences
 };
 const S_XLS = { text:'', filename:'' };
@@ -1319,7 +1315,7 @@ ORDINAMENTO delle righe:
 All'interno di ogni gruppo, ordinare per categoria farmacologica, poi alfabetico se più farmaci nella stessa categoria.
 
 - Motivazioni di switch terapeutico: nel decorso clinico, non nella tabella.
-- Nella tabella solo la terapia attiva alla dimissione.
+- Nella tabella inserisci solo l'ULTIMA terapia prescritta durante il ricovero (quella effettivamente in uso al momento della dimissione), salvo diverse indicazioni nelle PREFERENZE UTENTE.
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 GESTIONE DELL'INCERTEZZA
@@ -1336,6 +1332,7 @@ DECORSO CLINICO:
 - Il decorso clinico è un paragrafo unico continuo (200-500 parole, adattato alla complessità del caso), senza righe vuote interne.
 - Non spezzare il decorso in sotto-paragrafi separati da righe vuote.
 - È ammessa una sola riga di testo continua con a capo normali (senza blank lines) per scorrimento naturale della prosa.
+- SOSPENSIONI FARMACI: se durante il ricovero è stato sospeso un farmaco della terapia domiciliare, documenta SEMPRE la motivazione nel decorso clinico (es. "è stata sospesa la [farmaco] per [motivo clinico/interazione/reazione avversa]"). Questa regola è sempre attiva e non è opzionale.
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 REGISTRO E STILE
@@ -1357,7 +1354,7 @@ function goTo(i) {
   document.getElementById('panel'+i).classList.add('active');
   document.getElementById('nav'+i).classList.add('active');
   
-  if (i === 2) updateTokenPanel();
+  if (i === 2) { refreshPrompt(); updateTokenPanel(); }
   if (i === 3) updateVerifTokenPanel();
   if (i === 5) updateLocalStorageStats();
   if (i === 6) renderLibrary();
@@ -3711,15 +3708,13 @@ function hideGenOverlay(){
   if(_genTimerInterval){clearInterval(_genTimerInterval);_genTimerInterval=null;}
 }
 
-function showGenSettingsAndGenerate(){
-  document.getElementById('genSettingsPanel').style.display='block';
-  updateTokenPanel();
-  generateLetter();
-}
 async function generateLetter(){
   const key=document.getElementById('apiKeyInput').value.trim();
   if(!key){showErr('Inserisci la API key Anthropic.');return;}
   if(!S.anonText){showErr('Nessun testo anonimizzato.');return;}
+  // Show generation settings panel (model, temperature, cost)
+  document.getElementById('genSettingsPanel').style.display='block';
+  updateTokenPanel();
   const btn=document.getElementById('genBtn'),spin=document.getElementById('genSpin');
   btn.disabled=true;spin.style.display='inline-block';
   showGenOverlay();
@@ -3924,6 +3919,10 @@ async function runVerifica(){
   if(!S.anonText){ showVerifErr('Nessun testo anonimizzato — completa prima gli step 1-2.'); return; }
   const letterText = document.getElementById('verifLetterEdit').value.trim();
   if(!letterText){ showVerifErr('La lettera è vuota.'); return; }
+
+  // Show verification settings panel (model, cost)
+  document.getElementById('verifSettingsPanel').style.display='block';
+  updateVerifTokenPanel();
 
   const btn = document.getElementById('verifBtn');
   const spin = document.getElementById('verifSpin');
@@ -4969,7 +4968,7 @@ function updateTempPrefsSummary(){
     dec: { short:'decorso conciso', standard:'decorso standard', long:'decorso dettagliato' },
     an: { essential:'anamnesi essenziale', complete:'anamnesi completa' },
     rac: { main:'raccomandazioni principali', all:'tutte raccomandazioni' },
-    ter: { active:'solo farmaci attivi', withSuspended:'incluso sospesi' },
+    ter: { last:'ultima terapia', lastPlusHome:'terapia + domiciliare' },
   };
   // Show only non-default values to keep summary short
   const parts = [];
@@ -4993,6 +4992,14 @@ function toggleTempPrefsPanel(){
     if(!S.tempPrefs) S.tempPrefs = {...(S.userPrefs || DEFAULT_USER_PREFS)};
     applyTempPrefsToUI(S.tempPrefs);
   }
+}
+
+function toggleSysPrompt(){
+  const wrap = document.getElementById('sysPromptWrap');
+  const arrow = document.getElementById('sysPromptToggleArrow');
+  const open = wrap.style.display === 'none';
+  wrap.style.display = open ? 'block' : 'none';
+  arrow.textContent = open ? '▼' : '▶';
 }
 
 function setTempPref(category, value){
@@ -5033,13 +5040,13 @@ function buildPreferencesPromptBlock(){
     else if(prefs.dec === 'long') blocks.push('- DECORSO CLINICO: racconto dettagliato 400-600 parole con eventi intermedi e ragionamento clinico.');
   }
   if(prefs.an !== DEFAULT_USER_PREFS.an){
-    if(prefs.an === 'essential') blocks.push('- ANAMNESI: essenziale, solo fattori di rischio rilevanti per la patologia attuale.');
+    if(prefs.an === 'essential') blocks.push('- ANAMNESI: essenziale, riporta TUTTE le patologie del paziente ma in forma più sintetica (frasi brevi, senza dettagli su decorsi pregressi o terapie ormai concluse, mantenendo solo le informazioni cliniche rilevanti per il quadro attuale).');
   }
   if(prefs.rac !== DEFAULT_USER_PREFS.rac){
     if(prefs.rac === 'main') blocks.push('- RACCOMANDAZIONI: solo le principali (terapia, follow-up clinico).');
   }
   if(prefs.ter !== DEFAULT_USER_PREFS.ter){
-    if(prefs.ter === 'withSuspended') blocks.push('- TERAPIA: includi anche i farmaci sospesi con motivazione indicata nel decorso.');
+    if(prefs.ter === 'lastPlusHome') blocks.push('- TERAPIA ALLA DIMISSIONE: nella tabella della terapia alla dimissione, oltre agli ultimi farmaci prescritti durante il ricovero, includi anche i farmaci della terapia domiciliare che erano stati sospesi solo per esigenze organizzative del ricovero (es. farmaci non disponibili in reparto, sostituiti temporaneamente con equivalenti) e che il paziente dovrà riprendere dopo la dimissione.');
   }
   if(prefs.custom && prefs.custom.trim()){
     blocks.push('- ALTRE PREFERENZE: ' + prefs.custom.trim());
