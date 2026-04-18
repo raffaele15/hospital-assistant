@@ -5227,8 +5227,18 @@ async function pullLibraryFromGitHub(){
       throw new Error('Contenuto vuoto dal server. Il file potrebbe essere troppo grande: prova a ridurlo o controlla i log del browser (F12).');
     }
     if(!decoded || !decoded.trim()) throw new Error('File vuoto');
-    const lib=JSON.parse(decoded);
-    if(!Array.isArray(lib))throw new Error('Formato non valido — atteso array JSON');
+    let lib;
+    try{ lib = JSON.parse(decoded); }
+    catch(parseErr){
+      console.error('JSON parse failed. First 500 chars:', decoded.slice(0,500));
+      throw new Error('Il file non è un JSON valido: '+parseErr.message);
+    }
+    if(!Array.isArray(lib)){
+      console.error('Atteso array, ricevuto:', typeof lib, lib);
+      const actualType = lib===null ? 'null' : Array.isArray(lib) ? 'array' : typeof lib;
+      const keys = (lib && typeof lib === 'object') ? Object.keys(lib).slice(0,5).join(', ') : '';
+      throw new Error(`Formato non valido — atteso array JSON, ricevuto ${actualType}${keys?' con chiavi: '+keys:''}`);
+    }
     saveLibrary(lib);renderLibrary();
     sessionStorage.setItem('letteraai_lastpull',new Date().toISOString());
     updateLastPullTime();updateRefCaseNoCases();
