@@ -734,7 +734,6 @@ hr.div{border:none;border-top:1px solid var(--border);margin:18px 0}
       <div class="card">
         <div class="ctitle">API Key Anthropic</div>
         <input type="password" id="apiKeyInput" placeholder="sk-ant-... (solo in memoria di sessione, mai su disco)">
-        <div class="an"><span>ℹ</span><span>Usata solo per questa sessione. Mai salvata. Ottenibile su console.anthropic.com.</span></div>
       </div>
 
     </div>
@@ -994,12 +993,6 @@ hr.div{border:none;border-top:1px solid var(--border);margin:18px 0}
 <!-- ═══ PANEL 9 — ACCOUNTS (admin only) ═══ -->
 <div class="panel" id="panel9">
   <div class="ptitle">Accounts</div>
-
-  <div class="card" style="border-color:var(--red);border-width:1px;">
-    <div class="ib red" style="font-size:10px;line-height:1.6;">
-      ⚠ Gli account vengono salvati nel file <strong>users.json</strong> del repository di autenticazione. Le credenziali (API key + token GitHub) vengono cifrate con la password dell'utente tramite PBKDF2 + AES-GCM prima di essere salvate.
-    </div>
-  </div>
 
   <div class="card">
     <div class="ctitle">Crea Nuovo Account</div>
@@ -1504,7 +1497,20 @@ function goTo(i) {
   if (i === 5) updateLocalStorageStats();
   if (i === 6) renderLibrary();
   if (i === 8) loadReports();
-  if (i === 9) loadAccountsList();
+  if (i === 9) {
+    // Pre-fill API key and GitHub token from current session (if empty)
+    const apiKeyField = document.getElementById('newAccApiKey');
+    const ghTokenField = document.getElementById('newAccGhToken');
+    if(apiKeyField && !apiKeyField.value){
+      const current = document.getElementById('apiKeyInput')?.value?.trim();
+      if(current) apiKeyField.value = current;
+    }
+    if(ghTokenField && !ghTokenField.value){
+      const current = document.getElementById('cfg_gh_token')?.value?.trim();
+      if(current) ghTokenField.value = current;
+    }
+    loadAccountsList();
+  }
 }
 
 // ═══════════════════════════════════════════════════
@@ -5603,7 +5609,10 @@ async function loadAccountsList(){
             <span style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--dim);">creato: ${createdDate}</span>
             ${u.createdBy ? `<span style="font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--dim);">da: ${esc(u.createdBy)}</span>` : ''}
           </div>
-          ${!isAdmin ? `<button class="btn btn-g" style="font-size:10px;padding:4px 10px;color:var(--red);" onclick="deleteAccount('${esc(u.username)}')">🗑 Elimina</button>` : ''}
+          ${!isAdmin ? `<div style="display:flex;gap:6px;flex-wrap:wrap;">
+            <button class="btn btn-g" style="font-size:10px;padding:4px 10px;" onclick="changeAccountPassword('${esc(u.username)}')">🔑 Cambia password</button>
+            <button class="btn btn-g" style="font-size:10px;padding:4px 10px;color:var(--red);" onclick="deleteAccount('${esc(u.username)}')">🗑 Elimina</button>
+          </div>` : ''}
         </div>
       `;
       listEl.appendChild(card);
@@ -5611,6 +5620,56 @@ async function loadAccountsList(){
   }catch(e){
     statsEl.textContent = '✗ Errore: '+e.message;
     statsEl.style.color = 'var(--red)';
+  }
+}
+
+async function changeAccountPassword(username){
+  if(ADMIN_USERS.includes(username)){
+    alert('Non è possibile modificare la password di un account amministratore da questa interfaccia.');
+    return;
+  }
+  const newPass = prompt(`Inserisci la nuova password per "${username}":\n\n(Minimo 6 caratteri)`);
+  if(newPass === null) return;
+  if(newPass.length < 6){ alert('Password troppo corta (minimo 6 caratteri).'); return; }
+  const confirmPass = prompt('Conferma la nuova password:');
+  if(confirmPass === null) return;
+  if(confirmPass !== newPass){ alert('Le password non coincidono.'); return; }
+
+  const apiKey = document.getElementById('apiKeyInput')?.value?.trim();
+  const ghToken = document.getElementById('cfg_gh_token')?.value?.trim();
+  if(!apiKey || !ghToken){
+    alert('Impossibile recuperare API key o token GitHub dalla sessione corrente.');
+    return;
+  }
+
+  if(!confirm(`Confermi il cambio password per "${username}"?\n\nLe credenziali (API key + token GitHub) verranno ri-cifrate con la nuova password.`)) return;
+
+  try{
+    const { users, sha, authRepo } = await loadUsersFile();
+    const user = users.find(u => u.username === username);
+    if(!user){ alert('Account non trovato.'); return; }
+
+    user.passwordHash = await sha256(newPass);
+    user.apiKey = await encryptData(apiKey, newPass);
+    user.ghToken = await encryptData(ghToken, newPass);
+    user.passwordChangedAt = new Date().toISOString();
+    user.passwordChangedBy = S.currentUser || 'unknown';
+
+    const url = `https://api.github.com/repos/${authRepo}/contents/${LOGIN_USERS_PATH}`;
+    const newContent = btoa(unescape(encodeURIComponent(JSON.stringify(users, null, 2))));
+    const respPut = await fetch(url, {
+      method: 'PUT',
+      headers: { Accept:'application/vnd.github.v3+json', Authorization:`token ${LOGIN_AUTH_TOKEN}`, 'Content-Type':'application/json' },
+      body: JSON.stringify({ message: `Change password: ${username}`, content: newContent, sha })
+    });
+    if(!respPut.ok){
+      const err = await respPut.text();
+      throw new Error('HTTP '+respPut.status+': '+err.substring(0,100));
+    }
+    alert(`✓ Password cambiata per "${username}". Comunica la nuova password all'utente.`);
+    loadAccountsList();
+  }catch(e){
+    alert('Errore cambio password: '+e.message);
   }
 }
 
@@ -5821,7 +5880,7 @@ async function testGitHubConnection(){
     const r=await fetch(`https://api.github.com/repos/${cfg.repo}`,{headers:{Authorization:`token ${cfg.token}`}});
     if(!r.ok)throw new Error(`HTTP ${r.status}`);
     const d=await r.json();
-    ghStatus(`✓ Connesso a ${d.full_name} (${d.private?'privato':'pubblico'})${d.private?'':' — ⚠ repo pubblico!'}`,d.private?'var(--green)':'var(--accent)');
+    ghStatus('✓ Connesso a repository casi.', 'var(--green)');
   }catch(e){ghStatus('✗ '+e.message,'var(--red)');}
 }
 async function syncLibraryToGitHub(){
@@ -5834,7 +5893,7 @@ async function syncLibraryToGitHub(){
     const sha=existing?.sha;
     const lib=loadLibrary();
     await ghApiPut(cfg,JSON.stringify(lib,null,2),sha);
-    ghStatus(`✓ ${lib.filter(x=>x.type!=='ward').length} casi · ${lib.filter(x=>x.type==='ward').length} reparti → ${cfg.repo}/${cfg.path}`,'var(--green)');
+    ghStatus(`✓ Caricati ${lib.filter(x=>x.type!=='ward').length} casi · ${lib.filter(x=>x.type==='ward').length} reparti`,'var(--green)');
   }catch(e){ghStatus('✗ '+e.message,'var(--red)');}
 }
 async function pullLibraryFromGitHub(){
@@ -5869,7 +5928,7 @@ async function pullLibraryFromGitHub(){
     saveLibrary(lib);renderLibrary();
     sessionStorage.setItem('letteraai_lastpull',new Date().toISOString());
     updateLastPullTime();updateRefCaseNoCases();
-    ghStatus(`✓ ${lib.filter(x=>x.type!=='ward').length} casi · ${lib.filter(x=>x.type==='ward').length} reparti ← ${cfg.repo}/${cfg.path}`,'var(--green)');
+    ghStatus(`✓ Scaricati ${lib.filter(x=>x.type!=='ward').length} casi · ${lib.filter(x=>x.type==='ward').length} reparti`,'var(--green)');
   }catch(e){ghStatus('✗ '+e.message,'var(--red)');}
 }
 
