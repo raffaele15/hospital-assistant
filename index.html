@@ -143,6 +143,23 @@ hr.div{border:none;border-top:1px solid var(--border);margin:18px 0}
   #panel1.active{padding-bottom:80px}
   #scrollDownBtn{left:50vw!important}
 }
+
+/* Tutorial overlay */
+#tutOverlay{position:fixed;inset:0;z-index:3000;display:none;pointer-events:none;}
+#tutOverlay.active{display:block;}
+#tutOverlay .tut-mask{position:fixed;background:rgba(0,0,0,0.72);pointer-events:auto;transition:all .2s ease;}
+#tutOverlay .tut-highlight{position:fixed;border:2px solid var(--accent);border-radius:6px;box-shadow:0 0 0 9999px rgba(0,0,0,0.72);transition:all .25s cubic-bezier(.4,0,.2,1);pointer-events:none;z-index:3001;}
+#tutTooltip{position:fixed;background:var(--surface);border:1px solid var(--accent);border-radius:8px;padding:14px 16px;max-width:340px;min-width:260px;box-shadow:0 8px 24px rgba(0,0,0,.5);z-index:3002;pointer-events:auto;font-family:'JetBrains Mono',monospace;font-size:11px;line-height:1.55;}
+#tutTooltip .tut-step-num{font-size:9px;color:var(--dim);margin-bottom:6px;letter-spacing:.08em;}
+#tutTooltip .tut-title{font-size:12px;font-weight:600;color:var(--accent);margin-bottom:8px;}
+#tutTooltip .tut-body{color:var(--text);margin-bottom:12px;white-space:pre-line;}
+#tutTooltip .tut-nav{display:flex;gap:6px;flex-wrap:wrap;justify-content:space-between;align-items:center;}
+#tutTooltip .tut-nav-left{display:flex;gap:6px;flex-wrap:wrap;}
+#tutTooltip .tut-nav-right{display:flex;gap:6px;flex-wrap:wrap;}
+#tutTooltip button{font-family:inherit;font-size:10px;padding:5px 10px;border-radius:4px;cursor:pointer;border:1px solid var(--border);background:var(--surface2);color:var(--text);}
+#tutTooltip button.tut-p{background:var(--accent);color:#000;border-color:var(--accent);font-weight:600;}
+#tutTooltip button:hover{opacity:.85;}
+#tutJumpSel{background:var(--surface2);border:1px solid var(--border);color:var(--text);font-family:inherit;font-size:10px;padding:4px 6px;border-radius:4px;max-width:150px;}
 </style>
 </head>
 <body>
@@ -196,6 +213,8 @@ hr.div{border:none;border-top:1px solid var(--border);margin:18px 0}
   <div class="logo">Lettera<span>.</span>AI</div>
   <div style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--dim);">Generatore Lettera di Dimissione</div>
   <div style="margin-left:auto;display:flex;gap:8px;align-items:center;">
+    <button id="tutorialBtn" onclick="tutorialStart()" title="Avvia tutorial" style="background:none;border:1px solid var(--border);color:var(--dim);cursor:pointer;width:24px;height:24px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:600;">?</button>
+    <span id="topbarUsername" style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--dim);"></span>
     <button class="btn btn-g" style="font-size:10px;padding:4px 10px;color:var(--red);" onclick="doLogout()" title="Esci e cancella i dati locali">Esci</button>
   </div>
 </header>
@@ -278,7 +297,7 @@ hr.div{border:none;border-top:1px solid var(--border);margin:18px 0}
   <label>Testo Cartella Clinica Completa</label>
   <textarea id="inp_raw" style="flex:1;min-height:200px;" placeholder="Incolla qui il testo copiato dal PDF della cartella clinica"></textarea>
   <div class="btn-row">
-    <button class="btn btn-p" onclick="goToAnon()">Avanti → Anonimizza</button>
+    <button class="btn btn-p" id="btnGoAnon" onclick="goToAnon()">Avanti → Anonimizza</button>
     <button class="btn btn-g" onclick="clearAll()">✕ Reset</button>
   </div>
 </div>
@@ -329,14 +348,14 @@ hr.div{border:none;border-top:1px solid var(--border);margin:18px 0}
   <div class="ib red">⚠ Verifica il testo a destra. Correggi manualmente qualsiasi dato rimasto prima di procedere.</div>
   <div class="btn-row">
     <button class="btn btn-g" onclick="goTo(0)">← Indietro</button>
-    <button class="btn btn-p" onclick="proceedToGenerate()">Avanti → Genera</button>
+    <button class="btn btn-p" id="btnGoGen" onclick="proceedToGenerate()">Avanti → Genera</button>
   </div>
 </div>
 
 <!-- ═══ STEP 3 ═══ -->
 <div class="panel" id="panel2">
   <div class="ptitle">Genera Lettera</div>
-  <div class="card">
+  <div class="card" id="letterTemplateCard">
     <div class="ctitle">Modello di Lettera</div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:4px;align-items:stretch;" id="letterTemplateGrid">
       <label id="ltTile_dimissione" style="cursor:pointer;border:2px solid var(--accent);border-radius:var(--r);padding:10px 14px;background:var(--accent-g);display:flex;align-items:center;justify-content:center;margin:0;">
@@ -387,9 +406,9 @@ hr.div{border:none;border-top:1px solid var(--border);margin:18px 0}
     <div id="refCaseInjectRow" style="margin-top:8px;padding-top:10px;border-top:1px solid var(--border);">
       <div style="font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--dim);text-transform:uppercase;letter-spacing:.08em;margin-bottom:8px;">Cosa iniettare nel prompt</div>
       <div class="tabs">
-        <button class="tab active" id="refInjectBtn_fingerprint" onclick="setRefInject('fingerprint')" title="Inietta solo il fingerprint (ragionamento clinico + lettera-modello sintetica) — leggero, pochi token">Solo fingerprint</button>
+        <button class="tab active" id="refInjectBtn_fingerprint" onclick="setRefInject('fingerprint')" title="Inietta solo la logica (ragionamento clinico + lettera-modello sintetica) — leggero, pochi token">Solo logica</button>
         <button class="tab" id="refInjectBtn_full" onclick="setRefInject('full')" title="Inietta la cartella clinica e la lettera completa del caso come esempio few-shot — più token, più contestuale">Cartella + Lettera</button>
-        <button class="tab" id="refInjectBtn_both" onclick="setRefInject('both')" title="Inietta sia il fingerprint nel system prompt che la cartella e lettera nel turno utente — massima qualità, più token">Entrambi</button>
+        <button class="tab" id="refInjectBtn_both" onclick="setRefInject('both')" title="Inietta sia la logica nel system prompt che la cartella e lettera nel turno utente — massima qualità, più token">Entrambi</button>
       </div>
     </div>
     <!-- Status line -->
@@ -518,8 +537,8 @@ hr.div{border:none;border-top:1px solid var(--border);margin:18px 0}
     <button class="btn btn-p" id="genBtn" onclick="showGenSettings()">
       ✦ Genera Lettera con AI
     </button>
-    <button class="btn btn-g" onclick="copyFull()" title="Copia negli appunti il prompt completo (system + user) — utile per incollarlo in Claude.ai o altra AI">⎘ Copia prompt per AI esterna</button>
-    <button class="btn btn-g" onclick="togglePasteAI()" title="Incolla la risposta copiata dalla chat AI esterna e formattala automaticamente">📋 Incolla da AI esterna</button>
+    <button class="btn btn-g" id="btnCopyExt" onclick="copyFull()" title="Copia negli appunti il prompt completo (system + user) — utile per incollarlo in Claude.ai o altra AI">⎘ Copia prompt per AI esterna</button>
+    <button class="btn btn-g" id="btnPasteExt" onclick="togglePasteAI()" title="Incolla la risposta copiata dalla chat AI esterna e formattala automaticamente">📋 Incolla da AI esterna</button>
   </div>
   <div id="pasteAIPanel" style="display:none;margin-top:12px;">
     <div class="card" style="border-color:var(--accent-d);">
@@ -540,9 +559,9 @@ hr.div{border:none;border-top:1px solid var(--border);margin:18px 0}
   <div class="ptitle">Esporta</div>
   <div id="usageInfo" style="display:none;" class="ib blue"></div>
   <div id="letterOut" class="paper" style="min-height:500px;"><span style="color:var(--dim);">Generato dalla sezione di verifica</span></div>
-  <div class="btn-row" style="margin-top:18px;">
-    <button class="btn btn-b" onclick="exportWord()" style="background:var(--blue);color:#fff;">⬇ Esporta RTF</button>
-    <button class="btn btn-g" onclick="copyLetter()">⎘ Copia testo</button>
+  <div class="btn-row" style="margin-top:18px;" id="exportButtonsRow">
+    <button class="btn btn-b" id="btnExportRtf" onclick="exportWord()" style="background:var(--blue);color:#fff;">⬇ Esporta RTF</button>
+    <button class="btn btn-g" id="btnCopyLetter" onclick="copyLetter()">⎘ Copia testo</button>
     <button class="btn btn-g" onclick="printLetter()">⎙ Stampa / PDF</button>
     <button class="btn btn-g" onclick="goTo(3)">← Indietro</button>
     <button class="btn btn-g" onclick="newLetter()">↺ Nuova lettera</button>
@@ -790,7 +809,7 @@ hr.div{border:none;border-top:1px solid var(--border);margin:18px 0}
     <textarea id="caseEditLetter" rows="8" placeholder="Lettera di dimissione..." oninput="updateCaseEditTok()"></textarea>
     <div style="margin-top:18px;padding-top:14px;border-top:1px solid var(--border);">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;flex-wrap:wrap;gap:8px;">
-        <div style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--accent);text-transform:uppercase;letter-spacing:.1em;">Fingerprint</div>
+        <div style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--accent);text-transform:uppercase;letter-spacing:.1em;">Logica</div>
         <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;">
           <span id="caseEditFpTok" style="font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--dim);"></span>
           <button class="btn btn-g" style="font-size:9px;padding:3px 9px;" onclick="copyFingerprintPromptForEdit()">⎘ Copia prompt esterno</button>
@@ -800,7 +819,7 @@ hr.div{border:none;border-top:1px solid var(--border);margin:18px 0}
           </button>
         </div>
       </div>
-      <textarea id="caseEditFingerprint" rows="6" style="font-size:11px;font-family:'JetBrains Mono',monospace;" placeholder='JSON fingerprint oppure lascia vuoto' oninput="updateCaseEditTok();renderCaseEditFpPreview(this.value)"></textarea>
+      <textarea id="caseEditFingerprint" rows="6" style="font-size:11px;font-family:'JetBrains Mono',monospace;" placeholder='JSON logica oppure lascia vuoto' oninput="updateCaseEditTok();renderCaseEditFpPreview(this.value)"></textarea>
       <div id="caseEditExtStatus" style="margin-top:6px;font-family:'JetBrains Mono',monospace;font-size:11px;display:none;"></div>
       <div id="caseEditFpPreview" style="margin-top:8px;"></div>
     </div>
@@ -896,20 +915,20 @@ hr.div{border:none;border-top:1px solid var(--border);margin:18px 0}
     </div>
     <textarea id="newCaseLetter" rows="8" placeholder="Incolla la lettera già generata e revisionata...&#10;&#10;oppure usa il PDF import qui sopra ↑"></textarea>
 
-    <!-- ── Fingerprint section ───────────────────────────────────────── -->
+    <!-- ── Logica section ───────────────────────────────────────── -->
     <div style="margin-top:18px;padding-top:14px;border-top:1px solid var(--border);">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;flex-wrap:wrap;gap:8px;">
-        <div style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--accent);text-transform:uppercase;letter-spacing:.1em;">Fingerprint <span title="Analizza il ragionamento clinico della lettera e genera una lettera-modello sintetica con annotazioni. Auto-estrai lo genera con Sonnet (~30s, richiede cartella + lettera). Copia prompt esterno per generarlo manualmente in Claude.ai." style="display:inline-flex;align-items:center;justify-content:center;width:14px;height:14px;border-radius:50%;border:1px solid var(--dim);font-size:9px;color:var(--dim);cursor:help;vertical-align:middle;margin-left:4px;text-transform:none;letter-spacing:0;">?</span></div>
+        <div style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--accent);text-transform:uppercase;letter-spacing:.1em;">Logica <span title="Analizza il ragionamento clinico della lettera e genera una lettera-modello sintetica con annotazioni. Auto-estrai la genera con Sonnet (~30s, richiede cartella + lettera). Copia prompt esterno per generarla manualmente in Claude.ai." style="display:inline-flex;align-items:center;justify-content:center;width:14px;height:14px;border-radius:50%;border:1px solid var(--dim);font-size:9px;color:var(--dim);cursor:help;vertical-align:middle;margin-left:4px;text-transform:none;letter-spacing:0;">?</span></div>
         <div style="display:flex;gap:8px;flex-wrap:wrap;">
-          <button class="btn btn-g" style="font-size:9px;padding:4px 10px;" onclick="copyFingerprintPrompt()" title="Copia il prompt da incollare in Claude.ai per generare il fingerprint manualmente">⎘ Copia prompt esterno</button>
-          <button class="btn btn-g" onclick="autoExtractTemplate()" style="font-size:9px;padding:4px 10px;" title="Genera il fingerprint automaticamente con Sonnet — richiede cartella + lettera compilate sopra">
+          <button class="btn btn-g" style="font-size:9px;padding:4px 10px;" onclick="copyFingerprintPrompt()" title="Copia il prompt da incollare in Claude.ai per generare la logica manualmente">⎘ Copia prompt esterno</button>
+          <button class="btn btn-g" onclick="autoExtractTemplate()" style="font-size:9px;padding:4px 10px;" title="Genera la logica automaticamente con Sonnet — richiede cartella + lettera compilate sopra">
             <span class="spin" id="tplExtSpin" style="display:none;"></span>
             ✦ Auto-estrai
           </button>
         </div>
       </div>
-      <!-- Manual fingerprint textarea -->
-      <label style="margin-bottom:4px;">JSON Fingerprint <span style="color:var(--dim);font-size:9px;text-transform:none;letter-spacing:0;">(incolla JSON da AI esterna e importa)</span></label>
+      <!-- Manual logica textarea -->
+      <label style="margin-bottom:4px;">JSON Logica <span style="color:var(--dim);font-size:9px;text-transform:none;letter-spacing:0;">(incolla JSON da AI esterna e importa)</span></label>
       <div style="display:flex;gap:8px;align-items:flex-start;">
         <textarea id="manualFingerprintJson" rows="5" style="font-size:11px;font-family:'JetBrains Mono',monospace;" placeholder='{"ragionamento":{...},"lettera_modello":"...","frasi_chiave":{...},"struttura_terapia":{...},"note_stilistiche":"..."}' oninput="showManualFpImportBtn()"></textarea>
         <button class="btn btn-p" id="manualFpImportBtn" style="display:none;font-size:10px;padding:6px 12px;white-space:nowrap;margin-top:0;" onclick="importManualFingerprint()">↑ Importa</button>
@@ -932,7 +951,6 @@ hr.div{border:none;border-top:1px solid var(--border);margin:18px 0}
 
   <div class="card">
     <div class="ctitle">Descrizione</div>
-    <div class="ib" style="margin-bottom:10px;font-size:10px;">Descrivi il problema riscontrato o il suggerimento che vuoi proporre.</div>
     <label>Categoria</label>
     <select id="reportCategory" style="margin-bottom:12px;">
       <option value="errore_lettera">Errore nella lettera generata</option>
@@ -1121,6 +1139,7 @@ async function doLogin(){
       document.getElementById('loginPass').value='';
       S.currentUser = 'test';
       updateAdminVisibility();
+      updateTopbarUsername();
       resetIdleTimer();
       return;
     }
@@ -1183,6 +1202,7 @@ async function doLogin(){
       try{ await loadUserPreferences(); }catch(e){console.warn('Load preferences fallito:',e.message);}
     }
     updateAdminVisibility();
+    updateTopbarUsername();
     resetIdleTimer();
   }catch(e){
     errEl.style.display='block';
@@ -3160,6 +3180,7 @@ function doLogout(){
   S.activeTemplateId=null;S.activeWardId=null;
   S.currentUser=null;S.userPrefs=null;S.tempPrefs=null;
   updateAdminVisibility();
+  updateTopbarUsername();
   document.getElementById('loginScreen').style.display='flex';
 }
 
@@ -3368,7 +3389,7 @@ function deleteNewTplSection(id){newTplSections=newTplSections.filter(s=>s.id!==
 function renderNewTplSections(){
   const el=document.getElementById('newTplSections');
   if(!newTplSections.length){el.innerHTML='';return;}
-  el.innerHTML=`<div style="margin-top:10px;"><div style="font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--accent);text-transform:uppercase;letter-spacing:.1em;margin-bottom:8px;">Fingerprint Estratto</div>`
+  el.innerHTML=`<div style="margin-top:10px;"><div style="font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--accent);text-transform:uppercase;letter-spacing:.1em;margin-bottom:8px;">Logica Estratta</div>`
     +newTplSections.map(s=>`
     <div style="margin-bottom:8px;">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:3px;">
@@ -3397,7 +3418,7 @@ async function autoExtractTemplate(){
   if(!key){alert('Inserisci la API key nella sezione Generazione.');return;}
   const spin=document.getElementById('tplExtSpin'),status=document.getElementById('tplExtStatus');
   spin.style.display='inline-block';status.style.display='block';
-  status.style.color='var(--mid)';status.textContent='Estrazione fingerprint con Sonnet (3 fasi — ~30s)...';
+  status.style.color='var(--mid)';status.textContent='Estrazione logica con Sonnet (3 fasi — ~30s)...';
   try{
     const userMsg = (folder?`===== CARTELLA CLINICA =====\n${folder}\n\n`:'') +
                     `===== LETTERA DI DIMISSIONE =====\n${letter}`;
@@ -3423,7 +3444,7 @@ async function autoExtractTemplate(){
       const toks=tok(newTplFingerprintJson);
       const origTok=tok(letter+(folder||''));
       status.style.color='var(--green)';
-      status.textContent=`✓ Fingerprint estratto · ~${toks} token (lettera-modello + ragionamento + frasi)`;
+      status.textContent=`✓ Logica estratta · ~${toks} token (lettera-modello + ragionamento + frasi)`;
     } else {
       // Fallback: legacy 4-section
       const map={apertura:'Apertura',decorso:'Decorso tipo',terapia:'Terapia tipo',chiusura:'Chiusura'};
@@ -3530,9 +3551,9 @@ function updateTokenPanel(){
     opt.textContent = val.toLocaleString('it-IT').replace(/\./g,' ') + ' — ' + base + (val === suggested ? ' ✦ consigliato' : '');
   }
 
-  const fpLabel=refFpObj?`Fingerprint (${refCase?.name||'ref'})`:'—';
+  const fpLabel=refFpObj?`Logica (${refCase?.name||'ref'})`:'—';
   const fullLabel=refCase&&(injectMode==='full'||injectMode==='both')?`Cartella+Lettera (${refCase.name})`:'—';
-  const syslabel='System'+(wardFpObj?' + Ward':'')+(refFpObj?' + Fingerprint':'');
+  const syslabel='System'+(wardFpObj?' + Ward':'')+(refFpObj?' + Logica':'');
   const tTotal=tSys+tFp+tFullCase+tTemplate+tClinical;
   const costTotal=(tTotal/1e6)*price.in;
   const costOut=(tOut/1e6)*price.out;
@@ -6550,7 +6571,7 @@ function importManualFingerprint(){
       renderFpV2Preview(parsed);
       const toks = tok(newTplFingerprintJson);
       status.style.color='var(--green)';
-      status.textContent=`✓ Fingerprint importato · lettera-modello + ragionamento · ~${toks} token`;
+      status.textContent=`✓ Logica importata · lettera-modello + ragionamento · ~${toks} token`;
     } else {
       // ── Legacy 4-field schema ──────────────────────────────────
       const map={apertura:'Apertura',decorso:'Decorso tipo',terapia:'Terapia tipo',chiusura:'Chiusura'};
@@ -6562,7 +6583,7 @@ function importManualFingerprint(){
       renderNewTplSections();
       const fp=buildFingerprintFromSections(newTplSections);
       status.style.color='var(--green)';
-      status.textContent=`✓ Fingerprint legacy importato · ${newTplSections.length} sezioni · ~${tok(fp)} token`;
+      status.textContent=`✓ Logica legacy importata · ${newTplSections.length} sezioni · ~${tok(fp)} token`;
     }
     document.getElementById('manualFingerprintJson').value='';
     document.getElementById('manualFpImportBtn').style.display='none';
@@ -6607,7 +6628,7 @@ function renderFpV2Preview(fpObj){
     '<div id="'+editorId+'" style="border:1px solid var(--accent-d);border-radius:var(--r);overflow:hidden;margin-top:4px;">'+
     // header
     '<div style="background:var(--accent-g);padding:8px 12px;display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;">'+
-      '<span style="'+mono+';font-size:10px;color:var(--accent);font-weight:600;text-transform:uppercase;letter-spacing:.1em;">&#10022; Fingerprint</span>'+
+      '<span style="'+mono+';font-size:10px;color:var(--accent);font-weight:600;text-transform:uppercase;letter-spacing:.1em;">&#10022; Logica</span>'+
       '<div style="display:flex;gap:6px;flex-wrap:wrap;">'+
         '<span style="'+mono+';font-size:9px;color:var(--dim);">~'+tok(JSON.stringify(fpObj))+' token</span>'+
         '<button class="btn btn-g" style="font-size:9px;padding:3px 8px;" onclick="saveFpEdits(\''+editorId+'\')">&#10003; Salva modifiche</button>'+
@@ -6800,7 +6821,7 @@ async function autoExtractForEdit(){
   const status = document.getElementById('caseEditExtStatus');
   btn.disabled = true; spin.style.display = 'inline-block';
   status.style.display = 'block'; status.style.color = 'var(--mid)';
-  status.textContent = 'Estrazione fingerprint con Sonnet (~30s)...';
+  status.textContent = 'Estrazione logica con Sonnet (~30s)...';
   try{
     const userMsg = (folder ? `===== CARTELLA CLINICA =====\n${folder}\n\n` : '') +
                     `===== LETTERA DI DIMISSIONE =====\n${letter}`;
@@ -6825,7 +6846,7 @@ async function autoExtractForEdit(){
     updateCaseEditTok();
     renderCaseEditFpPreview(jsonStr);
     status.style.color = 'var(--green)';
-    status.textContent = `✓ Fingerprint estratto (~${tok(jsonStr)} token) — clicca "Salva Modifiche" per applicare.`;
+    status.textContent = `✓ Logica estratta (~${tok(jsonStr)} token) — clicca "Salva Modifiche" per applicare.`;
   } catch(err){
     status.style.color = 'var(--red)';
     status.textContent = '✗ ' + err.message;
@@ -7200,6 +7221,182 @@ function scrollToBottom(){
   requestAnimationFrame(updateBtn);
 })();
 
+// ═══════════════════════════════════════════════════
+// TUTORIAL
+// ═══════════════════════════════════════════════════
+const TUTORIAL_STEPS = [
+  { panel:0, target:'#pdfDropzone', title:'Cartella clinica', text:'Galileo → Stampe → Stampa cartella clinica → seleziona tutti (click primo, Shift+click ultimo) → deseleziona infermieristici con Ctrl+click → Salva PDF → trascina qui.' },
+  { panel:0, target:'#xlsDropzone', title:'Esami laboratorio', text:'Galileo → Strumenti paziente → Esami laboratorio → Esporta (in basso a destra) → Salva senza grafico → trascina il file XLS qui.' },
+  { panel:0, target:'#btnGoAnon', title:'Avanti', text:'Clicca per anonimizzare automaticamente la cartella.' },
+  { panel:1, target:'#anonText', title:'Testo anonimizzato', text:'A destra puoi modificare il testo anonimizzato prima di procedere.' },
+  { panel:1, target:'#btnGoGen', title:'Avanti', text:'Passa alla generazione della lettera.' },
+  { panel:2, target:'#letterTemplateCard', title:'Modello lettera', text:'Scegli tra dimissione o trasferimento ad altra struttura.' },
+  { panel:2, target:'#refCaseCard', title:'Caso di riferimento', text:'Auto = trova il caso più simile nella libreria. Manuale = lo scegli tu.' },
+  { panel:2, target:'#refCaseInjectRow', title:'Modalità iniezione', text:'Logica = solo il ragionamento e la struttura della lettera. Completa = tutta la lettera. Entrambi = somma delle due.' },
+  { panel:2, target:'#tempPrefsCard', title:'Preferenze lettera', text:'Modifica le preferenze solo per questa lettera. Quelle permanenti sono in Impostazioni.' },
+  { panel:2, target:'#genBtn', title:'Genera con AI', text:'Usa l\'API Anthropic (a pagamento).' },
+  { panel:2, target:'#btnCopyExt', title:'AI esterna (gratis)', text:'Copia il prompt e incollalo in Claude.ai o altra AI gratuita.' },
+  { panel:2, target:'#btnPasteExt', title:'Incolla risposta', text:'Dopo aver generato la lettera con l\'AI esterna, incolla qui la risposta.' },
+  { panel:3, target:'#verifBtn', title:'Verifica', text:'Confronta la lettera con la cartella. Codici colore: rosso = contraddice, arancio = assente, giallo = inferenza.' },
+  { panel:4, target:'#exportButtonsRow', title:'Esporta', text:'Salva RTF o copia il testo per incollarlo in Galileo.' }
+];
+
+let _tutIdx = 0;
+let _tutKeyHandler = null;
+let _tutResizeHandler = null;
+
+function tutorialStart(){
+  // Skip confirm for test user (artifact environment may block confirm dialogs)
+  if(S.currentUser !== 'test'){
+    if(!confirm('Avviare il tutorial?\n\nTi guiderà attraverso tutte le sezioni dell\'app.')) return;
+  }
+  _tutIdx = 0;
+  // Populate jump dropdown
+  const sel = document.getElementById('tutJumpSel');
+  sel.innerHTML = '<option value="">Salta a…</option>' + TUTORIAL_STEPS.map((s,i)=>`<option value="${i}">${i+1}. ${s.title}</option>`).join('');
+  // Keyboard: Esc to close
+  _tutKeyHandler = (e) => {
+    if(e.key === 'Escape') tutorialClose();
+    else if(e.key === 'ArrowRight') tutorialNext();
+    else if(e.key === 'ArrowLeft') tutorialPrev();
+  };
+  document.addEventListener('keydown', _tutKeyHandler);
+  _tutResizeHandler = () => tutorialRenderCurrent();
+  window.addEventListener('resize', _tutResizeHandler);
+  window.addEventListener('scroll', _tutResizeHandler, true);
+  tutorialRenderStep(0);
+}
+
+function tutorialClose(){
+  _tutIdx = 0;
+  document.getElementById('tutOverlay').classList.remove('active');
+  document.getElementById('tutTooltip').style.display = 'none';
+  document.getElementById('tutHighlight').style.display = 'none';
+  if(_tutKeyHandler){ document.removeEventListener('keydown', _tutKeyHandler); _tutKeyHandler=null; }
+  if(_tutResizeHandler){
+    window.removeEventListener('resize', _tutResizeHandler);
+    window.removeEventListener('scroll', _tutResizeHandler, true);
+    _tutResizeHandler=null;
+  }
+}
+
+function tutorialNext(){
+  if(_tutIdx >= TUTORIAL_STEPS.length - 1){ tutorialClose(); return; }
+  tutorialRenderStep(_tutIdx + 1);
+}
+
+function tutorialPrev(){
+  if(_tutIdx === 0) return;
+  tutorialRenderStep(_tutIdx - 1);
+}
+
+function tutorialJump(val){
+  if(val === '') return;
+  const n = parseInt(val);
+  if(isNaN(n)) return;
+  tutorialRenderStep(n);
+  document.getElementById('tutJumpSel').value = '';
+}
+
+function tutorialRenderCurrent(){ tutorialRenderStep(_tutIdx); }
+
+function tutorialRenderStep(idx){
+  _tutIdx = idx;
+  const step = TUTORIAL_STEPS[idx];
+  if(!step) return;
+  // Navigate to required panel
+  if(typeof goTo === 'function'){
+    try{ goTo(step.panel); }catch(e){}
+  }
+  // Show overlay
+  document.getElementById('tutOverlay').classList.add('active');
+  // Wait a tick so panel is rendered
+  setTimeout(() => {
+    const target = document.querySelector(step.target);
+    const highlight = document.getElementById('tutHighlight');
+    const tooltip = document.getElementById('tutTooltip');
+    // Fill tooltip text
+    document.getElementById('tutStepNum').textContent = `Step ${idx+1} / ${TUTORIAL_STEPS.length}`;
+    document.getElementById('tutTitle').textContent = step.title;
+    document.getElementById('tutBody').textContent = step.text;
+    // Toggle Next button label for last step
+    const nextBtn = document.getElementById('tutNextBtn');
+    nextBtn.textContent = (idx === TUTORIAL_STEPS.length - 1) ? '✓ Fine' : 'Avanti →';
+    // Toggle Prev disabled
+    const prevBtn = document.getElementById('tutPrevBtn');
+    prevBtn.disabled = (idx === 0);
+    prevBtn.style.opacity = (idx === 0) ? '0.4' : '1';
+
+    tooltip.style.display = 'block';
+
+    if(!target){
+      // No target: center tooltip
+      highlight.style.display = 'none';
+      tooltip.style.left = '50%';
+      tooltip.style.top = '50%';
+      tooltip.style.transform = 'translate(-50%, -50%)';
+      return;
+    }
+    tooltip.style.transform = '';
+
+    // Scroll element into view
+    target.scrollIntoView({behavior:'smooth', block:'center', inline:'nearest'});
+
+    // After scroll, measure and position
+    setTimeout(() => {
+      const rect = target.getBoundingClientRect();
+      const pad = 6;
+      highlight.style.display = 'block';
+      highlight.style.left = (rect.left - pad) + 'px';
+      highlight.style.top = (rect.top - pad) + 'px';
+      highlight.style.width = (rect.width + pad*2) + 'px';
+      highlight.style.height = (rect.height + pad*2) + 'px';
+
+      // Position tooltip near element (prefer below, fallback above)
+      const tipRect = tooltip.getBoundingClientRect();
+      const vw = window.innerWidth, vh = window.innerHeight;
+      let tipLeft = rect.left + rect.width/2 - tipRect.width/2;
+      let tipTop = rect.bottom + pad + 10;
+      if(tipTop + tipRect.height > vh - 10){
+        tipTop = rect.top - tipRect.height - pad - 10;
+      }
+      if(tipTop < 10) tipTop = 10;
+      if(tipLeft < 10) tipLeft = 10;
+      if(tipLeft + tipRect.width > vw - 10) tipLeft = vw - tipRect.width - 10;
+      tooltip.style.left = tipLeft + 'px';
+      tooltip.style.top = tipTop + 'px';
+    }, 300);
+  }, 60);
+}
+
+// Update topbar username on login
+function updateTopbarUsername(){
+  const el = document.getElementById('topbarUsername');
+  if(!el) return;
+  el.textContent = S.currentUser ? '👤 ' + S.currentUser : '';
+}
+
 </script>
+
+<!-- Tutorial Overlay -->
+<div id="tutOverlay">
+  <div class="tut-highlight" id="tutHighlight" style="display:none;"></div>
+</div>
+<div id="tutTooltip" style="display:none;">
+  <div class="tut-step-num" id="tutStepNum"></div>
+  <div class="tut-title" id="tutTitle"></div>
+  <div class="tut-body" id="tutBody"></div>
+  <div class="tut-nav">
+    <div class="tut-nav-left">
+      <button id="tutPrevBtn" onclick="tutorialPrev()">← Indietro</button>
+      <select id="tutJumpSel" onchange="tutorialJump(this.value)"></select>
+    </div>
+    <div class="tut-nav-right">
+      <button onclick="tutorialClose()">✕ Chiudi</button>
+      <button class="tut-p" id="tutNextBtn" onclick="tutorialNext()">Avanti →</button>
+    </div>
+  </div>
+</div>
+
 </body>
 </html>
