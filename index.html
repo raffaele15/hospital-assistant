@@ -142,17 +142,24 @@ hr.div{border:none;border-top:1px solid var(--border);margin:18px 0}
   .panel.active{padding-bottom:80px}
   #panel1.active{padding-bottom:80px}
   #scrollDownBtn{left:50vw!important}
+  header{flex-wrap:nowrap;gap:6px!important;padding-left:8px!important;padding-right:8px!important;overflow:hidden}
+  header > div:nth-of-type(2){display:none!important} /* hide subtitle on mobile */
+  .logo{font-size:14px!important;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  /* Hide desktop username + logout, show mobile user icon */
+  #topbarUsername{display:none!important}
+  #topbarLogoutBtn{display:none!important}
+  #topbarUserIcon{display:inline-flex!important}
 }
 
 /* Tutorial overlay */
 #tutOverlay{position:fixed;inset:0;z-index:3000;display:none;pointer-events:none;}
 #tutOverlay.active{display:block;}
-#tutOverlay .tut-mask{position:fixed;background:rgba(0,0,0,0.72);pointer-events:auto;transition:all .15s ease;}
+#tutOverlay .tut-mask{position:fixed;background:rgba(0,0,0,0.72);pointer-events:auto;}
 #tutOverlay #tutMaskTop{top:0;left:0;right:0;}
 #tutOverlay #tutMaskBottom{bottom:0;left:0;right:0;}
 #tutOverlay #tutMaskLeft{left:0;}
 #tutOverlay #tutMaskRight{right:0;}
-#tutOverlay .tut-highlight{position:fixed;border:2px solid var(--accent);border-radius:6px;transition:all .25s cubic-bezier(.4,0,.2,1);pointer-events:none;z-index:3004;}
+#tutOverlay .tut-highlight{position:fixed;border:2px solid var(--accent);border-radius:6px;pointer-events:none;z-index:3004;will-change:transform;}
 #tutTooltip{position:fixed;background:var(--surface);border:1px solid var(--accent);border-radius:8px;padding:14px 16px;max-width:340px;min-width:260px;box-shadow:0 8px 24px rgba(0,0,0,.5);z-index:3005;pointer-events:auto;font-family:'JetBrains Mono',monospace;font-size:11px;line-height:1.55;}
 #tutTooltip .tut-step-num{font-size:9px;color:var(--dim);margin-bottom:6px;letter-spacing:.08em;}
 #tutTooltip .tut-title{font-size:12px;font-weight:600;color:var(--accent);margin-bottom:8px;}
@@ -216,10 +223,18 @@ hr.div{border:none;border-top:1px solid var(--border);margin:18px 0}
   </button>
   <div class="logo">Lettera<span>.</span>AI</div>
   <div style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--dim);">Generatore Lettera di Dimissione</div>
-  <div style="margin-left:auto;display:flex;gap:8px;align-items:center;">
+  <div style="margin-left:auto;display:flex;gap:8px;align-items:center;position:relative;">
     <button id="tutorialBtn" onclick="tutorialStart()" title="Avvia tutorial" style="background:none;border:1px solid var(--border);color:var(--dim);cursor:pointer;width:24px;height:24px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:600;">?</button>
+    <!-- Desktop: inline username + logout -->
     <span id="topbarUsername" style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--dim);"></span>
-    <button class="btn btn-g" style="font-size:10px;padding:4px 10px;color:var(--red);" onclick="doLogout()" title="Esci e cancella i dati locali">Esci</button>
+    <button id="topbarLogoutBtn" class="btn btn-g" style="font-size:10px;padding:4px 10px;color:var(--red);" onclick="doLogout()" title="Esci e cancella i dati locali">Esci</button>
+    <!-- Mobile: user icon that toggles popup -->
+    <button id="topbarUserIcon" onclick="toggleUserPopup(event)" title="Account" style="display:none;background:none;border:1px solid var(--border);color:var(--dim);cursor:pointer;width:28px;height:28px;border-radius:50%;align-items:center;justify-content:center;font-size:14px;">👤</button>
+    <!-- Popup for mobile -->
+    <div id="userPopup" style="display:none;position:absolute;top:100%;right:0;margin-top:6px;background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:10px 12px;min-width:160px;box-shadow:0 4px 16px rgba(0,0,0,.4);z-index:1002;">
+      <div id="userPopupName" style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--accent);margin-bottom:8px;word-break:break-all;"></div>
+      <button class="btn btn-g" style="font-size:10px;padding:4px 10px;color:var(--red);width:100%;justify-content:center;" onclick="doLogout();hideUserPopup();">Esci</button>
+    </div>
   </div>
 </header>
 
@@ -7252,6 +7267,7 @@ const TUTORIAL_STEPS = [
 let _tutIdx = 0;
 let _tutKeyHandler = null;
 let _tutResizeHandler = null;
+let _tutRaf = null;
 
 function tutorialStart(){
   // Skip confirm for test user (artifact environment may block confirm dialogs)
@@ -7284,7 +7300,14 @@ function tutorialStart(){
     else if(e.key === 'ArrowLeft') tutorialPrev();
   };
   document.addEventListener('keydown', _tutKeyHandler);
-  _tutResizeHandler = () => tutorialRenderCurrent();
+  // Use rAF-throttled lightweight reposition (no full re-render) for smoothness
+  _tutResizeHandler = () => {
+    if(_tutRaf) return;
+    _tutRaf = requestAnimationFrame(() => {
+      _tutRaf = null;
+      tutorialRepositionOnly();
+    });
+  };
   window.addEventListener('resize', _tutResizeHandler);
   window.addEventListener('scroll', _tutResizeHandler, true);
   tutorialRenderStep(0);
@@ -7297,6 +7320,7 @@ function tutorialClose(){
   document.getElementById('tutHighlight').style.display = 'none';
   hideTutorialMasks();
   restoreTutorialTarget();
+  if(_tutRaf){ cancelAnimationFrame(_tutRaf); _tutRaf = null; }
   if(_tutKeyHandler){ document.removeEventListener('keydown', _tutKeyHandler); _tutKeyHandler=null; }
   if(_tutResizeHandler){
     window.removeEventListener('resize', _tutResizeHandler);
@@ -7324,6 +7348,37 @@ function tutorialJump(val){
 }
 
 function tutorialRenderCurrent(){ tutorialRenderStep(_tutIdx); }
+
+// Fast-path reposition: only update positions (no panel switch, no scrollIntoView).
+// Called during scroll/resize for smooth tracking.
+function tutorialRepositionOnly(){
+  const step = TUTORIAL_STEPS[_tutIdx];
+  if(!step) return;
+  const target = document.querySelector(step.target);
+  const highlight = document.getElementById('tutHighlight');
+  const tooltip = document.getElementById('tutTooltip');
+  if(!target || !highlight || !tooltip) return;
+  const rect = target.getBoundingClientRect();
+  const pad = 6;
+  highlight.style.left = (rect.left - pad) + 'px';
+  highlight.style.top = (rect.top - pad) + 'px';
+  highlight.style.width = (rect.width + pad*2) + 'px';
+  highlight.style.height = (rect.height + pad*2) + 'px';
+  positionTutorialMasks(rect, pad);
+  // Reposition tooltip
+  const tipRect = tooltip.getBoundingClientRect();
+  const vw = window.innerWidth, vh = window.innerHeight;
+  let tipLeft = rect.left + rect.width/2 - tipRect.width/2;
+  let tipTop = rect.bottom + pad + 10;
+  if(tipTop + tipRect.height > vh - 10){
+    tipTop = rect.top - tipRect.height - pad - 10;
+  }
+  if(tipTop < 10) tipTop = 10;
+  if(tipLeft < 10) tipLeft = 10;
+  if(tipLeft + tipRect.width > vw - 10) tipLeft = vw - tipRect.width - 10;
+  tooltip.style.left = tipLeft + 'px';
+  tooltip.style.top = tipTop + 'px';
+}
 
 function tutorialRenderStep(idx){
   _tutIdx = idx;
@@ -7374,37 +7429,34 @@ function tutorialRenderStep(idx){
     }
     tooltip.style.transform = '';
 
-    // Scroll element into view
+    // Scroll element into view (smooth). The rAF scroll handler will keep
+    // the highlight and tooltip tracking the target as it moves.
     target.scrollIntoView({behavior:'smooth', block:'center', inline:'nearest'});
 
-    // After scroll, measure and position
-    setTimeout(() => {
-      const rect = target.getBoundingClientRect();
-      const pad = 6;
-      highlight.style.display = 'block';
-      highlight.style.left = (rect.left - pad) + 'px';
-      highlight.style.top = (rect.top - pad) + 'px';
-      highlight.style.width = (rect.width + pad*2) + 'px';
-      highlight.style.height = (rect.height + pad*2) + 'px';
+    // Render immediately at current position — scroll handler will follow-up
+    const rect = target.getBoundingClientRect();
+    const pad = 6;
+    highlight.style.display = 'block';
+    highlight.style.left = (rect.left - pad) + 'px';
+    highlight.style.top = (rect.top - pad) + 'px';
+    highlight.style.width = (rect.width + pad*2) + 'px';
+    highlight.style.height = (rect.height + pad*2) + 'px';
+    positionTutorialMasks(rect, pad);
+    elevateTutorialTarget(target);
 
-      // Block clicks everywhere except the highlighted target (which is elevated)
-      positionTutorialMasks(rect, pad);
-      elevateTutorialTarget(target);
-
-      // Position tooltip near element (prefer below, fallback above)
-      const tipRect = tooltip.getBoundingClientRect();
-      const vw = window.innerWidth, vh = window.innerHeight;
-      let tipLeft = rect.left + rect.width/2 - tipRect.width/2;
-      let tipTop = rect.bottom + pad + 10;
-      if(tipTop + tipRect.height > vh - 10){
-        tipTop = rect.top - tipRect.height - pad - 10;
-      }
-      if(tipTop < 10) tipTop = 10;
-      if(tipLeft < 10) tipLeft = 10;
-      if(tipLeft + tipRect.width > vw - 10) tipLeft = vw - tipRect.width - 10;
-      tooltip.style.left = tipLeft + 'px';
-      tooltip.style.top = tipTop + 'px';
-    }, 300);
+    // Position tooltip near element (prefer below, fallback above)
+    const tipRect = tooltip.getBoundingClientRect();
+    const vw = window.innerWidth, vh = window.innerHeight;
+    let tipLeft = rect.left + rect.width/2 - tipRect.width/2;
+    let tipTop = rect.bottom + pad + 10;
+    if(tipTop + tipRect.height > vh - 10){
+      tipTop = rect.top - tipRect.height - pad - 10;
+    }
+    if(tipTop < 10) tipTop = 10;
+    if(tipLeft < 10) tipLeft = 10;
+    if(tipLeft + tipRect.width > vw - 10) tipLeft = vw - tipRect.width - 10;
+    tooltip.style.left = tipLeft + 'px';
+    tooltip.style.top = tipTop + 'px';
   }, 60);
 }
 
@@ -7472,8 +7524,37 @@ function restoreTutorialTarget(){
 // Update topbar username on login
 function updateTopbarUsername(){
   const el = document.getElementById('topbarUsername');
-  if(!el) return;
-  el.textContent = S.currentUser ? '👤 ' + S.currentUser : '';
+  if(el) el.textContent = S.currentUser ? '👤 ' + S.currentUser : '';
+  const popupName = document.getElementById('userPopupName');
+  if(popupName) popupName.textContent = S.currentUser ? '👤 ' + S.currentUser : '';
+}
+
+function toggleUserPopup(ev){
+  if(ev) ev.stopPropagation();
+  const p = document.getElementById('userPopup');
+  if(!p) return;
+  if(p.style.display === 'block'){
+    hideUserPopup();
+  }else{
+    p.style.display = 'block';
+    // Close on outside click
+    setTimeout(() => {
+      document.addEventListener('click', _userPopupOutside);
+    }, 0);
+  }
+}
+function hideUserPopup(){
+  const p = document.getElementById('userPopup');
+  if(p) p.style.display = 'none';
+  document.removeEventListener('click', _userPopupOutside);
+}
+function _userPopupOutside(e){
+  const p = document.getElementById('userPopup');
+  const icon = document.getElementById('topbarUserIcon');
+  if(!p) return;
+  if(!p.contains(e.target) && !icon?.contains(e.target)){
+    hideUserPopup();
+  }
 }
 
 </script>
