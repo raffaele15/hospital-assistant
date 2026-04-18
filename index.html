@@ -208,15 +208,18 @@ hr.div{border:none;border-top:1px solid var(--border);margin:18px 0}
 
 <aside>
   <button id="mobileNavClose" onclick="closeMobileNav()" title="Chiudi menu" style="display:none;position:absolute;top:12px;right:12px;background:none;border:none;cursor:pointer;padding:4px;color:var(--text);font-size:22px;line-height:1;z-index:2;">✕</button>
-  <div class="ns">Flusso</div>
+  <div class="ns">Procedura</div>
   <button class="ni active" onclick="goTo(0)" id="nav0"><span class="sn">1</span>Carica Cartella</button>
   <button class="ni" onclick="goTo(1)" id="nav1"><span class="sn">2</span>Anonimizza Dati</button>
   <button class="ni" onclick="goTo(2)" id="nav2"><span class="sn">3</span>Genera Lettera</button>
   <button class="ni" onclick="goTo(3)" id="nav3"><span class="sn">4</span>Verifica</button>
   <button class="ni" onclick="goTo(4)" id="nav4"><span class="sn">5</span>Esporta</button>
-  <div class="ns" style="margin-top:14px;">Config</div>
+  <div class="ns" style="margin-top:14px;">Strumenti</div>
   <button class="ni" onclick="goTo(6)" id="nav6"><span class="sn">📚</span>Libreria Casi</button>
   <button class="ni" onclick="goTo(5)" id="nav5"><span class="sn">⚙</span>Impostazioni</button>
+  <button class="ni" onclick="goTo(7)" id="nav7"><span class="sn">⚠</span>Segnala Errori</button>
+  <button class="ni" onclick="goTo(8)" id="nav8" style="display:none;"><span class="sn">📋</span>Segnalazioni</button>
+  <button class="ni" onclick="goTo(9)" id="nav9" style="display:none;"><span class="sn">👥</span>Accounts</button>
 </aside>
 
 <main>
@@ -283,9 +286,6 @@ hr.div{border:none;border-top:1px solid var(--border);margin:18px 0}
 <!-- ═══ STEP 2 ═══ -->
 <div class="panel" id="panel1">
   <div class="ptitle">Anonimizza Dati</div>
-  <div class="card">
-    <div class="ctitle">Modalità Anonimizzazione</div>
-  </div>
   <div id="anonStatus" class="card" style="display:flex;align-items:center;gap:10px;padding:12px 14px;">
     <span class="spin" id="anonSpin" style="display:none;"></span>
     <span id="anonStatusTxt" style="font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--mid);">Pronto.</span>
@@ -927,6 +927,111 @@ hr.div{border:none;border-top:1px solid var(--border);margin:18px 0}
   </div>
 </div>
 
+<!-- ═══ PANEL 7 — SEGNALA ERRORI ═══ -->
+<div class="panel" id="panel7">
+  <div class="ptitle">Segnala Errori</div>
+
+  <div class="card">
+    <div class="ctitle">Descrizione</div>
+    <div class="ib" style="margin-bottom:10px;font-size:10px;">Descrivi il problema riscontrato o il suggerimento che vuoi proporre.</div>
+    <label>Categoria</label>
+    <select id="reportCategory" style="margin-bottom:12px;">
+      <option value="errore_lettera">Errore nella lettera generata</option>
+      <option value="errore_anonimizzazione">Errore nell'anonimizzazione</option>
+      <option value="bug_ui">Bug interfaccia</option>
+      <option value="suggerimento">Suggerimento / miglioramento</option>
+      <option value="altro">Altro</option>
+    </select>
+    <label>Descrizione del problema</label>
+    <textarea id="reportDescription" rows="6" placeholder="Descrivi il problema con quanti più dettagli possibili..." style="font-size:12px;"></textarea>
+  </div>
+
+  <div class="card">
+    <div class="ctitle">Prompt Utilizzato <span style="color:var(--dim);font-size:9px;text-transform:none;letter-spacing:0;margin-left:6px;">opzionale</span></div>
+    <div style="display:flex;gap:8px;margin-bottom:10px;flex-wrap:wrap;">
+      <button class="btn btn-g" style="font-size:10px;padding:6px 13px;" onclick="useCurrentPrompt()" title="Usa il prompt attualmente visibile nella sezione Genera Lettera">📥 Usa prompt corrente</button>
+      <button class="btn btn-g" style="font-size:10px;padding:6px 13px;" onclick="readClipboardInto('reportPrompt')" title="Incolla dagli appunti">📋 Incolla dagli appunti</button>
+    </div>
+    <textarea id="reportPrompt" rows="8" placeholder="Incolla qui il prompt completo che ha causato il problema (se applicabile)..." style="font-size:11px;font-family:'JetBrains Mono',monospace;"></textarea>
+  </div>
+
+  <div class="card">
+    <div class="ctitle">Lettera Generata <span style="color:var(--dim);font-size:9px;text-transform:none;letter-spacing:0;margin-left:6px;">opzionale</span></div>
+    <div style="display:flex;gap:8px;margin-bottom:10px;flex-wrap:wrap;">
+      <button class="btn btn-g" style="font-size:10px;padding:6px 13px;" onclick="useCurrentLetter()" title="Usa la lettera attualmente generata">📥 Usa lettera corrente</button>
+      <button class="btn btn-g" style="font-size:10px;padding:6px 13px;" onclick="readClipboardInto('reportLetter')" title="Incolla dagli appunti">📋 Incolla dagli appunti</button>
+    </div>
+    <textarea id="reportLetter" rows="10" placeholder="Incolla qui la lettera generata (o la sezione problematica)..." style="font-size:12px;font-family:'Times New Roman',serif;line-height:1.6;"></textarea>
+  </div>
+
+  <div class="btn-row">
+    <button class="btn btn-p" id="reportSendBtn" onclick="sendReport()">
+      <span class="spin" id="reportSpin" style="display:none;"></span>
+      → Invia Segnalazione
+    </button>
+    <button class="btn btn-g" onclick="resetReportForm()">↺ Reset</button>
+  </div>
+  <div id="reportStatus" style="margin-top:10px;font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--dim);display:none;"></div>
+</div>
+
+<!-- ═══ PANEL 8 — SEGNALAZIONI (admin only) ═══ -->
+<div class="panel" id="panel8">
+  <div class="ptitle">Segnalazioni</div>
+
+  <div class="card">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;flex-wrap:wrap;gap:8px;">
+      <div class="ctitle" style="margin:0;">Segnalazioni Ricevute</div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;">
+        <button class="btn btn-g" style="font-size:10px;padding:6px 13px;" onclick="loadReports()" title="Ricarica segnalazioni da GitHub">↻ Aggiorna</button>
+      </div>
+    </div>
+    <div id="reportsStats" style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--dim);margin-bottom:12px;"></div>
+    <div id="reportsList"></div>
+    <div id="reportsEmpty" style="display:none;" class="ib">Nessuna segnalazione ricevuta.</div>
+  </div>
+</div>
+
+<!-- ═══ PANEL 9 — ACCOUNTS (admin only) ═══ -->
+<div class="panel" id="panel9">
+  <div class="ptitle">Accounts</div>
+
+  <div class="card" style="border-color:var(--red);border-width:1px;">
+    <div class="ib red" style="font-size:10px;line-height:1.6;">
+      ⚠ Gli account vengono salvati nel file <strong>users.json</strong> del repository di autenticazione. Le credenziali (API key + token GitHub) vengono cifrate con la password dell'utente tramite PBKDF2 + AES-GCM prima di essere salvate.
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="ctitle">Crea Nuovo Account</div>
+    <label>Username</label>
+    <input type="text" id="newAccUser" autocapitalize="off" autocorrect="off" spellcheck="false" placeholder="es: mariorossi" style="margin-bottom:10px;">
+    <label>Password</label>
+    <input type="password" id="newAccPass" placeholder="Password dell'utente" style="margin-bottom:10px;">
+    <label>API Key Anthropic <span style="color:var(--dim);font-size:9px;text-transform:none;letter-spacing:0;margin-left:6px;">sk-ant-...</span></label>
+    <input type="password" id="newAccApiKey" placeholder="sk-ant-..." style="margin-bottom:10px;">
+    <label>Token GitHub (Personal Access Token) <span style="color:var(--dim);font-size:9px;text-transform:none;letter-spacing:0;margin-left:6px;">ghp_...</span></label>
+    <input type="password" id="newAccGhToken" placeholder="ghp_...">
+    <div class="btn-row" style="margin-top:14px;">
+      <button class="btn btn-p" id="accCreateBtn" onclick="createNewAccount()">
+        <span class="spin" id="accCreateSpin" style="display:none;"></span>
+        ✓ Crea Account
+      </button>
+      <button class="btn btn-g" onclick="resetNewAccountForm()">↺ Reset</button>
+    </div>
+    <div id="accCreateStatus" style="margin-top:10px;font-family:'JetBrains Mono',monospace;font-size:11px;display:none;"></div>
+  </div>
+
+  <div class="card">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;flex-wrap:wrap;gap:8px;">
+      <div class="ctitle" style="margin:0;">Account Esistenti</div>
+      <button class="btn btn-g" style="font-size:10px;padding:6px 13px;" onclick="loadAccountsList()" title="Ricarica lista account">↻ Aggiorna</button>
+    </div>
+    <div id="accListStats" style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--dim);margin-bottom:12px;"></div>
+    <div id="accList"></div>
+    <div id="accListEmpty" style="display:none;" class="ib">Nessun account trovato.</div>
+  </div>
+</div>
+
 </main>
 </div>
 
@@ -980,6 +1085,32 @@ async function decryptData(encrypted,password){
   return new TextDecoder().decode(decrypted);
 }
 
+// Derive a key for encryption (same params as deriveKey but with encrypt purpose)
+async function deriveKeyForEncryption(password,salt){
+  const enc=new TextEncoder();
+  const keyMaterial=await crypto.subtle.importKey('raw',enc.encode(password),'PBKDF2',false,['deriveKey']);
+  return crypto.subtle.deriveKey(
+    {name:'PBKDF2',salt:Uint8Array.from(atob(salt),c=>c.charCodeAt(0)),iterations:100000,hash:'SHA-256'},
+    keyMaterial,
+    {name:'AES-GCM',length:256},
+    false,
+    ['encrypt']
+  );
+}
+
+async function encryptData(plaintext, password){
+  // Generate random salt (16 bytes) and IV (12 bytes for AES-GCM)
+  const saltBytes = crypto.getRandomValues(new Uint8Array(16));
+  const ivBytes = crypto.getRandomValues(new Uint8Array(12));
+  const saltB64 = btoa(String.fromCharCode(...saltBytes));
+  const ivB64 = btoa(String.fromCharCode(...ivBytes));
+  const key = await deriveKeyForEncryption(password, saltB64);
+  const encoded = new TextEncoder().encode(plaintext);
+  const ciphertext = await crypto.subtle.encrypt({name:'AES-GCM', iv: ivBytes}, key, encoded);
+  const dataB64 = btoa(String.fromCharCode(...new Uint8Array(ciphertext)));
+  return `${saltB64}:${ivB64}:${dataB64}`;
+}
+
 async function doLogin(){
   const user=document.getElementById('loginUser').value.trim().toLowerCase();
   const pass=document.getElementById('loginPass').value;
@@ -994,6 +1125,8 @@ async function doLogin(){
       document.getElementById('loginScreen').style.display='none';
       document.getElementById('loginUser').value='';
       document.getElementById('loginPass').value='';
+      S.currentUser = 'test';
+      updateAdminVisibility();
       resetIdleTimer();
       return;
     }
@@ -1055,6 +1188,7 @@ async function doLogin(){
       // Load user preferences
       try{ await loadUserPreferences(); }catch(e){console.warn('Load preferences fallito:',e.message);}
     }
+    updateAdminVisibility();
     resetIdleTimer();
   }catch(e){
     errEl.style.display='block';
@@ -1369,6 +1503,8 @@ function goTo(i) {
   if (i === 3) updateVerifTokenPanel();
   if (i === 5) updateLocalStorageStats();
   if (i === 6) renderLibrary();
+  if (i === 8) loadReports();
+  if (i === 9) loadAccountsList();
 }
 
 // ═══════════════════════════════════════════════════
@@ -3016,6 +3152,7 @@ function doLogout(){
   S.rawText=S.cleanText=S.anonText=S.letter='';
   S.activeTemplateId=null;S.activeWardId=null;
   S.currentUser=null;S.userPrefs=null;S.tempPrefs=null;
+  updateAdminVisibility();
   document.getElementById('loginScreen').style.display='flex';
 }
 
@@ -4870,6 +5007,8 @@ function toggleAdvancedSettings(){
 // USER PREFERENCES — per-user, synced via GitHub
 // ═══════════════════════════════════════════════════
 const USER_PREFS_PATH = 'user_preferences.json';
+const REPORTS_PATH = 'reports.json';
+const ADMIN_USERS = ['raffaele', 'test'];
 
 function applyPrefsToUI(prefs){
   const categories = ['lab','acc','dec','an','rac','ter'];
@@ -5091,6 +5230,416 @@ function loadBaseSettings(){
   // Repo: sempre dal default hardcoded
   const repoEl=document.getElementById('cfg_gh_repo');
   if(repoEl) repoEl.value=DEFAULT_GH_REPO;
+}
+
+// ═══════════════════════════════════════════════════
+// REPORTS / ERROR SEGNALATIONS
+// ═══════════════════════════════════════════════════
+function useCurrentPrompt(){
+  refreshPrompt();
+  const promptView = document.getElementById('promptView');
+  const text = promptView?.value || '';
+  if(!text || text.includes('Completa gli Step')){
+    alert('Nessun prompt disponibile. Genera prima una lettera nella sezione Genera Lettera.');
+    return;
+  }
+  document.getElementById('reportPrompt').value = text;
+  showReportStatus('✓ Prompt corrente copiato', 'var(--green)');
+}
+
+function useCurrentLetter(){
+  if(!S.letter || !S.letter.trim()){
+    alert('Nessuna lettera generata in sessione. Genera prima una lettera.');
+    return;
+  }
+  document.getElementById('reportLetter').value = S.letter;
+  showReportStatus('✓ Lettera corrente copiata', 'var(--green)');
+}
+
+function resetReportForm(){
+  document.getElementById('reportCategory').value = 'errore_lettera';
+  document.getElementById('reportDescription').value = '';
+  document.getElementById('reportPrompt').value = '';
+  document.getElementById('reportLetter').value = '';
+  document.getElementById('reportStatus').style.display = 'none';
+}
+
+function showReportStatus(msg, color){
+  const el = document.getElementById('reportStatus');
+  el.style.display = 'block';
+  el.style.color = color || 'var(--dim)';
+  el.textContent = msg;
+  if(color === 'var(--green)') setTimeout(()=>{ el.style.display='none'; }, 4000);
+}
+
+async function sendReport(){
+  const description = document.getElementById('reportDescription').value.trim();
+  if(!description){
+    alert('Inserisci una descrizione del problema.');
+    return;
+  }
+  if(!S.currentUser){
+    alert('Devi essere autenticato per inviare una segnalazione.');
+    return;
+  }
+  if(!confirm('Confermi l\'invio della segnalazione?\n\nLe informazioni inserite saranno visibili agli amministratori.')) return;
+
+  const btn = document.getElementById('reportSendBtn');
+  const spin = document.getElementById('reportSpin');
+  btn.disabled = true; spin.style.display = 'inline-block';
+  showReportStatus('⟳ Invio in corso...', 'var(--dim)');
+
+  try{
+    const cfg = await getGitHubCfg();
+    if(!cfg.token || !cfg.repo) throw new Error('GitHub non configurato.');
+
+    const report = {
+      id: 'rep_' + Date.now() + '_' + Math.random().toString(36).slice(2, 8),
+      username: S.currentUser,
+      timestamp: new Date().toISOString(),
+      category: document.getElementById('reportCategory').value,
+      description: description,
+      prompt: document.getElementById('reportPrompt').value.trim() || null,
+      letter: document.getElementById('reportLetter').value.trim() || null
+    };
+
+    // Fetch existing reports file
+    const url = `https://api.github.com/repos/${cfg.repo}/contents/${REPORTS_PATH}`;
+    let existing = [];
+    let sha = null;
+    try{
+      const file = await ghApiGet({...cfg, path: REPORTS_PATH});
+      if(file){
+        sha = file.sha;
+        let decoded = null;
+        if(file._rawText) decoded = file._rawText;
+        else if(file.content && file.content.trim()) decoded = decodeURIComponent(escape(atob(file.content.replace(/\n/g,''))));
+        if(decoded){
+          try{ const parsed = JSON.parse(decoded); if(Array.isArray(parsed)) existing = parsed; }
+          catch(e){ console.warn('Failed to parse existing reports.json:', e); }
+        }
+      }
+    }catch(e){ /* file might not exist yet */ }
+
+    existing.unshift(report); // newest first
+
+    const newContent = btoa(unescape(encodeURIComponent(JSON.stringify(existing, null, 2))));
+    const body = {
+      message: `New report from ${S.currentUser} [${report.category}]`,
+      content: newContent
+    };
+    if(sha) body.sha = sha;
+
+    const respPut = await fetch(url, {
+      method: 'PUT',
+      headers: { Accept:'application/vnd.github.v3+json', Authorization:`token ${cfg.token}`, 'Content-Type':'application/json' },
+      body: JSON.stringify(body)
+    });
+    if(!respPut.ok){
+      const err = await respPut.text();
+      throw new Error('HTTP '+respPut.status+': '+err.substring(0,100));
+    }
+
+    showReportStatus('✓ Segnalazione inviata. Grazie!', 'var(--green)');
+    resetReportForm();
+  }catch(e){
+    showReportStatus('✗ Errore: '+e.message, 'var(--red)');
+  }finally{
+    btn.disabled = false; spin.style.display = 'none';
+  }
+}
+
+async function loadReports(){
+  const listEl = document.getElementById('reportsList');
+  const emptyEl = document.getElementById('reportsEmpty');
+  const statsEl = document.getElementById('reportsStats');
+  listEl.innerHTML = '';
+  emptyEl.style.display = 'none';
+  statsEl.textContent = '⟳ Caricamento...';
+
+  try{
+    const cfg = await getGitHubCfg();
+    if(!cfg.token || !cfg.repo) throw new Error('GitHub non configurato.');
+
+    const file = await ghApiGet({...cfg, path: REPORTS_PATH});
+    if(!file){
+      emptyEl.style.display = 'block';
+      statsEl.textContent = '';
+      return;
+    }
+
+    let decoded = null;
+    if(file._rawText) decoded = file._rawText;
+    else if(file.content && file.content.trim()) decoded = decodeURIComponent(escape(atob(file.content.replace(/\n/g,''))));
+
+    if(!decoded){
+      emptyEl.style.display = 'block';
+      statsEl.textContent = '';
+      return;
+    }
+
+    const reports = JSON.parse(decoded);
+    if(!Array.isArray(reports) || reports.length === 0){
+      emptyEl.style.display = 'block';
+      statsEl.textContent = '';
+      return;
+    }
+
+    statsEl.textContent = `${reports.length} segnalazion${reports.length===1?'e':'i'}`;
+
+    const CATEGORY_LABELS = {
+      errore_lettera: 'Errore lettera',
+      errore_anonimizzazione: 'Errore anonimizzazione',
+      bug_ui: 'Bug UI',
+      suggerimento: 'Suggerimento',
+      altro: 'Altro'
+    };
+
+    reports.forEach((r, idx) => {
+      const card = document.createElement('div');
+      card.style.cssText = 'background:var(--surface2);border:1px solid var(--border);border-radius:var(--r);padding:12px 14px;margin-bottom:10px;';
+      const date = new Date(r.timestamp).toLocaleString('it-IT', { day:'2-digit', month:'short', year:'numeric', hour:'2-digit', minute:'2-digit' });
+      const catLabel = CATEGORY_LABELS[r.category] || r.category;
+      card.innerHTML = `
+        <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:8px;">
+          <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+            <span style="font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--accent);font-weight:500;">@${esc(r.username||'unknown')}</span>
+            <span style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--dim);">${date}</span>
+            <span class="chip c-blue" style="font-size:9px;">${esc(catLabel)}</span>
+          </div>
+          <button class="btn btn-g" style="font-size:10px;padding:4px 10px;color:var(--red);" onclick="deleteReport('${r.id}')">🗑 Elimina</button>
+        </div>
+        <div style="font-size:12px;line-height:1.55;white-space:pre-wrap;margin-bottom:8px;">${esc(r.description||'')}</div>
+        ${r.prompt ? `<details style="margin-top:8px;"><summary style="cursor:pointer;font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--dim);">📄 Prompt (${r.prompt.length} caratteri)</summary><pre style="margin-top:8px;max-height:300px;overflow:auto;background:var(--bg);border:1px solid var(--border);border-radius:4px;padding:10px;font-size:10px;font-family:'JetBrains Mono',monospace;white-space:pre-wrap;word-break:break-word;">${esc(r.prompt)}</pre></details>` : ''}
+        ${r.letter ? `<details style="margin-top:8px;"><summary style="cursor:pointer;font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--dim);">📝 Lettera (${r.letter.length} caratteri)</summary><pre style="margin-top:8px;max-height:300px;overflow:auto;background:var(--bg);border:1px solid var(--border);border-radius:4px;padding:10px;font-size:11px;font-family:'Times New Roman',serif;line-height:1.6;white-space:pre-wrap;">${esc(r.letter)}</pre></details>` : ''}
+      `;
+      listEl.appendChild(card);
+    });
+  }catch(e){
+    statsEl.textContent = '✗ Errore: '+e.message;
+    statsEl.style.color = 'var(--red)';
+  }
+}
+
+async function deleteReport(id){
+  if(!confirm('Eliminare definitivamente questa segnalazione?')) return;
+  try{
+    const cfg = await getGitHubCfg();
+    const file = await ghApiGet({...cfg, path: REPORTS_PATH});
+    if(!file) return;
+    const sha = file.sha;
+    let decoded = null;
+    if(file._rawText) decoded = file._rawText;
+    else if(file.content && file.content.trim()) decoded = decodeURIComponent(escape(atob(file.content.replace(/\n/g,''))));
+    if(!decoded) return;
+    const reports = JSON.parse(decoded).filter(r => r.id !== id);
+    const url = `https://api.github.com/repos/${cfg.repo}/contents/${REPORTS_PATH}`;
+    const newContent = btoa(unescape(encodeURIComponent(JSON.stringify(reports, null, 2))));
+    const respPut = await fetch(url, {
+      method: 'PUT',
+      headers: { Accept:'application/vnd.github.v3+json', Authorization:`token ${cfg.token}`, 'Content-Type':'application/json' },
+      body: JSON.stringify({ message:`Delete report ${id}`, content: newContent, sha })
+    });
+    if(!respPut.ok) throw new Error('HTTP '+respPut.status);
+    loadReports();
+  }catch(e){
+    alert('Errore eliminazione: '+e.message);
+  }
+}
+
+function updateAdminVisibility(){
+  const nav8 = document.getElementById('nav8');
+  const nav9 = document.getElementById('nav9');
+  const isAdmin = S.currentUser && ADMIN_USERS.includes(S.currentUser);
+  if(nav8) nav8.style.display = isAdmin ? '' : 'none';
+  if(nav9) nav9.style.display = isAdmin ? '' : 'none';
+}
+
+// ═══════════════════════════════════════════════════
+// ACCOUNT MANAGEMENT (admin only)
+// ═══════════════════════════════════════════════════
+function resetNewAccountForm(){
+  document.getElementById('newAccUser').value = '';
+  document.getElementById('newAccPass').value = '';
+  document.getElementById('newAccApiKey').value = '';
+  document.getElementById('newAccGhToken').value = '';
+  const st = document.getElementById('accCreateStatus');
+  st.style.display = 'none';
+}
+
+function showAccStatus(msg, color){
+  const st = document.getElementById('accCreateStatus');
+  st.style.display = 'block';
+  st.style.color = color || 'var(--dim)';
+  st.textContent = msg;
+}
+
+async function loadUsersFile(){
+  const authRepo = await resolveLoginRepo();
+  if(!authRepo) throw new Error('Impossibile determinare il repository di autenticazione.');
+  const url = `https://api.github.com/repos/${authRepo}/contents/${LOGIN_USERS_PATH}`;
+  const resp = await fetch(url, { headers: { Accept:'application/vnd.github.v3+json', Authorization:`token ${LOGIN_AUTH_TOKEN}` } });
+  if(!resp.ok){
+    if(resp.status === 404) return { users: [], sha: null, authRepo };
+    throw new Error('HTTP '+resp.status);
+  }
+  const file = await resp.json();
+  const decoded = decodeURIComponent(escape(atob(file.content.replace(/\n/g,''))));
+  const users = JSON.parse(decoded);
+  return { users: Array.isArray(users) ? users : [], sha: file.sha, authRepo };
+}
+
+async function createNewAccount(){
+  const user = document.getElementById('newAccUser').value.trim().toLowerCase();
+  const pass = document.getElementById('newAccPass').value;
+  const apiKey = document.getElementById('newAccApiKey').value.trim();
+  const ghToken = document.getElementById('newAccGhToken').value.trim();
+
+  if(!user || !pass){
+    showAccStatus('✗ Username e password sono obbligatori.', 'var(--red)');
+    return;
+  }
+  if(!/^[a-z0-9_]+$/.test(user)){
+    showAccStatus('✗ Username: solo lettere minuscole, numeri e underscore.', 'var(--red)');
+    return;
+  }
+  if(pass.length < 6){
+    showAccStatus('✗ Password troppo corta (minimo 6 caratteri).', 'var(--red)');
+    return;
+  }
+  if(!apiKey || !ghToken){
+    showAccStatus('✗ API Key e Token GitHub sono obbligatori.', 'var(--red)');
+    return;
+  }
+
+  if(!confirm(`Confermi la creazione dell'account "${user}"?\n\nLe credenziali saranno cifrate con la password fornita e salvate su GitHub.`)) return;
+
+  const btn = document.getElementById('accCreateBtn');
+  const spin = document.getElementById('accCreateSpin');
+  btn.disabled = true; spin.style.display = 'inline-block';
+  showAccStatus('⟳ Creazione in corso...', 'var(--dim)');
+
+  try{
+    const { users, sha, authRepo } = await loadUsersFile();
+
+    // Check username availability
+    if(users.find(u => u.username === user)){
+      throw new Error(`L'username "${user}" esiste già.`);
+    }
+
+    // Hash password + encrypt credentials
+    const passwordHash = await sha256(pass);
+    const encryptedApiKey = await encryptData(apiKey, pass);
+    const encryptedGhToken = await encryptData(ghToken, pass);
+
+    const newUser = {
+      username: user,
+      passwordHash,
+      apiKey: encryptedApiKey,
+      ghToken: encryptedGhToken,
+      createdAt: new Date().toISOString(),
+      createdBy: S.currentUser || 'unknown'
+    };
+    users.push(newUser);
+
+    // Push updated users file
+    const url = `https://api.github.com/repos/${authRepo}/contents/${LOGIN_USERS_PATH}`;
+    const newContent = btoa(unescape(encodeURIComponent(JSON.stringify(users, null, 2))));
+    const body = { message: `Create account: ${user}`, content: newContent };
+    if(sha) body.sha = sha;
+
+    const respPut = await fetch(url, {
+      method: 'PUT',
+      headers: { Accept:'application/vnd.github.v3+json', Authorization:`token ${LOGIN_AUTH_TOKEN}`, 'Content-Type':'application/json' },
+      body: JSON.stringify(body)
+    });
+    if(!respPut.ok){
+      const err = await respPut.text();
+      throw new Error('HTTP '+respPut.status+': '+err.substring(0,100));
+    }
+
+    showAccStatus(`✓ Account "${user}" creato con successo.`, 'var(--green)');
+    resetNewAccountForm();
+    loadAccountsList();
+  }catch(e){
+    showAccStatus('✗ Errore: '+e.message, 'var(--red)');
+  }finally{
+    btn.disabled = false; spin.style.display = 'none';
+  }
+}
+
+async function loadAccountsList(){
+  const listEl = document.getElementById('accList');
+  const emptyEl = document.getElementById('accListEmpty');
+  const statsEl = document.getElementById('accListStats');
+  listEl.innerHTML = '';
+  emptyEl.style.display = 'none';
+  statsEl.textContent = '⟳ Caricamento...';
+  statsEl.style.color = 'var(--dim)';
+
+  try{
+    const { users } = await loadUsersFile();
+    if(!users || users.length === 0){
+      emptyEl.style.display = 'block';
+      statsEl.textContent = '';
+      return;
+    }
+
+    statsEl.textContent = `${users.length} account`;
+
+    // Sort: most recently created first
+    const sortedUsers = [...users].sort((a,b) => (b.createdAt||'').localeCompare(a.createdAt||''));
+
+    sortedUsers.forEach(u => {
+      const card = document.createElement('div');
+      card.style.cssText = 'background:var(--surface2);border:1px solid var(--border);border-radius:var(--r);padding:12px 14px;margin-bottom:10px;';
+      const createdDate = u.createdAt ? new Date(u.createdAt).toLocaleString('it-IT', { day:'2-digit', month:'short', year:'numeric' }) : '—';
+      const isAdmin = ADMIN_USERS.includes(u.username);
+      card.innerHTML = `
+        <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;">
+          <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+            <span style="font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--accent);font-weight:500;">@${esc(u.username)}</span>
+            ${isAdmin ? '<span class="chip c-blue" style="font-size:9px;">admin</span>' : ''}
+            <span style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--dim);">creato: ${createdDate}</span>
+            ${u.createdBy ? `<span style="font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--dim);">da: ${esc(u.createdBy)}</span>` : ''}
+          </div>
+          ${!isAdmin ? `<button class="btn btn-g" style="font-size:10px;padding:4px 10px;color:var(--red);" onclick="deleteAccount('${esc(u.username)}')">🗑 Elimina</button>` : ''}
+        </div>
+      `;
+      listEl.appendChild(card);
+    });
+  }catch(e){
+    statsEl.textContent = '✗ Errore: '+e.message;
+    statsEl.style.color = 'var(--red)';
+  }
+}
+
+async function deleteAccount(username){
+  if(ADMIN_USERS.includes(username)){
+    alert('Non è possibile eliminare un account amministratore da questa interfaccia.');
+    return;
+  }
+  if(!confirm(`Eliminare definitivamente l'account "${username}"?\n\nL'utente perderà l'accesso all'applicazione.`)) return;
+
+  try{
+    const { users, sha, authRepo } = await loadUsersFile();
+    const updated = users.filter(u => u.username !== username);
+    if(updated.length === users.length){
+      alert('Account non trovato.');
+      return;
+    }
+    const url = `https://api.github.com/repos/${authRepo}/contents/${LOGIN_USERS_PATH}`;
+    const newContent = btoa(unescape(encodeURIComponent(JSON.stringify(updated, null, 2))));
+    const respPut = await fetch(url, {
+      method: 'PUT',
+      headers: { Accept:'application/vnd.github.v3+json', Authorization:`token ${LOGIN_AUTH_TOKEN}`, 'Content-Type':'application/json' },
+      body: JSON.stringify({ message: `Delete account: ${username}`, content: newContent, sha })
+    });
+    if(!respPut.ok) throw new Error('HTTP '+respPut.status);
+    loadAccountsList();
+  }catch(e){
+    alert('Errore eliminazione: '+e.message);
+  }
 }
 
 // ═══════════════════════════════════════════════════
