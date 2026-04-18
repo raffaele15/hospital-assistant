@@ -5143,6 +5143,15 @@ async function ghApiGet(cfg){
     if(r.status===404)return null;
     if(!r.ok)throw new Error(`GitHub GET ${r.status}: ${await r.text()}`);
     const meta=await r.json();
+    // Debug: log what we received
+    console.log('ghApiGet meta:', { 
+      hasContent: !!meta.content, 
+      contentLength: meta.content?.length || 0, 
+      size: meta.size, 
+      encoding: meta.encoding,
+      download_url: meta.download_url ? meta.download_url.substring(0,80)+'...' : null,
+      keys: Object.keys(meta)
+    });
     // If no content (large file) or empty content, try download_url fallback
     const hasContent = meta.content && meta.content.trim().length > 0;
     if(!hasContent){
@@ -5175,26 +5184,27 @@ async function ghApiGet(cfg){
       // Try raw content API as last resort
       if(!meta._rawText){
         try{
-          const raw=await fetch(url,{headers:{Authorization:`token ${cfg.token}`,'Accept':'application/vnd.github.v3.raw'}});
-          if(raw.ok){
-            const text = await raw.text();
-            let looksLikeMetadata = false;
-            if(text && text.trimStart().startsWith('{')){
-              try{
-                const maybeMeta = JSON.parse(text);
-                looksLikeMetadata = maybeMeta && typeof maybeMeta === 'object' && !Array.isArray(maybeMeta)
-                  && 'sha' in maybeMeta && 'path' in maybeMeta && 'url' in maybeMeta;
-              }catch(_){}
-            }
-            if(looksLikeMetadata){
-              console.warn('raw API returned metadata — ignoring');
+          // For private repos use the git/blobs API with SHA which returns authenticated raw content via base64
+          if(meta.sha){
+            const blobUrl = `https://api.github.com/repos/${cfg.repo}/git/blobs/${meta.sha}`;
+            const blobResp = await fetch(blobUrl,{headers:{Authorization:`token ${cfg.token}`,'Accept':'application/vnd.github.v3+json'}});
+            if(blobResp.ok){
+              const blob = await blobResp.json();
+              if(blob.content && blob.encoding === 'base64'){
+                try{
+                  meta._rawText = decodeURIComponent(escape(atob(blob.content.replace(/\n/g,''))));
+                  console.log('git/blobs fallback success, length:', meta._rawText.length);
+                }catch(decodeErr){
+                  console.warn('git/blobs base64 decode failed:', decodeErr);
+                }
+              } else {
+                console.warn('git/blobs returned no usable content:', blob);
+              }
             } else {
-              meta._rawText = text;
+              console.warn('git/blobs HTTP',blobResp.status);
             }
-          } else {
-            console.warn('raw API HTTP',raw.status);
           }
-        }catch(e){ console.warn('raw API fallback failed:',e); }
+        }catch(e){ console.warn('git/blobs fallback failed:',e); }
       }
     }
     return meta;
