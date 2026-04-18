@@ -147,9 +147,13 @@ hr.div{border:none;border-top:1px solid var(--border);margin:18px 0}
 /* Tutorial overlay */
 #tutOverlay{position:fixed;inset:0;z-index:3000;display:none;pointer-events:none;}
 #tutOverlay.active{display:block;}
-#tutOverlay .tut-mask{position:fixed;background:rgba(0,0,0,0.72);pointer-events:auto;transition:all .2s ease;}
-#tutOverlay .tut-highlight{position:fixed;border:2px solid var(--accent);border-radius:6px;box-shadow:0 0 0 9999px rgba(0,0,0,0.72);transition:all .25s cubic-bezier(.4,0,.2,1);pointer-events:none;z-index:3001;}
-#tutTooltip{position:fixed;background:var(--surface);border:1px solid var(--accent);border-radius:8px;padding:14px 16px;max-width:340px;min-width:260px;box-shadow:0 8px 24px rgba(0,0,0,.5);z-index:3002;pointer-events:auto;font-family:'JetBrains Mono',monospace;font-size:11px;line-height:1.55;}
+#tutOverlay .tut-mask{position:fixed;background:rgba(0,0,0,0.72);pointer-events:auto;transition:all .15s ease;}
+#tutOverlay #tutMaskTop{top:0;left:0;right:0;}
+#tutOverlay #tutMaskBottom{bottom:0;left:0;right:0;}
+#tutOverlay #tutMaskLeft{left:0;}
+#tutOverlay #tutMaskRight{right:0;}
+#tutOverlay .tut-highlight{position:fixed;border:2px solid var(--accent);border-radius:6px;transition:all .25s cubic-bezier(.4,0,.2,1);pointer-events:none;z-index:3004;}
+#tutTooltip{position:fixed;background:var(--surface);border:1px solid var(--accent);border-radius:8px;padding:14px 16px;max-width:340px;min-width:260px;box-shadow:0 8px 24px rgba(0,0,0,.5);z-index:3005;pointer-events:auto;font-family:'JetBrains Mono',monospace;font-size:11px;line-height:1.55;}
 #tutTooltip .tut-step-num{font-size:9px;color:var(--dim);margin-bottom:6px;letter-spacing:.08em;}
 #tutTooltip .tut-title{font-size:12px;font-weight:600;color:var(--accent);margin-bottom:8px;}
 #tutTooltip .tut-body{color:var(--text);margin-bottom:12px;white-space:pre-line;}
@@ -407,7 +411,7 @@ hr.div{border:none;border-top:1px solid var(--border);margin:18px 0}
       <div style="font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--dim);text-transform:uppercase;letter-spacing:.08em;margin-bottom:8px;">Cosa iniettare nel prompt</div>
       <div class="tabs">
         <button class="tab active" id="refInjectBtn_fingerprint" onclick="setRefInject('fingerprint')" title="Inietta solo la logica (ragionamento clinico + lettera-modello sintetica) — leggero, pochi token">Solo logica</button>
-        <button class="tab" id="refInjectBtn_full" onclick="setRefInject('full')" title="Inietta la cartella clinica e la lettera completa del caso come esempio few-shot — più token, più contestuale">Cartella + Lettera</button>
+        <button class="tab" id="refInjectBtn_full" onclick="setRefInject('full')" title="Inietta la cartella clinica e la lettera completa del caso come riferimento — più token, più contestuale">Cartella + Lettera</button>
         <button class="tab" id="refInjectBtn_both" onclick="setRefInject('both')" title="Inietta sia la logica nel system prompt che la cartella e lettera nel turno utente — massima qualità, più token">Entrambi</button>
       </div>
     </div>
@@ -583,8 +587,8 @@ hr.div{border:none;border-top:1px solid var(--border);margin:18px 0}
       <span class="spin" id="verifSpin" style="display:none;"></span>
       ✦ Verifica con AI
     </button>
-    <button class="btn btn-g" onclick="copyVerificaPrompt()" title="Copia il prompt di verifica negli appunti per incollarlo manualmente in Claude.ai o altra AI">⎘ Copia prompt di verifica per AI esterna</button>
-    <button class="btn btn-g" onclick="togglePasteVerifica()" title="Incolla il risultato JSON della verifica copiato dalla chat AI esterna">📋 Incolla risultato verifica AI esterna</button>
+    <button class="btn btn-g" id="btnCopyVerifExt" onclick="copyVerificaPrompt()" title="Copia il prompt di verifica negli appunti per incollarlo manualmente in Claude.ai o altra AI">⎘ Copia prompt di verifica per AI esterna</button>
+    <button class="btn btn-g" id="btnPasteVerifExt" onclick="togglePasteVerifica()" title="Incolla il risultato JSON della verifica copiato dalla chat AI esterna">📋 Incolla risultato verifica AI esterna</button>
     <div id="verifStats" style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--dim);margin-left:4px;"></div>
   </div>
   <!-- Paste verifica result panel -->
@@ -803,7 +807,7 @@ hr.div{border:none;border-top:1px solid var(--border);margin:18px 0}
     </div>
     <textarea id="caseEditFolder" rows="8" placeholder="Cartella clinica anonimizzata..." oninput="updateCaseEditTok()"></textarea>
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:5px;margin-top:16px;">
-      <label style="margin:0;">Lettera di Dimissione <span style="color:var(--dim);font-size:9px;text-transform:none;letter-spacing:0;">(few-shot)</span></label>
+      <label style="margin:0;">Lettera di Dimissione</label>
       <span id="caseEditLetterTok" style="font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--dim);"></span>
     </div>
     <textarea id="caseEditLetter" rows="8" placeholder="Lettera di dimissione..." oninput="updateCaseEditTok()"></textarea>
@@ -3179,6 +3183,8 @@ function doLogout(){
   S.rawText=S.cleanText=S.anonText=S.letter='';
   S.activeTemplateId=null;S.activeWardId=null;
   S.currentUser=null;S.userPrefs=null;S.tempPrefs=null;
+  // Close tutorial if active
+  if(typeof tutorialClose === 'function') tutorialClose();
   updateAdminVisibility();
   updateTopbarUsername();
   document.getElementById('loginScreen').style.display='flex';
@@ -7238,6 +7244,8 @@ const TUTORIAL_STEPS = [
   { panel:2, target:'#btnCopyExt', title:'AI esterna (gratis)', text:'Copia il prompt e incollalo in Claude.ai o altra AI gratuita.' },
   { panel:2, target:'#btnPasteExt', title:'Incolla risposta', text:'Dopo aver generato la lettera con l\'AI esterna, incolla qui la risposta.' },
   { panel:3, target:'#verifBtn', title:'Verifica', text:'Confronta la lettera con la cartella. Codici colore: rosso = contraddice, arancio = assente, giallo = inferenza.' },
+  { panel:3, target:'#btnCopyVerifExt', title:'Verifica con AI esterna', text:'Copia il prompt di verifica per incollarlo in Claude.ai o altra AI gratuita.' },
+  { panel:3, target:'#btnPasteVerifExt', title:'Incolla risultato verifica', text:'Dopo aver verificato con l\'AI esterna, incolla qui il risultato JSON per vedere le segnalazioni evidenziate.' },
   { panel:4, target:'#exportButtonsRow', title:'Esporta', text:'Salva RTF o copia il testo per incollarlo in Galileo.' }
 ];
 
@@ -7251,9 +7259,24 @@ function tutorialStart(){
     if(!confirm('Avviare il tutorial?\n\nTi guiderà attraverso tutte le sezioni dell\'app.')) return;
   }
   _tutIdx = 0;
-  // Populate jump dropdown
+  // Populate jump dropdown — only show first step of each panel with section title
+  const PANEL_TITLES = {
+    0: 'Caricamento Cartella',
+    1: 'Anonimizzazione',
+    2: 'Generazione Lettera',
+    3: 'Verifica Lettera',
+    4: 'Esportazione'
+  };
+  const seenPanels = new Set();
+  const jumpOptions = [];
+  TUTORIAL_STEPS.forEach((s, i) => {
+    if(!seenPanels.has(s.panel) && PANEL_TITLES[s.panel]){
+      seenPanels.add(s.panel);
+      jumpOptions.push(`<option value="${i}">${PANEL_TITLES[s.panel]}</option>`);
+    }
+  });
   const sel = document.getElementById('tutJumpSel');
-  sel.innerHTML = '<option value="">Salta a…</option>' + TUTORIAL_STEPS.map((s,i)=>`<option value="${i}">${i+1}. ${s.title}</option>`).join('');
+  sel.innerHTML = '<option value="">Salta a…</option>' + jumpOptions.join('');
   // Keyboard: Esc to close
   _tutKeyHandler = (e) => {
     if(e.key === 'Escape') tutorialClose();
@@ -7272,6 +7295,8 @@ function tutorialClose(){
   document.getElementById('tutOverlay').classList.remove('active');
   document.getElementById('tutTooltip').style.display = 'none';
   document.getElementById('tutHighlight').style.display = 'none';
+  hideTutorialMasks();
+  restoreTutorialTarget();
   if(_tutKeyHandler){ document.removeEventListener('keydown', _tutKeyHandler); _tutKeyHandler=null; }
   if(_tutResizeHandler){
     window.removeEventListener('resize', _tutResizeHandler);
@@ -7330,11 +7355,21 @@ function tutorialRenderStep(idx){
     tooltip.style.display = 'block';
 
     if(!target){
-      // No target: center tooltip
+      // No target: center tooltip, cover full screen with masks
       highlight.style.display = 'none';
       tooltip.style.left = '50%';
       tooltip.style.top = '50%';
       tooltip.style.transform = 'translate(-50%, -50%)';
+      // Make top mask cover entire viewport, hide others
+      const top = document.getElementById('tutMaskTop');
+      top.style.height = '100vh';
+      top.style.width = '100vw';
+      top.style.clipPath = 'none';
+      ['tutMaskBottom','tutMaskLeft','tutMaskRight'].forEach(id => {
+        const el = document.getElementById(id);
+        if(el){ el.style.width='0'; el.style.height='0'; }
+      });
+      restoreTutorialTarget();
       return;
     }
     tooltip.style.transform = '';
@@ -7351,6 +7386,10 @@ function tutorialRenderStep(idx){
       highlight.style.top = (rect.top - pad) + 'px';
       highlight.style.width = (rect.width + pad*2) + 'px';
       highlight.style.height = (rect.height + pad*2) + 'px';
+
+      // Block clicks everywhere except the highlighted target (which is elevated)
+      positionTutorialMasks(rect, pad);
+      elevateTutorialTarget(target);
 
       // Position tooltip near element (prefer below, fallback above)
       const tipRect = tooltip.getBoundingClientRect();
@@ -7369,6 +7408,67 @@ function tutorialRenderStep(idx){
   }, 60);
 }
 
+function positionTutorialMasks(rect, pad){
+  const vw = window.innerWidth, vh = window.innerHeight;
+  const top = document.getElementById('tutMaskTop');
+  top.style.top = '0';
+  top.style.left = '0';
+  top.style.right = '0';
+  top.style.width = '100vw';
+  top.style.height = '100vh';
+  // Cut a hole in the mask around the target using clip-path
+  if(rect && rect.width > 0 && rect.height > 0){
+    const l = Math.max(0, rect.left - pad);
+    const t = Math.max(0, rect.top - pad);
+    const r = Math.min(vw, rect.right + pad);
+    const b = Math.min(vh, rect.bottom + pad);
+    // Polygon going around the viewport then around the hole (evenodd fill rule)
+    top.style.clipPath = `polygon(0 0, 100% 0, 100% 100%, 0 100%, 0 ${t}px, ${l}px ${t}px, ${l}px ${b}px, ${r}px ${b}px, ${r}px ${t}px, 0 ${t}px)`;
+  }else{
+    top.style.clipPath = 'none';
+  }
+  // Hide the other masks
+  ['tutMaskBottom','tutMaskLeft','tutMaskRight'].forEach(id => {
+    const el = document.getElementById(id);
+    if(el){ el.style.width='0'; el.style.height='0'; el.style.clipPath='none'; }
+  });
+}
+
+function hideTutorialMasks(){
+  ['tutMaskTop','tutMaskBottom','tutMaskLeft','tutMaskRight'].forEach(id => {
+    const el = document.getElementById(id);
+    if(el){ el.style.width='0'; el.style.height='0'; }
+  });
+}
+
+// Track currently-elevated element so we can restore its z-index/position later
+let _tutHighlightedEl = null;
+let _tutOriginalStyle = null;
+
+function elevateTutorialTarget(el){
+  restoreTutorialTarget();
+  if(!el) return;
+  _tutHighlightedEl = el;
+  _tutOriginalStyle = {
+    position: el.style.position,
+    zIndex: el.style.zIndex
+  };
+  const computed = window.getComputedStyle(el);
+  if(computed.position === 'static'){
+    el.style.position = 'relative';
+  }
+  el.style.zIndex = '3003';
+}
+
+function restoreTutorialTarget(){
+  if(_tutHighlightedEl && _tutOriginalStyle){
+    _tutHighlightedEl.style.position = _tutOriginalStyle.position;
+    _tutHighlightedEl.style.zIndex = _tutOriginalStyle.zIndex;
+  }
+  _tutHighlightedEl = null;
+  _tutOriginalStyle = null;
+}
+
 // Update topbar username on login
 function updateTopbarUsername(){
   const el = document.getElementById('topbarUsername');
@@ -7380,6 +7480,10 @@ function updateTopbarUsername(){
 
 <!-- Tutorial Overlay -->
 <div id="tutOverlay">
+  <div class="tut-mask" id="tutMaskTop"></div>
+  <div class="tut-mask" id="tutMaskBottom"></div>
+  <div class="tut-mask" id="tutMaskLeft"></div>
+  <div class="tut-mask" id="tutMaskRight"></div>
   <div class="tut-highlight" id="tutHighlight" style="display:none;"></div>
 </div>
 <div id="tutTooltip" style="display:none;">
