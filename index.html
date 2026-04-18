@@ -1019,6 +1019,7 @@ hr.div{border:none;border-top:1px solid var(--border);margin:18px 0}
       <div class="ctitle" style="margin:0;">Account Esistenti</div>
       <button class="btn btn-g" style="font-size:10px;padding:6px 13px;" onclick="loadAccountsList()" title="Ricarica lista account">↻ Aggiorna</button>
     </div>
+    <input type="text" id="accSearchInput" placeholder="🔍 Cerca per username..." oninput="filterAccounts()" autocapitalize="off" autocorrect="off" spellcheck="false" style="margin-bottom:12px;font-size:12px;">
     <div id="accListStats" style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--dim);margin-bottom:12px;"></div>
     <div id="accList"></div>
     <div id="accListEmpty" style="display:none;" class="ib">Nessun account trovato.</div>
@@ -5467,8 +5468,11 @@ function updateAdminVisibility(){
 function resetNewAccountForm(){
   document.getElementById('newAccUser').value = '';
   document.getElementById('newAccPass').value = '';
-  document.getElementById('newAccApiKey').value = '';
-  document.getElementById('newAccGhToken').value = '';
+  // Re-inject session API key and GitHub token for next account creation
+  const sessionApiKey = document.getElementById('apiKeyInput')?.value?.trim() || '';
+  const sessionGhToken = document.getElementById('cfg_gh_token')?.value?.trim() || '';
+  document.getElementById('newAccApiKey').value = sessionApiKey;
+  document.getElementById('newAccGhToken').value = sessionGhToken;
   const st = document.getElementById('accCreateStatus');
   st.style.display = 'none';
 }
@@ -5574,6 +5578,25 @@ async function createNewAccount(){
   }
 }
 
+function filterAccounts(){
+  const input = document.getElementById('accSearchInput');
+  const query = (input?.value || '').trim().toLowerCase();
+  const cards = document.querySelectorAll('#accList .account-card');
+  let visibleCount = 0;
+  cards.forEach(card => {
+    const uname = card.getAttribute('data-username') || '';
+    const matches = !query || uname.includes(query);
+    card.style.display = matches ? '' : 'none';
+    if(matches) visibleCount++;
+  });
+  const statsEl = document.getElementById('accListStats');
+  const total = cards.length;
+  if(statsEl && total > 0){
+    if(query) statsEl.textContent = `${visibleCount}/${total} account (filtrati)`;
+    else statsEl.textContent = `${total} account`;
+  }
+}
+
 async function loadAccountsList(){
   const listEl = document.getElementById('accList');
   const emptyEl = document.getElementById('accListEmpty');
@@ -5598,13 +5621,15 @@ async function loadAccountsList(){
 
     sortedUsers.forEach(u => {
       const card = document.createElement('div');
+      card.className = 'account-card';
+      card.setAttribute('data-username', (u.username||'').toLowerCase());
       card.style.cssText = 'background:var(--surface2);border:1px solid var(--border);border-radius:var(--r);padding:12px 14px;margin-bottom:10px;';
       const createdDate = u.createdAt ? new Date(u.createdAt).toLocaleString('it-IT', { day:'2-digit', month:'short', year:'numeric' }) : '—';
       const isAdmin = ADMIN_USERS.includes(u.username);
       card.innerHTML = `
         <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;">
           <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
-            <span style="font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--accent);font-weight:500;">@${esc(u.username)}</span>
+            <span style="font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--accent);font-weight:500;">${esc(u.username)}</span>
             ${isAdmin ? '<span class="chip c-blue" style="font-size:9px;">admin</span>' : ''}
             <span style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--dim);">creato: ${createdDate}</span>
             ${u.createdBy ? `<span style="font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--dim);">da: ${esc(u.createdBy)}</span>` : ''}
@@ -5617,6 +5642,8 @@ async function loadAccountsList(){
       `;
       listEl.appendChild(card);
     });
+    // Re-apply current search filter, if any
+    filterAccounts();
   }catch(e){
     statsEl.textContent = '✗ Errore: '+e.message;
     statsEl.style.color = 'var(--red)';
