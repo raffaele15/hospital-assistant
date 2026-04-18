@@ -231,10 +231,10 @@ hr.div{border:none;border-top:1px solid var(--border);margin:18px 0}
       ondragover="event.preventDefault();this.style.borderColor='var(--accent)'"
       ondragleave="this.style.borderColor='var(--border)'"
       ondrop="handlePdfDrop(event)">
-      <input type="file" id="pdfFileInput" accept=".pdf" style="display:none;" onchange="handlePdfFile(event)">
+      <input type="file" id="pdfFileInput" accept=".pdf" multiple style="display:none;" onchange="handlePdfFile(event)">
       <div style="font-size:24px;margin-bottom:6px;color:var(--dim);">📁</div>
       <div style="font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--mid);">
-        <strong style="color:var(--text);">Clicca o trascina il PDF</strong>
+        <strong style="color:var(--text);">Clicca o trascina uno o più PDF</strong>
       </div>
     </div>
     <div id="pdfStatus" style="display:none;margin-top:10px;">
@@ -506,11 +506,16 @@ hr.div{border:none;border-top:1px solid var(--border);margin:18px 0}
       <div id="tokRows"><div style="font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--dim);">Completa gli Step 1–2 per vedere la stima.</div></div>
       <div id="genUsageInfo" style="display:none;margin-top:12px;" class="ib green"></div>
     </div>
+    <div class="btn-row" style="margin-top:14px;">
+      <button class="btn btn-p" id="genConfirmBtn" onclick="generateLetter()">
+        <span class="spin" id="genSpin" style="display:none;"></span>
+        Avanti → Genera con AI
+      </button>
+    </div>
   </div>
   <div class="btn-row">
     <button class="btn btn-g" onclick="goTo(1)">← Indietro</button>
-    <button class="btn btn-p" id="genBtn" onclick="generateLetter()">
-      <span class="spin" id="genSpin" style="display:none;"></span>
+    <button class="btn btn-p" id="genBtn" onclick="showGenSettings()">
       ✦ Genera Lettera con AI
     </button>
     <button class="btn btn-g" onclick="copyFull()" title="Copia negli appunti il prompt completo (system + user) — utile per incollarlo in Claude.ai o altra AI">⎘ Copia prompt per AI esterna</button>
@@ -1354,7 +1359,13 @@ function goTo(i) {
   document.getElementById('panel'+i).classList.add('active');
   document.getElementById('nav'+i).classList.add('active');
   
-  if (i === 2) { refreshPrompt(); updateTokenPanel(); }
+  if (i === 2) {
+    // Sync anonText from panel 1 textarea in case user navigates via menu
+    const anonEl = document.getElementById('anonText');
+    if(anonEl && anonEl.value.trim()) S.anonText = anonEl.value;
+    updateTokenPanel();
+    setTimeout(refreshPrompt, 0);
+  }
   if (i === 3) updateVerifTokenPanel();
   if (i === 5) updateLocalStorageStats();
   if (i === 6) renderLibrary();
@@ -2872,8 +2883,22 @@ async function ensurePdfJs(){
     document.head.appendChild(s);
   });
 }
-function handlePdfDrop(e){e.preventDefault();document.getElementById('pdfDropzone').style.borderColor='var(--border)';const f=e.dataTransfer.files[0];if(f&&f.type==='application/pdf')processPdf(f);else alert('Carica un PDF.');}
-function handlePdfFile(e){const f=e.target.files[0];if(f)processPdf(f);}
+function handlePdfDrop(e){
+  e.preventDefault();
+  document.getElementById('pdfDropzone').style.borderColor='var(--border)';
+  const files=Array.from(e.dataTransfer.files).filter(f=>f.type==='application/pdf');
+  if(files.length===0){alert('Carica uno o più PDF.');return;}
+  processPdfs(files);
+}
+function handlePdfFile(e){
+  const files=Array.from(e.target.files);
+  if(files.length) processPdfs(files);
+}
+async function processPdfs(files){
+  for(const f of files){
+    await processPdf(f);
+  }
+}
 async function processPdf(file){
   const spin=document.getElementById('pdfSpin'),stxt=document.getElementById('pdfStatusTxt'),
     bar=document.getElementById('pdfBar'),status=document.getElementById('pdfStatus');
@@ -3685,7 +3710,7 @@ function proceedToGenerate(){
   if(!S.anonText.trim()){alert('Nessun testo. Torna allo Step 1.');return;}
   if(!document.getElementById('systemPrompt').value.trim())
     document.getElementById('systemPrompt').value=DEFAULT_SYS;
-  goTo(2);updateRagPreview();updateAutoRefInfo();
+  goTo(2);updateRagPreview();updateAutoRefInfo();refreshPrompt();
 }
 
 // ═══════════════════════════════════════════════════
@@ -3708,14 +3733,22 @@ function hideGenOverlay(){
   if(_genTimerInterval){clearInterval(_genTimerInterval);_genTimerInterval=null;}
 }
 
+function showGenSettings(){
+  if(!S.anonText){showErr('Nessun testo anonimizzato.');return;}
+  document.getElementById('genSettingsPanel').style.display='block';
+  updateTokenPanel();
+  // Scroll to the settings panel so user sees it
+  setTimeout(()=>{
+    const panel=document.getElementById('genSettingsPanel');
+    if(panel && panel.scrollIntoView) panel.scrollIntoView({behavior:'smooth', block:'start'});
+  },50);
+}
+
 async function generateLetter(){
   const key=document.getElementById('apiKeyInput').value.trim();
   if(!key){showErr('Inserisci la API key Anthropic.');return;}
   if(!S.anonText){showErr('Nessun testo anonimizzato.');return;}
-  // Show generation settings panel (model, temperature, cost)
-  document.getElementById('genSettingsPanel').style.display='block';
-  updateTokenPanel();
-  const btn=document.getElementById('genBtn'),spin=document.getElementById('genSpin');
+  const btn=document.getElementById('genConfirmBtn'),spin=document.getElementById('genSpin');
   btn.disabled=true;spin.style.display='inline-block';
   showGenOverlay();
   document.getElementById('genErr').style.display='none';
