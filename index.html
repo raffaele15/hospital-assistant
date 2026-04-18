@@ -5150,7 +5150,21 @@ async function ghApiGet(cfg){
         try{
           const dl=await fetch(meta.download_url,{headers:{Authorization:`token ${cfg.token}`}});
           if(dl.ok){
-            meta._rawText = await dl.text();
+            const text = await dl.text();
+            let looksLikeMetadata = false;
+            if(text && text.trimStart().startsWith('{')){
+              try{
+                const maybeMeta = JSON.parse(text);
+                // GitHub metadata response always has sha + path + url
+                looksLikeMetadata = maybeMeta && typeof maybeMeta === 'object' && !Array.isArray(maybeMeta)
+                  && 'sha' in maybeMeta && 'path' in maybeMeta && 'url' in maybeMeta;
+              }catch(_){}
+            }
+            if(looksLikeMetadata){
+              console.warn('download_url returned metadata — ignoring');
+            } else {
+              meta._rawText = text;
+            }
           } else {
             console.warn('download_url HTTP',dl.status);
           }
@@ -5159,10 +5173,22 @@ async function ghApiGet(cfg){
       // Try raw content API as last resort
       if(!meta._rawText){
         try{
-          const rawUrl=`https://api.github.com/repos/${cfg.repo}/contents/${cfg.path}`;
-          const raw=await fetch(rawUrl,{headers:{Authorization:`token ${cfg.token}`,'Accept':'application/vnd.github.v3.raw'}});
+          const raw=await fetch(url,{headers:{Authorization:`token ${cfg.token}`,'Accept':'application/vnd.github.v3.raw'}});
           if(raw.ok){
-            meta._rawText = await raw.text();
+            const text = await raw.text();
+            let looksLikeMetadata = false;
+            if(text && text.trimStart().startsWith('{')){
+              try{
+                const maybeMeta = JSON.parse(text);
+                looksLikeMetadata = maybeMeta && typeof maybeMeta === 'object' && !Array.isArray(maybeMeta)
+                  && 'sha' in maybeMeta && 'path' in maybeMeta && 'url' in maybeMeta;
+              }catch(_){}
+            }
+            if(looksLikeMetadata){
+              console.warn('raw API returned metadata — ignoring');
+            } else {
+              meta._rawText = text;
+            }
           } else {
             console.warn('raw API HTTP',raw.status);
           }
