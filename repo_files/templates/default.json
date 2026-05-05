@@ -1,0 +1,30 @@
+{
+  "id": "default",
+  "name": "Dimissione standard a domicilio",
+  "scenario": "dimissione_domicilio",
+  "intestazione": "Alla cortese attenzione del Medico Curante",
+  "saluto": "Egregi Colleghi,",
+  "apertura": "dimettiamo in data odierna il/la sig./sig.ra [PAZIENTE_NOME], di anni [ETÀ] ([DATA_NASCITA]), ricoverato/a presso il nostro reparto in data [DATA_INGRESSO], con diagnosi di:",
+  "ordine_sezioni": [
+    "diagnosi_quotata",
+    "anamnesi_patologica_remota",
+    "terapia_domiciliare",
+    "motivo_ricovero",
+    "ricoveri_precedenti",
+    "eo_neurologico_ingresso",
+    "eo_generale_ingresso",
+    "esami_ematochimici",
+    "indagini_strumentali",
+    "decorso_clinico",
+    "eo_neurologico_dimissione",
+    "terapia_dimissione",
+    "visite_controllo",
+    "raccomandazioni"
+  ],
+  "chiusura": "Rimaniamo a disposizione e porgiamo cordiali saluti.",
+  "firma_specializzando_label": "[NOME_SPECIALIZZANDO]",
+  "firma_dirigente_label": "[NOME_DIRIGENTE]",
+  "firma_ruolo_sx": "Medico in formazione specialistica",
+  "firma_ruolo_dx": "Dirigente medico",
+  "createdAt": "2026-04-25T22:50:00Z"
+}
