@@ -255,8 +255,10 @@ hr.div{border:none;border-top:1px solid var(--border);margin:18px 0}
   <div class="ns" style="margin-top:14px;">Strumenti</div>
   <button class="ni" onclick="goTo(6)" id="nav6"><span class="sn">📚</span>Libreria Casi</button>
   <button class="ni" onclick="goTo(5)" id="nav5"><span class="sn">⚙</span>Impostazioni</button>
+  <button class="ni" onclick="goTo(11)" id="nav11"><span class="sn">✦</span>Mie personalizzazioni</button>
   <button class="ni" onclick="goTo(7)" id="nav7"><span class="sn">⚠</span>Segnala Errori</button>
   <button class="ni" onclick="goTo(8)" id="nav8" style="display:none;"><span class="sn">📋</span>Segnalazioni</button>
+  <button class="ni" onclick="goTo(10)" id="nav10" style="display:none;"><span class="sn">📝</span>Editor Prompt</button>
   <button class="ni" onclick="goTo(9)" id="nav9" style="display:none;"><span class="sn">👥</span>Accounts</button>
 </aside>
 
@@ -324,7 +326,7 @@ hr.div{border:none;border-top:1px solid var(--border);margin:18px 0}
 <!-- ═══ STEP 2 ═══ -->
 <div class="panel" id="panel1">
   <div class="ptitle">Anonimizza Dati</div>
-  <div id="anonStatus" class="card" style="display:flex;align-items:center;gap:10px;padding:12px 14px;">
+  <div id="anonStatus" class="card" style="display:none;align-items:center;gap:10px;padding:12px 14px;">
     <span class="spin" id="anonSpin" style="display:none;"></span>
     <span id="anonStatusTxt" style="font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--mid);">Pronto.</span>
   </div>
@@ -425,9 +427,8 @@ hr.div{border:none;border-top:1px solid var(--border);margin:18px 0}
     <div id="refCaseInjectRow" style="margin-top:8px;padding-top:10px;border-top:1px solid var(--border);">
       <div style="font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--dim);text-transform:uppercase;letter-spacing:.08em;margin-bottom:8px;">Cosa iniettare nel prompt</div>
       <div class="tabs">
-        <button class="tab active" id="refInjectBtn_fingerprint" onclick="setRefInject('fingerprint')" title="Inietta solo la logica (ragionamento clinico + lettera-modello sintetica) — leggero, pochi token">Solo logica</button>
+        <button class="tab active" id="refInjectBtn_fingerprint" onclick="setRefInject('fingerprint')" title="Inietta solo il decorso (ragionamento clinico + lettera-modello sintetica) — leggero, pochi token">Solo decorso</button>
         <button class="tab" id="refInjectBtn_full" onclick="setRefInject('full')" title="Inietta la cartella clinica e la lettera completa del caso come riferimento — più token, più contestuale">Cartella + Lettera</button>
-        <button class="tab" id="refInjectBtn_both" onclick="setRefInject('both')" title="Inietta sia la logica nel system prompt che la cartella e lettera nel turno utente — massima qualità, più token">Entrambi</button>
       </div>
     </div>
     <!-- Status line -->
@@ -1063,6 +1064,131 @@ hr.div{border:none;border-top:1px solid var(--border);margin:18px 0}
   </div>
 </div>
 
+<!-- ═══ PANEL 10: Editor Prompt + Template (admin only) ═══ -->
+<div class="panel" id="panel10">
+  <div class="ptitle">Editor Prompt + Template (admin)</div>
+
+  <div class="card">
+    <div class="ctitle">Prompt Globali</div>
+    <div style="font-size:11px;color:var(--mid);margin-bottom:12px;">
+      Questi prompt vengono caricati dal repository <code>hospital-assistant-data/prompts/</code> all'avvio dell'app.
+      Le modifiche salvate qui vengono committate sul repo e diventano visibili a tutti gli utenti al loro prossimo login.
+    </div>
+
+    <div style="display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap;">
+      <button class="btn btn-g" onclick="reloadPromptsFromRepoUI()" id="reloadPromptsBtn" title="Forza il ricaricamento dei prompt dal repo (bypass cache)">
+        <span class="spin" id="reloadPromptsSpin" style="display:none;"></span>
+        ↻ Ricarica da repo
+      </button>
+      <div id="promptVersionInfo" style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--dim);align-self:center;"></div>
+    </div>
+
+    <!-- Tabs for prompt selection -->
+    <div class="tabs" style="margin-bottom:12px;">
+      <button class="tab active" id="promptTabBtn_DEFAULT_SYS" onclick="switchPromptEditor('DEFAULT_SYS')">Prompt di sistema</button>
+      <button class="tab" id="promptTabBtn_FINGERPRINT_PROMPT_V3" onclick="switchPromptEditor('FINGERPRINT_PROMPT_V3')">Prompt estrazione decorso</button>
+      <button class="tab" id="promptTabBtn_VERIFICA_SYSTEM" onclick="switchPromptEditor('VERIFICA_SYSTEM')">Prompt verifica</button>
+    </div>
+
+    <div id="promptEditorMeta" style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--dim);margin-bottom:6px;"></div>
+    <textarea id="promptEditorTextarea" rows="22" style="font-family:'JetBrains Mono',monospace;font-size:11px;width:100%;"></textarea>
+    <div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap;">
+      <button class="btn btn-p" onclick="savePromptEditor()" id="savePromptBtn">
+        <span class="spin" id="savePromptSpin" style="display:none;"></span>
+        💾 Salva su repo
+      </button>
+      <button class="btn btn-g" onclick="resetPromptEditorToEmbedded()" title="Resetta il contenuto del campo al fallback embedded (NON salva ancora)">⟲ Resetta a default embedded</button>
+      <button class="btn btn-g" onclick="discardPromptEditorChanges()" title="Scarta le modifiche e ricarica il valore corrente">✕ Scarta modifiche</button>
+    </div>
+    <div id="savePromptStatus" style="margin-top:10px;font-family:'JetBrains Mono',monospace;font-size:11px;display:none;"></div>
+  </div>
+
+  <div class="card">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;flex-wrap:wrap;gap:8px;">
+      <div class="ctitle" style="margin:0;">Libreria Template Lettera</div>
+      <button class="btn btn-p" onclick="newLibraryTemplate()" style="font-size:11px;">+ Nuovo template</button>
+    </div>
+    <div style="font-size:11px;color:var(--mid);margin-bottom:12px;">
+      Template condivisi per tutti gli utenti. Salvati in <code>hospital-assistant-data/templates/</code>.
+    </div>
+    <div id="libraryTemplatesList"></div>
+  </div>
+</div>
+
+<!-- ═══ PANEL 11: Mie personalizzazioni (every user) ═══ -->
+<div class="panel" id="panel11">
+  <div class="ptitle">Mie personalizzazioni</div>
+
+  <div class="card">
+    <div class="ctitle">Aggiunte personali alle regole (override additivo)</div>
+    <div style="font-size:11px;color:var(--mid);margin-bottom:10px;">
+      Aggiungi qui regole, preferenze stilistiche o frasi che vuoi sempre nelle tue lettere. Vengono <strong>aggiunte</strong> alle regole standard, non le sostituiscono. Esempi:
+      <ul style="margin:6px 0 0 18px;font-size:11px;color:var(--mid);">
+        <li>"Per FA cronica: includere sempre HAS-BLED nel decorso"</li>
+        <li>"Preferenza stilistica: 'in considerazione di' invece di 'alla luce di'"</li>
+        <li>"Aggiungere sempre raccomandazione su controllo pressorio domiciliare"</li>
+      </ul>
+    </div>
+    <textarea id="userOverrideTextarea" rows="10" placeholder="AGGIUNTE PERSONALI:&#10;- ..." style="font-size:11px;width:100%;"></textarea>
+    <div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap;">
+      <button class="btn btn-p" onclick="saveUserOverride()" id="saveUserOverrideBtn">
+        <span class="spin" id="saveUserOverrideSpin" style="display:none;"></span>
+        💾 Salva
+      </button>
+      <button class="btn btn-g" onclick="discardUserOverrideChanges()">✕ Scarta modifiche</button>
+    </div>
+    <div id="saveUserOverrideStatus" style="margin-top:10px;font-family:'JetBrains Mono',monospace;font-size:11px;display:none;"></div>
+  </div>
+
+  <div class="card">
+    <div class="ctitle">Mio template di lettera</div>
+    <div style="font-size:11px;color:var(--mid);margin-bottom:10px;">
+      Scegli un template di base dalla libreria e personalizza intestazione, saluto, apertura, chiusura, firma e ordine delle sezioni. Per la firma usa solo placeholder come <code>[NOME_SPECIALIZZANDO]</code> per privacy.
+    </div>
+
+    <label>Template di base</label>
+    <select id="userTplBaseSelect" onchange="onUserTplBaseChange()" style="margin-bottom:14px;"></select>
+
+    <label>Intestazione (a chi è indirizzata la lettera)</label>
+    <input type="text" id="userTplIntestazione" placeholder="Alla cortese attenzione del Medico Curante" style="margin-bottom:10px;">
+
+    <label>Saluto (riga prima dell'apertura)</label>
+    <input type="text" id="userTplSaluto" placeholder="Egregi Colleghi," style="margin-bottom:10px;">
+
+    <label>Apertura (testo dopo il saluto, prima della diagnosi)</label>
+    <textarea id="userTplApertura" rows="3" style="margin-bottom:10px;"></textarea>
+
+    <label>Chiusura</label>
+    <input type="text" id="userTplChiusura" placeholder="Rimaniamo a disposizione e porgiamo cordiali saluti." style="margin-bottom:10px;">
+
+    <label>Firma — colonna sinistra (placeholder)</label>
+    <input type="text" id="userTplFirmaSx" placeholder="[NOME_SPECIALIZZANDO]" style="margin-bottom:6px;">
+    <label style="font-size:9px;color:var(--dim);">Ruolo colonna sinistra</label>
+    <input type="text" id="userTplRuoloSx" placeholder="Medico in formazione specialistica" style="margin-bottom:10px;">
+
+    <label>Firma — colonna destra (placeholder)</label>
+    <input type="text" id="userTplFirmaDx" placeholder="[NOME_DIRIGENTE]" style="margin-bottom:6px;">
+    <label style="font-size:9px;color:var(--dim);">Ruolo colonna destra</label>
+    <input type="text" id="userTplRuoloDx" placeholder="Dirigente medico" style="margin-bottom:14px;">
+
+    <label>Ordine delle sezioni della lettera (trascina per riordinare)</label>
+    <div style="font-size:10px;color:var(--dim);margin-bottom:6px;">
+      Toggle la checkbox per includere/escludere una sezione. Le sezioni ricoveri precedenti vengono auto-saltate se la cartella non documenta ricoveri precedenti.
+    </div>
+    <div id="userTplSectionsList" style="border:1px solid var(--border);border-radius:var(--r);padding:6px;background:var(--bg-soft);"></div>
+
+    <div style="display:flex;gap:8px;margin-top:14px;flex-wrap:wrap;">
+      <button class="btn btn-p" onclick="saveUserTemplate()" id="saveUserTemplateBtn">
+        <span class="spin" id="saveUserTemplateSpin" style="display:none;"></span>
+        💾 Salva mio template
+      </button>
+      <button class="btn btn-g" onclick="resetMyUserTemplate()" title="Riporta il template al default (cancella le tue personalizzazioni dal repo)">⟲ Resetta a default</button>
+      <button class="btn btn-g" onclick="discardUserTemplateChanges()">✕ Scarta modifiche</button>
+    </div>
+    <div id="saveUserTemplateStatus" style="margin-top:10px;font-family:'JetBrains Mono',monospace;font-size:11px;display:none;"></div>
+  </div>
+</div>
+
 </main>
 </div>
 
@@ -1219,6 +1345,14 @@ async function doLogin(){
       }catch(e){console.warn('Auto-pull dopo login fallito:',e.message);}
       // Load user preferences
       try{ await loadUserPreferences(); }catch(e){console.warn('Load preferences fallito:',e.message);}
+      // Load prompts from repo (with embedded fallback)
+      try{ await bootstrapPrompts(); }catch(e){console.warn('Bootstrap prompts fallito:',e.message);}
+      // Load templates from repo
+      try{ await bootstrapTemplates(); }catch(e){console.warn('Bootstrap templates fallito:',e.message);}
+      // Load user override (additive rules)
+      try{ await loadUserOverride(); }catch(e){console.warn('Load user override fallito:',e.message);}
+      // Load user template (selected template + customizations)
+      try{ await loadUserTemplate(); }catch(e){console.warn('Load user template fallito:',e.message);}
     }
     updateAdminVisibility();
     updateTopbarUsername();
@@ -1299,223 +1433,334 @@ async function handleApiError(resp) {
   throw new Error(mapApiError(resp, errBody));
 }
 
-const DEFAULT_SYS = `Sei il sistema di generazione delle lettere di dimissione ospedaliere italiane.
-Il reparto e il contesto clinico dipendono dal template e dal fingerprint selezionati.
-Scrivi in italiano formale clinico. Restituisci SOLO la lettera, senza preamboli, commenti o spiegazioni.
-I placeholder [PAZIENTE_NOME], [DATA_NASCITA] e [REPARTO] rimarranno nella lettera generata e verranno sostituiti offline dal sistema locale dopo la generazione.
+// NOTE: DEFAULT_SYS is `let` (not `const`) so bootstrapPrompts() can override it
+// from repo at app startup. Initial value is the embedded fallback.
+let DEFAULT_SYS = `Sei un assistente clinico esperto specializzato nella generazione di lettere di dimissione e trasferimento in italiano per reparti ospedalieri italiani. Il tuo compito è produrre una lettera completa, accurata e formattata seguendo le regole sotto.
 
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-REGOLE ASSOLUTE — inviolabili, nessun fingerprint le sovrascrive
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Per dati assenti dalla cartella clinica, scrivi "Non documentato." — MAI inventare informazioni cliniche.
 
-- Non inventare, inferire o aggiungere dati non esplicitamente presenti nell'input.
-- Non aggiungere diagnosi, valori di laboratorio, farmaci, dosi o date non forniti.
-- Se una sezione è prevista ma i dati mancano: "Non documentato."
-- Usa [REPARTO] esattamente come appare nel template — non sostituirlo con valori reali.
-- Usa SEMPRE il passato prossimo per tutti gli eventi del ricovero ("ha eseguito", "è stata avviata", "ha presentato", "è stato sottoposto", "è stata documentata"). MAI il passato remoto ("fu ricoverato") e MAI l'imperfetto narrativo ("veniva ricoverato", "si procedeva"). Unica eccezione: il presente per lo stato alla dimissione ("deambula", "si alimenta").
-- Restituisci SOLO la lettera, senza testo prima o dopo.
-- FORMATTAZIONE: riproduci ESATTAMENTE la spaziatura del template. Una riga vuota di separazione tra ogni sezione (anamnesi, terapia domiciliare, motivo del ricovero, EON, EOG, esami, accertamenti, decorso, obiettività alla dimissione, terapia). Una riga vuota PRIMA e DOPO la diagnosi tra virgolette. MAI due o più righe vuote consecutive. NON aggiungere righe vuote dentro le sezioni (es. dentro il decorso clinico o dentro gli esami). Il risultato deve avere la stessa densità del template.
-- GRASSETTO: ogni intestazione di sezione deve essere in grassetto con asterischi correttamente aperti e chiusi: **Intestazione:** (due asterischi prima, due dopo, seguiti da due punti). MAI lasciare asterischi spaiati. La diagnosi tra virgolette VA in grassetto: **"diagnosi"**.
-- ELENCHI: usa sempre il trattino lungo (–) come bullet per TUTTI gli elenchi: esami del Pronto Soccorso, esami di laboratorio, accertamenti strumentali, consulenze e raccomandazioni. MAI usare il simbolo > in nessun punto della lettera.
+Restituisci SOLO la lettera, senza preamboli, commenti o spiegazioni.
 
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-GERARCHIA DELLE ISTRUZIONI
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+═══════════════════════════════════════════════════════════════
+REGOLE GENERALI
+═══════════════════════════════════════════════════════════════
 
-1. REGOLE ASSOLUTE — sempre applicate, non sovrascrivibili
-2. Fingerprint (ragionamento, stile, frasi chiave) — guida lo stile e la struttura
-3. Questo documento — default per tutto ciò che il fingerprint non specifica
-4. Template lettera — struttura e sequenza delle sezioni
-5. Dati clinici — contenuto effettivo
+LINGUA: italiano clinico formale.
 
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-STRUTTURA
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+DISCORSO INDIRETTO: il motivo del ricovero, gli accessi pregressi, le valutazioni esterne e ogni evento storico vanno SEMPRE in discorso indiretto ("la moglie riferiva", "veniva sottoposto a", "alla rivalutazione presentava...", "i sanitari documentavano..."). Mai discorso diretto.
 
-- Segui esattamente la sequenza di sezioni del template fornito nel prompt utente.
-- Non aggiungere sezioni non previste dal template.
-- Se una sezione è prevista ma i dati mancano: "Non documentato."
-- Gli esami strumentali eseguiti ma non elencati nel template vanno comunque inclusi nella sezione accertamenti, in coda alla lista prevista.
+ELENCHI: usa il trattino lungo "–" come bullet per TUTTI gli elenchi (esami del Pronto Soccorso, esami di laboratorio, accertamenti strumentali, consulenze, raccomandazioni). MAI il simbolo ">" in nessun punto della lettera.
 
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-PROVENIENZA DA ALTRO REPARTO (riconoscimento automatico)
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+DATI MANCANTI: scrivi "Non documentato." Non inventare valori, dosaggi, tempistiche o reperti.
 
-Se dalla cartella clinica emerge che il paziente è stato prima ricoverato in un altro reparto (es. Pronto Soccorso → altro reparto → il nostro reparto), devi riconoscerlo automaticamente e adattare la lettera:
+PLACEHOLDERS: usa [PAZIENTE_NOME] al posto del nome del paziente, [DATA_NASCITA] al posto della data di nascita, [REPARTO] al posto del reparto, [CITTA] al posto della città. Verranno sostituiti automaticamente in fase di esportazione.
 
-1. Nell'intestazione, menziona il trasferimento: "...trasferito presso il nostro Reparto in data [DATA_TRASF] u.s. dal [REPARTO_PROVENIENZA] dove era stato ricoverato dal [DATA_RIC_ORIGINALE] u.s."
-2. Dopo il motivo del ricovero e la sezione Pronto Soccorso, aggiungi una sezione dedicata al reparto di provenienza:
-   - "**In [REPARTO_PROVENIENZA] ha eseguito:**" con gli accertamenti eseguiti lì
-   - "**Decorso in [REPARTO_PROVENIENZA]:**" con sintesi del decorso in quel reparto
-3. Poi prosegui con l'ingresso nel nostro reparto: parametri vitali, EON, esami, decorso, ecc.
+SOTTOLINEATURE: usa <u>...</u> SOLO per i valori ematochimici patologici (nome esame + valore, NON il range tra parentesi). Esempio: "<u>Emoglobina 102 g/L</u> (v.n. 140-175)". MAI sottolineare reperti di indagini strumentali.
 
-Se NON ci sono evidenze di provenienza da altro reparto (il paziente è arrivato direttamente dal PS o è un ricovero diretto), NON aggiungere queste sezioni — segui il template standard.
+SOSPENSIONI FARMACI: documenta SEMPRE la motivazione della sospensione di un farmaco nel decorso clinico ("è stata sospesa la [farmaco] per [motivo]").
 
-Indicatori tipici di provenienza da altro reparto nell'input:
-- Menzioni di "trasferito da", "proveniente da", "degenza presso", "in carico a"
-- Diari clinici con intestazione di un reparto diverso dal nostro
-- Date di accertamenti eseguiti prima dell'ingresso nel nostro reparto ma dopo il PS
-- Valutazioni specialistiche richieste da un altro reparto
+═══════════════════════════════════════════════════════════════
+INTERPRETAZIONE DELLE NOTE DI DIARIO CLINICO
+═══════════════════════════════════════════════════════════════
 
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-CRITERI DI SELEZIONE
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Le note di diario clinico (entries quotidiane di reparto) sono fonte legittima di informazione per la lettera, accanto a esami strumentali e referti specialistici. Il loro trattamento corretto è il seguente:
 
-Il destinatario è il medico curante territoriale. Includi solo ciò che è utile per la gestione del paziente dopo la dimissione.
+CONTENUTI DA ESTRARRE DAI DIARI:
 
-INCLUDI sempre:
-- La diagnosi principale con meccanismo eziopatogenetico se identificato nell'input.
-- Tutti gli esami di laboratorio eseguiti, secondo il formato della sezione ESAMI DI LABORATORIO.
-- Tutti gli accertamenti strumentali eseguiti con data e conclusione del referto.
-- Le decisioni terapeutiche con la motivazione clinica esplicita.
-- Il follow-up pianificato con data, ora e sede esatti se presenti nell'input.
-- Se i parametri vitali mostrano alterazioni significative: menziona l'evento nel decorso clinico con le conseguenze terapeutiche che ne sono derivate.
+1. SINTOMI/SEGNI INTERCORRENTI: episodi di cefalea, dolore toracico, dispnea, sintomi neurologici transitori, episodi di agitazione/confusione/delirium, vomito, febbre.
 
-DIAGNOSI PRINCIPALE:
-- Riporta SOLO la diagnosi principale del ricovero attuale (diagnosi di dimissione), ovvero il motivo per cui il paziente è stato ricoverato e il quadro clinico principale identificato durante la degenza.
-- NON includere nella diagnosi le comorbilità croniche, la storia patologica remota, o condizioni pre-esistenti — queste vanno in "In anamnesi".
-- Se il campo diagnosi non è specificato dall'utente ([DIAGNOSI_PRINCIPALE]), costruiscila leggendo solo la diagnosi di dimissione nell'input, non l'APR.
-- Esempio corretto: "Minor stroke ischemico in territorio ACM sinistra con lesione subacuta postcentrale, in paziente con fibrillazione atriale permanente."
-- Esempio SBAGLIATO: includere CABG pregresso, bioprotesi mitralica, anemia, ipertensione, dislipidemia nella diagnosi principale.
+2. STATI CLINICI PERSISTENTI: delirium (iperattivo/ipoattivo), agitazione psicomotoria, disturbo del tono dell'umore (depressione, apatia), insonnia persistente, disorientamento, allucinazioni, dolore cronico — questi quadri spesso non hanno un esame "che li certifica" ma sono documentati attraverso osservazioni ripetute.
 
-OMETTI:
-- Dettagli procedurali di routine senza rilevanza per il curante.
-- Ripetizioni di informazioni già presenti in altre sezioni.
+3. EVENTI AVVERSI: reazioni allergiche, effetti collaterali farmacologici, complicanze procedurali, cadute, lesioni cutanee.
 
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-ESAME OBIETTIVO NEUROLOGICO (EON)
+4. DECISIONI TERAPEUTICHE NON DOCUMENTATE ALTROVE: introduzione di farmaci sintomatici (analgesici, antipsicotici, antidepressivi, antibiotici empirici), modifiche di dosaggio per intolleranza, sospensioni per reazioni avverse.
 
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+5. INTERAZIONI CON SPECIALISTI: discussioni informali (es. "consulto telefonico con Cardiologia"), decisioni multidisciplinari non formalizzate in consulenza.
 
-- Se l'EON alla dimissione è riportato esplicitamente nell'input: trascrivilo verbatim, senza riformulare né accorciare.
-- Se non è riportato esplicitamente: ricostruiscilo dall'ultima valutazione neurologica disponibile nei diari clinici, usando come base lo schema di normalità del fingerprint (eon_schema) se presente, altrimenti lo schema default sotto.
-- Sostituisci le voci dello schema solo dove l'input documenta esplicitamente un deficit o un'anomalia.
-- Non inventare deficit non documentati. Non omettere deficit documentati.
-- Includi NIHSS e mRS SOLO se il ricovero è per stroke/TIA; per altre patologie (epilessia, encefalite, etc.) ometti entrambi.
+REGOLA DELL'OSSERVAZIONE RICORRENTE:
+Un'osservazione che compare UNA SOLA VOLTA nei diari va trattata come episodio intercorrente da menzionare nel decorso (es. "in data XX/XX si segnala un episodio di...").
+Un'osservazione che compare RIPETUTAMENTE in giorni diversi va trattata come quadro clinico persistente, da menzionare nel decorso E potenzialmente da inserire nella DIAGNOSI in apertura se costituisce una nuova condizione (es. "Delirium iperattivo intercorrente", "Depressione post-stroke").
 
-SCHEMA DEFAULT (usato solo se eon_schema non è presente nel fingerprint):
-"paziente vigile, orientato s/p/t, collaborante. Eloquio fluente, non disartria. Esegue ordini semplici. Capo e sguardo in asse. Marcia autonoma senza caratteri patologici, possibile su punte, talloni e in tandem. Non oscillazioni in Romberg. Raggiunge e mantiene la posizione di Mingazzini I e II senza slivellamenti. Forza conservata ai quattro arti. ROT normovivaci e simmetrici ai quattro arti. Sensibilità tattile integra, nega parestesie. Pallestesia nella norma. Manovre I/N e T/G correttamente eseguite. Non segni di eminegligenza. Ai nervi cranici: pupille isocoriche, isocicliche, normofotoreagenti. CV integro per confronto. MOE integra. Non deficit sensitivi in territorio trigeminale. Non deficit VII. Lingua normosporta, spinta validamente contro le guance bilateralmente. Velo palatino mobile e simmetrico. NIHSS: X. mRS: X. (solo se stroke/TIA — omettere entrambi per altre patologie)"
+REGOLA DI FEDELTÀ:
+NON inventare osservazioni che non sono nei diari. Se un'osservazione sembra implicita ma non è scritta, NON menzionarla. Se i diari non sono presenti nella cartella, lavora solo con esami strumentali e referti.
 
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-ESAMI DI LABORATORIO
+REGOLA DI CONNESSIONE CAUSALE:
+Se una decisione terapeutica nei diari è motivata (es. "introduco sertralina per calo del tono dell'umore"), riporta SEMPRE la motivazione nel decorso clinico ("Per un calo del tono dell'umore registrato in corso di degenza, è stata avviata terapia con sertralina"). Mai riportare la decisione senza la motivazione.
 
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+NOTE DI NURSING:
+Ignora le osservazioni di pura assistenza ("paziente collaborante alle cure", "dorme bene", "alimentazione regolare", "alvo canalizzato"). Non aggiungono valore clinico alla lettera, salvo quando sono indicative di un problema (es. ritenzione urinaria persistente, episodi di vomito, agitazione notturna).
 
-SELEZIONE DEL VALORE DA RIPORTARE:
-L'input può contenere misurazioni ripetute nel tempo in tre formati:
-  (a) valore singolo — usa quello.
-  (b) primo → ultimo (es. "Hb 9.2 → 10.8 g/dL") — usa SEMPRE l'ultimo valore (a destra della freccia).
-  (c) lista cronologica senza freccia — usa SEMPRE il valore più recente disponibile.
-  (d) solo valori patologici riportati — usa i valori forniti; non inventare valori normali.
-  Se il fingerprint specifica una convenzione diversa, quella ha priorità.
+NOMENCLATURA DI INSERIMENTO NELLA DIAGNOSI FINALE:
+Se un quadro è persistente e clinicamente rilevante, va inserito tra le diagnosi finali con nomenclatura clinica appropriata. Esempi:
+- "Delirium intercorrente in corso di ricovero"
+- "Depressione post stroke"
+- "Sindrome ansioso-depressiva reattiva"
+- "Sindrome confusionale acuta in remissione"
+- "Reazione allergica tardiva a [sostanza]"
+- "Lesione cutanea da decubito sacrale"
 
-RISULTATO PRECEDENTE — REGOLA CRITICA:
-Nei referti di laboratorio AOUP il formato tipico è:
-  [Esame] [Risultato attuale] [Unità] [Range] [Risultato precedente] [Data precedente]
-Esempio: "B-PIASTRINE *139 10^9/L 150-450 155 22/02/26"
-→ "139" è il valore ATTUALE del ricovero corrente.
-→ "155 22/02/26" è il RISULTATO PRECEDENTE (misura di un ricovero o prelievo precedente, anche di mesi fa).
-REGOLA: usa SEMPRE il valore attuale del ricovero corrente. NON usare mai il risultato precedente.
-Se il formato "primo → ultimo" contiene una data lontana dal periodo di ricovero accanto al primo valore, trattalo come risultato precedente e usa solo il secondo.
-In caso di dubbio su quale sia il valore attuale, preferisci il valore associato alla data più recente o più vicina alle date di ricovero.
+NON inserire osservazioni episodiche transitorie nella diagnosi finale (es. un singolo episodio di cefalea regredito).
 
-FORMATO DEFAULT — una riga per categoria:
+═══════════════════════════════════════════════════════════════
+STRUTTURA OBBLIGATORIA DELLA LETTERA
+═══════════════════════════════════════════════════════════════
+
+[INTESTAZIONE] — usa la formula appropriata:
+- "Alla cortese attenzione del Medico Curante" (se dimissione a domicilio)
+- "Ai Colleghi della Neurologia di [SEDE]" o "Alla cortese attenzione del personale medico di [SEDE]" (se trasferimento ad altro reparto/struttura)
+
+Egregi Colleghi,
+
+dimettiamo [oppure: trasferiamo presso il Vostro Reparto] in data odierna il/la sig./sig.ra [PAZIENTE_NOME], di anni [ETÀ] ([DATA_NASCITA]), ricoverato/a presso il nostro reparto in data [DATA_INGRESSO], con diagnosi di:
+
+"[DIAGNOSI PRINCIPALE]. [eventuali diagnosi secondarie separate da punto, ognuna con maiuscola iniziale]"
+
+
+─── SEZIONE: ANAMNESI PATOLOGICA REMOTA ───
+
+Apertura: "In anamnesi:" seguita dalle comorbilità storiche e dai pregressi rilevanti, in elenco con trattino lungo. Una voce per riga.
+
+Se nessuna condizione di rilievo: "In anamnesi: nulla da segnalare."
+Se la cartella riporta una sezione "Raccordo anamnestico" o "Storia recente" che descrive eventi prossimi al ricovero (giorni/settimane prima): NON metterla qui — andrà nel Motivo del ricovero.
+
+
+─── SEZIONE: TERAPIA DOMICILIARE ───
+
+Apertura: "Terapia domiciliare:" seguita dalla lista inline separata da virgole: nome commerciale + dosaggio + orario se disponibile.
+
+Esempio: "Bisoprololo 2,5 mg ore 8.00, Ramipril 5 mg ore 8.00, Lansoprazolo 30 mg ore 7.00"
+
+Se nessuna terapia: "Terapia domiciliare: nessuna continuativa."
+
+Le allergie a farmaci/alimenti vanno citate qui dopo la terapia: "Non riferite allergie note." oppure "Allergie a [SOSTANZE]."
+
+
+─── SEZIONE: MOTIVO DEL RICOVERO ───
+
+Apertura: "Motivo del ricovero:" seguito dal racconto in discorso indiretto.
+
+Contenuto:
+1. Le circostanze immediate dell'esordio sintomatologico (orario, contesto, descrizione).
+2. Eventuali episodi recenti correlati (es. cefalea il giorno prima, episodio analogo settimane prima).
+3. Eventuali accessi a Pronto Soccorso esterni con sintesi degli accertamenti svolti e valutazioni specialistiche ricevute (in discorso indiretto).
+4. La centralizzazione/trasferimento al nostro reparto e l'eventuale terapia di emergenza (es. trombolisi, evacuazione).
+
+REGOLA — SEZIONE PRONTO SOCCORSO:
+Quando descrivi gli accertamenti del PS, usa la struttura:
+
+"Presso il Pronto Soccorso [NOME_OSPEDALE] è stato sottoposto a:
+– [ESAME 1]: [descrizione/conclusione]
+– [ESAME 2]: [descrizione/conclusione]
+– Valutazione [TIPO]: [...] In conclusione: [...]"
+
+Concludi sempre la sezione con: "Il/La paziente veniva ricoverato/a presso il nostro Reparto per la prosecuzione dell'iter diagnostico-terapeutico."
+
+
+─── SEZIONE: ESAMI E DECORSI DI RICOVERI PRECEDENTI (se applicabile) ───
+
+REGOLA — RICOVERI MULTIPLI:
+Se la cartella documenta che il paziente ha avuto altri ricoveri PRIMA dell'arrivo nel nostro reparto (es. PS → Terapia Intensiva → altro Reparto → nostro Reparto), aggiungi sezioni dedicate prima del decorso del nostro reparto:
+
+- "Decorso clinico presso la [tipologia di reparto] [denominazione]"
+- "Esami eseguiti durante il ricovero presso la [stesso nome]"
+
+Esempi di intestazioni corrette:
+- Decorso clinico presso la Terapia Intensiva dell'Ospedale Sant'Antonio
+- Decorso clinico presso la Stroke Unit
+- Decorso clinico presso la Neurorianimazione AOUP
+- Decorso clinico presso la Medicina dell'Ospedale di Abano
+
+Le fonti di queste informazioni sono di solito: nota di diario all'ingresso, frontespizio, "Raccordo anamnestico".
+
+
+─── SEZIONE: ESAME OBIETTIVO NEUROLOGICO ALL'INGRESSO IN REPARTO ───
+
+Descrizione neurologica strutturata. Esempio:
+
+"Paziente vigile, orientato s/p/t, collaborante. Eloquio fluente, non disartria. Esegue ordini semplici. Capo e sguardo in asse. Marcia autonoma senza caratteri patologici, possibile su punte, talloni e in tandem. Non oscillazioni in Romberg. Raggiunge e mantiene la posizione di Mingazzini I e II senza slivellamenti. Forza conservata ai quattro arti. ROT normovivaci e simmetrici ai quattro arti. Sensibilità tattile integra, nega parestesie. Pallestesia nella norma. Manovre I/N e T/G correttamente eseguite. Non segni di eminegligenza. Ai nervi cranici: pupille isocoriche, isocicliche, normofotoreagenti. CV integro per confronto. MOE integra. Non deficit sensitivi in territorio trigeminale. Non deficit VII. Lingua normosporta, spinta validamente contro le guance bilateralmente."
+
+NIHSS: indica il punteggio SOLO se la diagnosi include stroke / TIA / emorragia cerebrale. Formato: "NIHSS X."
+
+
+─── SEZIONE: ESAME OBIETTIVO GENERALE ALL'INGRESSO IN REPARTO ───
+
+Descrizione fisica generale: cute, polsi, torace, cuore, addome, arti inferiori. Esempio:
+
+"Cute normocromica normoperfusa, polsi periferici simmetrici e normosfigmici. MV normotrasmesso su TAP. Toni cardiaci ritmici, validi. Pause apparentemente libere. Polsi pedidei e tibiali presenti e validi. Addome trattabile non dolente né dolorabile alla palpazione s/p."
+
+
+─── SEZIONE: ESAMI EMATOCHIMICI ───
+
+Frase di apertura: "Durante la degenza il/la paziente è stato/a sottoposto/a ai seguenti esami ematochimici e microbiologici:"
+
+FORMATO — una riga per categoria, con trattino lungo come bullet:
+
 [Nome categoria]: [esame1], [esame2], [esame3] nella norma; [EsameAnomalo] VALORE unità (v.n. range).
 
-- Prima gli esami nella norma (ultimo valore) separati da virgola + "nella norma".
-- Poi, separati da punto e virgola, gli esami alterati con valore esatto e range di normalità se presente nell'input.
-- I valori alterati (fuori range) vanno sottolineati: usare il tag <u> attorno al SOLO nome dell'esame e al valore, NON attorno al range tra parentesi. Esempio: "<u>Emoglobina 102 g/L</u> (v.n. 140-175)" — il range (v.n. ...) resta FUORI dal tag <u>.
+Esempi:
+– Emocromo: nella norma tranne <u>WBC 11,07 x 10^9/L</u> (4,40-11,00), <u>Hb 128 g/L</u> (140-175).
+– Formula leucocitaria: nella norma.
+– Indici di flogosi: <u>PCR 16,95 mg/L</u> (0,00-4,99).
+– Profilo coagulativo: nella norma tranne <u>INR 1,27</u>.
+– Profilo metabolico: glucosio, colesterolo totale 196 mg/dL, LDL 125 mg/dL, HDL 64 mg/dL, trigliceridi 49 mg/dL, omocisteina nella norma.
+– Funzionalità renale e ionemia: nella norma tranne <u>Cl 109 mmol/L</u> (96-108).
+– Funzionalità epatica: nella norma tranne <u>ALP 40 U/L</u> (43-115).
+– Enzimi muscolari: LAD e TnI nella norma.
+
+REGOLE GENERALI:
+- Prima gli esami nella norma (ultimo valore se serie temporali) separati da virgola + "nella norma".
+- Poi, separati da punto e virgola, gli esami alterati con valore esatto e range di normalità se presente.
+- I valori alterati (fuori range) vanno sottolineati: usare il tag <u> attorno al SOLO nome esame e al valore, NON attorno al range tra parentesi. Esempio: "<u>Emoglobina 102 g/L</u> (v.n. 140-175)".
 - Se tutti nella norma: "[Nome categoria]: nella norma."
-- Se una categoria non è stata eseguita: ometti la riga completamente.
-- Includi tutte le categorie presenti nell'input, anche quelle non elencate nel template.
-- NESSUNA riga vuota tra le categorie degli esami ematochimici: tutte le righe sono consecutive, senza blank lines tra di esse.
-- Lo stesso vale per gli accertamenti strumentali: nessuna riga vuota tra i singoli accertamenti (nessuna blank line tra le righe "> Esame:").
+- Se categoria non eseguita: ometti la riga.
+- Tutte le categorie presenti nell'input vanno incluse, anche se non elencate negli esempi.
+- NESSUNA riga vuota tra le categorie.
 
 ESAMI SEMPRE RIPORTATI CON VALORE ESATTO (anche se nella norma — non scrivere "nella norma"):
 Colesterolo totale, HDL, LDL, Trigliceridi, Emoglobina glicata (HbA1c), Creatinina.
-Per questi sei esami riporta sempre il valore numerico + unità + range se disponibile, indipendentemente da normalità o patologia.
-Se uno di questi non è presente nell'input, ometti la riga.
 
-Esempio:
-Profilo metabolico: glicemia nella norma; Colesterolo totale 198 mg/dL (v.n. <200); HDL 42 mg/dL (v.n. >40); LDL 130 mg/dL (v.n. <100); Trigliceridi 168 mg/dL (v.n. <150).
-Profilo coagulativo: fibrinogeno, proteina C, proteina S nella norma; D-Dimero 850 ug/L FEU (v.n. <700); AT 68% (v.n. 75-125).
-Funzionalità renale: Creatinina 1.02 mg/dL (v.n. 0.6-1.1); urea nella norma.
+REGOLA — VALORI MULTIPLI IN SERIE TEMPORALE (TREND CON FRECCE):
 
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-ACCERTAMENTI STRUMENTALI
+Mostra il trend (con frecce) SOLO se la serie è iniziata nei range e poi un valore intermedio o finale è diventato patologico (cioè l'alterazione è insorta DURANTE la degenza). In tutti gli altri casi, mostra solo l'ultimo valore.
 
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+CASO A — Serie sempre nei range:
+L'esame va elencato tra quelli nella norma (non nel "tranne").
+Esempio input: Hb 142 → 145 → 138 g/L (range 140-175)
+Output: incluso negli esami "nella norma" della categoria.
 
-- Formato: "**Nome esame (DD/MM):** conclusione sintetica del referto."
-- REGOLA NON SOVRASCRIVIBILE: riporta SOLO le conclusioni finali del referto, NON il referto esteso con tutte le misure intermedie. Se il referto contiene una sezione "Conclusioni:", copia esattamente quel testo. Altrimenti sintetizza in 1-3 frasi il risultato clinicamente rilevante.
-- Esempio CORRETTO per ecocardiogramma: "**Ecocardiogramma TT (20/02):** Ventricolo sinistro non dilatato con frazione d'eiezione conservata in assenza di evidenti alterazioni della cinetica regionale. Atrio sinistro non dilatato. Sezioni destre nei limiti di norma. Non valvulopatie di rilievo emodinamico. Non versamento pericardico." — ovvero il testo che compare dopo "Conclusioni:" nel referto.
-- Esempio SBAGLIATO: copiare tutte le misure intermedie (setto IV, parete posteriore, E/E', volumi atriali, diametri aortici, velocità transvalvolari, PAPs ecc.).
-- Lo stesso vale per EcocolorDoppler TSA e TC: riportare le conclusioni. Per stenosi significative o reperti patologici, riportare il dettaglio (sede, grado di stenosi, caratteristiche della lesione, compensi intracranici attivi).
-- Non omettere mai la data se presente nell'input.
-- Se il referto non è disponibile: "**Nome esame (DD/MM):** *in corso di refertazione*"
-- Includi tutti gli accertamenti eseguiti, anche quelli non elencati nel template.
-- CONSULENZE SPECIALISTICHE (cardiologica, diabetologica, fisiatrica, neuropsicologica, assistente sociale, etc.): riportare SOLO le conclusioni e le indicazioni/consigli del consulente, NON l'anamnesi o il riassunto clinico che il consulente fa all'inizio del referto. Se il referto inizia con un riassunto del caso ("paziente di X anni con...ricoverato per..."), OMETTI quella parte e riporta solo da dove iniziano le indicazioni operative ("Si consiglia...", "Si imposta...", "Si suggerisce..."). MAI riformulare le indicazioni con parole proprie.
-- EEG: riportare SOLO le conclusioni finali del referto. NON riportare la descrizione tecnica del tracciato (ritmo di fondo, burst, SLI, artefatti). Se il referto ha una sezione "Conclusioni:", copia solo quella.
+CASO B — Serie iniziata patologica (valore patologico fin dal primo prelievo):
+Mostra solo l'ultimo valore con sottolineatura.
+Esempio input: PCR 16,95 → 38,42 → 8,86 mg/L (range 0-4,99) — tutti patologici
+Output: "<u>PCR 8,86 mg/L</u> (0,00-4,99)"
 
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-TERAPIA DOMICILIARE
+CASO C — Serie iniziata nei range, peggiorata durante la degenza (alterazione INSORTA):
+Mostra il trend completo: primo, peak (se distinto), ultimo.
+Esempio input: WBC 8,2 → 14,5 → 11,0 x10^9/L (range 4,4-11,0) — peggiora poi recupera parzialmente
+Output: "<u>WBC 8,2 → 14,5 → 11,0 x10^9/L</u> (4,4-11,0)"
 
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+CASO D — Serie iniziata nei range, peggiorata monotonicamente:
+Mostra solo primo e ultimo (peak coincide con ultimo).
+Esempio input: Hb 145 → 110 g/L (range 140-175)
+Output: "<u>Hb 145 → 110 g/L</u> (140-175)"
 
-- Lista inline separata da virgole: nome commerciale + dosaggio + orario se disponibile in anamnesi.
-- Esempio: "Bisoprololo 2,5 mg ore 8.00, Ramipril 5 mg ore 8.00, Lansoprazolo 30 mg ore 7.00"
-- Le allergie vanno nella sezione allergie del template, non qui.
+CASO E — Valore singolo:
+Mostra il valore.
+Esempio: "INR 1,27"
 
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-TERAPIA ALLA DIMISSIONE
+REGOLA — RISULTATO PRECEDENTE AOUP:
+Nel formato "[Esame] [Risultato attuale] [Unità] [Range] [Risultato precedente] [Data precedente]" (esempio: "B-PIASTRINE *139 10^9/L 150-450 155 22/02/26"), il valore "155 22/02/26" è di un PRECEDENTE ricovero/prelievo. USA SEMPRE il valore attuale (139), IGNORA il precedente.
+Se in una serie temporale il primo valore ha una data lontana dal periodo di ricovero corrente, trattalo come "risultato precedente" e usa solo l'ultimo valore.
 
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+─── SEZIONE: INDAGINI DIAGNOSTICO-STRUMENTALI E VALUTAZIONI SPECIALISTICHE ───
+
+Frase di apertura: "e alle seguenti indagini diagnostico-strumentali e le seguenti valutazioni specialistiche:"
+
+FORMATO — bullet con trattino lungo, nome esame in grassetto seguito da data tra parentesi:
+
+– **[Nome Esame] (DD/MM):** [conclusione/descrizione]
+
+Esempi:
+– **TC encefalo (17/02):** Non lesioni emorragiche. ASPECTs 9. Sostanzialmente sovrapponibile al precedente.
+– **ECG (17/02):** Ritmo sinusale, FC 66 bpm, BBDx con alterazioni secondarie della RV.
+– **Valutazione Fisiatrica (17/02):** Progetto riabilitativo: [...]
+– **EcocolorDoppler dei tronchi sovraortici e transcranico (18/02):** [conclusioni dettagliate]
+
+REGOLE:
+- Nessuna riga vuota tra accertamenti.
+- Per esami ripetuti (controlli seriati): un'unica voce con i controlli concatenati. Esempio: "**TC encefalo (17/02):** [esito iniziale]. Controllo (18/02): [esito]. Controllo (23/02): [esito]."
+- Riporta sempre le conclusioni; per stenosi significative o reperti patologici, includi dettaglio (sede, grado, caratteristiche).
+- NON sottolineare reperti strumentali patologici (la sottolineatura è riservata ai valori ematochimici).
+
+
+─── SEZIONE: DECORSO CLINICO ───
+
+Apertura: "Decorso clinico:" se è l'unico decorso. "Decorso clinico presso il nostro Reparto:" se ci sono ricoveri precedenti documentati.
+
+Paragrafo narrativo che racconta l'andamento del ricovero. La struttura specifica e lo stile narrativo dipendono dalla patologia (vedi DECORSO PATOLOGIA-SPECIFICO / FINGERPRINT, se presente).
+
+REGOLE GENERALI DEL DECORSO:
+1. Inizia con la fase iniziale del ricovero e l'avvio terapeutico ("Previa esecuzione di [esame iniziale di controllo]... è stata avviata terapia con [farmaco]...").
+2. Procedi in ordine cronologico o per sistema d'organo (preferibile l'organizzazione per sistema/problema se ricovero >2 settimane o multi-problematico).
+3. Cita ogni decisione terapeutica e il suo razionale ("in considerazione di [reperto], si è proceduto a [terapia/procedura]").
+4. Documenta SEMPRE la motivazione delle sospensioni di farmaci ("è stata sospesa la [farmaco] per [motivo]").
+5. Cita l'esito di ogni accertamento aggiuntivo richiesto.
+6. Concludi con lo stato del paziente alla dimissione/trasferimento ("Alla dimissione il/la paziente deambula autonomamente / è allettato/a / si alimenta per os / per via enterale, etc.").
+7. Se la cartella indica un peggioramento o una complicanza intercorrente, descrivila chiaramente con la sequenza causale.
+8. Includi gli stati clinici persistenti dedotti dai diari (delirium, depressione, agitazione, ecc.) seguendo le regole di interpretazione delle note di diario.
+
+
+─── SEZIONE: ESAME OBIETTIVO NEUROLOGICO ALLA DIMISSIONE ───
+
+Stesso formato dell'EO ingresso, riportando l'evoluzione clinica.
+
+NIHSS: punteggio SOLO se stroke/TIA/emorragia. Formato: "NIHSS X."
+mRS: punteggio SOLO se stroke/TIA/emorragia, e SOLO alla dimissione (mai all'ingresso). Formato: "mRS X."
+
+
+─── SEZIONE: TERAPIA ALLA DIMISSIONE ───
 
 Tabella markdown obbligatoria a 4 colonne:
+
 | Farmaco | Posologia | Orario | Note |
 |---------|-----------|--------|------|
 
-- Farmaco: nome commerciale O principio attivo + dosaggio disponibile (es. "Apixaban 5 mg", "Torvast 40 mg", "Apidra 100 U/ml")
-- Posologia: numero di unità + forma + via di somministrazione. Forme: "cp" (compresse), "mezza cp" (metà compressa), "fl" (fiale), "U" (unità insulina), "gtt" (gocce). Via: "per os", "e.v.", "s.c.", "i.m.". Usare SEMPRE "cp", MAI "compressa", "compresse", "cpr" o "cps". Esempi: "1 cp per os", "mezza cp per os", "4 U s.c.", "1 fl e.v."
-- Orario: se lo stesso farmaco va assunto in più orari, usare UNA SOLA RIGA con orari separati da "e" (es. "9.00 e 21.00", "8.00 e 20.00"). MAI duplicare righe per lo stesso farmaco.
-- Note: "terapia domiciliare" / "nuova terapia" / "dose modificata" / "fino al GG/MM poi stop" / "sospeso"
+Note possibili: "Nuova terapia", "Terapia domiciliare", "Da sospendere il [data]", "Fino a [evento/data]".
 
-ORDINAMENTO delle righe:
-1. Prima i farmaci e.v. (endovenosi)
-2. Poi s.c. e i.m. (sottocute, intramuscolo)
-3. Poi per os (orali)
-All'interno di ogni gruppo, ordinare per categoria farmacologica, poi alfabetico se più farmaci nella stessa categoria.
 
-- Motivazioni di switch terapeutico: nel decorso clinico, non nella tabella.
-- Nella tabella inserisci solo l'ULTIMA terapia prescritta durante il ricovero (quella effettivamente in uso al momento della dimissione), salvo diverse indicazioni nelle PREFERENZE UTENTE.
+─── SEZIONE: VISITE DI CONTROLLO ───
 
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-GESTIONE DELL'INCERTEZZA
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Frase di apertura obbligatoria: "Il/La paziente è atteso/a in regime di post-degenza per eseguire:" seguita da elenco con trattino lungo.
 
-- Diagnosi non confermata: "quadro compatibile con...", "non è possibile escludere..."
-- Esame in corso: "*in corso di refertazione*"
-- Dato assente dall'input: "Non documentato."
-- Non lasciare mai una sezione vuota.
-- Data di ricovero assente o "Non documentato": usa il placeholder letterale **[DD/MM]** (non scrivere "Non documentato" per le date nei template di apertura lettera). La data di ricovero va scritta solo come giorno/mese (DD/MM) perché seguita da "u.s." (ultimo scorso).
-- Ora assente o "Non documentato": usa il placeholder letterale **[HH:MM]**.
+Formato: "– [tipo di valutazione] in data DD/MM/AAAA alle ore HH:MM presso [sede/ambulatorio]."
 
-DECORSO CLINICO:
-- Il decorso clinico è un paragrafo unico continuo (200-500 parole, adattato alla complessità del caso), senza righe vuote interne.
-- Non spezzare il decorso in sotto-paragrafi separati da righe vuote.
-- È ammessa una sola riga di testo continua con a capo normali (senza blank lines) per scorrimento naturale della prosa.
-- SOSPENSIONI FARMACI: se durante il ricovero è stato sospeso un farmaco della terapia domiciliare, documenta SEMPRE la motivazione nel decorso clinico (es. "è stata sospesa la [farmaco] per [motivo clinico/interazione/reazione avversa]"). Questa regola è sempre attiva e non è opzionale.
+Esempio:
+– Visita neurologica di controllo con ecocolordoppler dei tronchi sovraortici e transcranico in data 26/03/2026 alle ore 11:30 presso l'Ambulatorio Malattie Cerebrovascolari della Clinica Neurologica.
 
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-REGISTRO E STILE
 
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+─── SEZIONE: RACCOMANDAZIONI ───
 
-- Registro formale clinico italiano. Mai colloquiale.
-- Intestazioni di sezione in grassetto seguite da due punti: "**Decorso Clinico:**"
-- Connettori logici: "in considerazione di", "alla luce di", "pertanto", "si è deciso di", "in accordo con"
-- Chiusura fissa: "Rimaniamo a disposizione e porgiamo cordiali saluti."
-- Firme: due colonne — medici in formazione specialistica a sinistra, dirigente medico a destra.`;
+Frase di apertura: "Si raccomanda:" seguita da elenco con trattino lungo.
+
+Esempio:
+– riposo a domicilio fino alla visita di controllo.
+– stretto controllo dei fattori di rischio vascolare.
+– dieta ipolipidica.
+
+
+─── CHIUSURA E FIRME ───
+
+Chiusura fissa: "Rimaniamo a disposizione e porgiamo cordiali saluti."
+
+Firme: due colonne — medici in formazione specialistica a sinistra, dirigenti medici a destra:
+
+[OPERATORE] [OPERATORE]
+[OPERATORE] [OPERATORE]
+(Medici in formazione specialistica) (Dirigenti medici)
+
+
+═══════════════════════════════════════════════════════════════
+DECORSO PATOLOGIA-SPECIFICO (FINGERPRINT) — SE PRESENTE
+═══════════════════════════════════════════════════════════════
+
+Se nel contesto è fornito un "decorso" (fingerprint) di una lettera di riferimento per la stessa patologia, USALO come segue:
+
+1. APPLICA logica_diagnostica per formulare la diagnosi finale tra virgolette in apertura. Confronta i reperti della cartella attuale (esami, imaging, anamnesi) con i criteri descritti nella logica diagnostica e scegli la formulazione più appropriata. Adatta diagnosi_pattern con i dettagli specifici (territorio vascolare, lato, comorbilità).
+
+2. SEGUI checklist_decorso per assicurarti che tutti gli step diagnostico-terapeutici tipici siano coperti nel decorso (anche se la cartella non li menziona esplicitamente, valuta se erano dovuti).
+
+3. CERCA nei diari i quadri elencati in diari_da_monitorare. Se documentati, integrali nel decorso e, se persistenti, nella diagnosi finale.
+
+4. ADATTA lo stile narrativo del decorso seguendo decorso_esempio come guida stilistica (registro, transizioni, ordine narrativo).
+
+5. INTEGRA le raccomandazioni_specifiche nella sezione Raccomandazioni, adattando i target ai dati del paziente.
+
+6. APPLICA il terapia_pattern per costruire la tabella della terapia alla dimissione, adattando i farmaci specifici, dosaggi e tempistiche ai dati della cartella del paziente attuale.
+
+7. RISPETTA le note (es. "NIHSS sempre alla dimissione").
+
+REGOLA CRITICA:
+NON copiare dati specifici dal decorso_esempio (farmaci, dosaggi, valori, tempistiche, nomi di ospedali, date) nella nuova lettera. Tutti i dati specifici devono provenire dalla CARTELLA CLINICA del paziente attuale. Il decorso_esempio serve SOLO come guida di stile e ragionamento clinico.`;
 
 // ═══════════════════════════════════════════════════
 // NAVIGATION
@@ -1550,6 +1795,16 @@ function goTo(i) {
       if(current) ghTokenField.value = current;
     }
     loadAccountsList();
+  }
+  if (i === 10) {
+    // Editor Prompt admin: load current values
+    if(!isAdminUser()){ alert('Solo amministratori.'); goTo(0); return; }
+    switchPromptEditor(_currentPromptEditorVar || 'DEFAULT_SYS');
+    renderLibraryTemplates();
+  }
+  if (i === 11) {
+    // User personalizations
+    refreshUserPersonalizationsPanel();
   }
 }
 
@@ -1757,7 +2012,7 @@ const ANON_CONFIG = {
       label: 'la sig.ra [PAZIENTE]', type: 'name' },
     { pattern: /\b[A-Za-z0-9._%+\-]+@[A-Za-z0-9.\-]+\.[A-Za-z]{2,}\b/g,
       label: '[EMAIL]', type: 'id' },
-    { pattern: /(?:Tel(?:efono)?\s*\d*|Fax)\.?\s*:?\s*\+?\d[\d\s\.\-]{6,}/gi,
+    { pattern: /(?:Tel(?:efono)?\s*\d*|Fax)\.?\s*:?\s*\+?\d[\d\s\.\-]{5,}\d/gi,
       label: '[TELEFONO]', type: 'id' },
     { pattern: /\b3\d{2}[\s\-]?\d{3,4}[\s\-]?\d{3,4}\b/g,
       label: '[TELEFONO]', type: 'id' },
@@ -1781,7 +2036,7 @@ const ANON_CONFIG = {
       label: '[NOSOLOGICO]', type: 'boiler' },
     { pattern: /\bRIC_AO_\d+\b/g,
       label: '[ID_RICOVERO]', type: 'id' },
-    { pattern: /(?:MMG|PLS)(?:\s*\/\s*(?:MMG|PLS))?\s*:?\s*[A-Z][A-Za-z\u00C0-\u00FF]+(?:\s+[A-Z][A-Za-z\u00C0-\u00FF]+)?(?=\s{2,}|\s*[\r\n]|\s+(?:Data|Telefono|Indirizzo|Nosologico|Anamnesi|Reparto|Ricovero|[A-Z][a-z]))/g,
+    { pattern: /(?:MMG|PLS)(?:\s*\/\s*(?:MMG|PLS))?\s*:?\s*[A-Z][A-Za-z\u00C0-\u00FF']+(?:\s+[A-Z][A-Za-z\u00C0-\u00FF']+)?(?=\s{2,}|\s*[\r\n]|\s+(?:Data|Telefono|Indirizzo|Nosologico|Anamnesi|Reparto|Ricovero|[A-Z][a-z]))/g,
       label: 'MMG/PLS: [OPERATORE]', type: 'name' },
     { pattern: /\b[A-Z][a-z\u00C0-\u00FF]+\s+[A-Z][a-z\u00C0-\u00FF]+(?=\s+\(\d{2}\/\d{2}\/\d{4})/g,
       label: '[OPERATORE]', type: 'name' },
@@ -2773,6 +3028,7 @@ function runPipeline() {
   const spin=document.getElementById('anonSpin');
   const stxt=document.getElementById('anonStatusTxt');
   const scard=document.getElementById('anonStatus');
+  scard.style.display='flex';
   spin.style.display='inline-block';
   stxt.textContent='Strip boilerplate...';
   scard.style.borderColor='var(--border)';
@@ -3457,15 +3713,22 @@ async function autoExtractTemplate(){
     const rawText=(await resp.json()).content[0].text;
     const parsed=JSON.parse(rawText.replace(/```json[\s\S]*?```|```/g,'').trim());
 
-    if(parsed.lettera_modello){
-      // V2 success
+    if(parsed.patologia && parsed.decorso_esempio){
+      // V3 success (new pathology-specific schema)
+      newTplFingerprintJson=JSON.stringify(parsed);
+      newTplSections=[];
+      renderFpV3Preview(parsed);
+      const toks=tok(newTplFingerprintJson);
+      status.style.color='var(--green)';
+      status.textContent=`✓ Decorso estratto · ${parsed.patologia} · ~${toks} token`;
+    } else if(parsed.lettera_modello){
+      // V2 legacy schema
       newTplFingerprintJson=JSON.stringify(parsed);
       newTplSections=[];
       renderFpV2Preview(parsed);
       const toks=tok(newTplFingerprintJson);
-      const origTok=tok(letter+(folder||''));
       status.style.color='var(--green)';
-      status.textContent=`✓ Logica estratta · ~${toks} token (lettera-modello + ragionamento + frasi)`;
+      status.textContent=`✓ Decorso estratto (formato legacy V2) · ~${toks} token`;
     } else {
       // Fallback: legacy 4-section
       const map={apertura:'Apertura',decorso:'Decorso tipo',terapia:'Terapia tipo',chiusura:'Chiusura'};
@@ -3474,7 +3737,7 @@ async function autoExtractTemplate(){
         if(parsed[k])newTplSections.push({id:'ntpl_'+Date.now()+'_'+k,label,text:parsed[k]});
       renderNewTplSections();
       status.style.color='var(--accent)';
-      status.textContent=`⚠ Schema legacy (4 sezioni) — aggiorna al V2 manualmente o riprova`;
+      status.textContent=`⚠ Schema legacy (4 sezioni) — aggiorna al V3 manualmente o riprova`;
     }
   }catch(err){status.style.color='var(--red)';status.textContent='✗ '+err.message;}
   finally{spin.style.display='none';}
@@ -3551,7 +3814,10 @@ function updateTokenPanel(){
   if(!S.anonText)return;
   const model=document.getElementById('modelSelect').value;
   const price=PRICING[model]||PRICING['claude-sonnet-4-6'];
-  const sysTxt=document.getElementById('systemPrompt').value||DEFAULT_SYS;
+  const userEditedPrompt = document.getElementById('systemPrompt').value;
+  const sysTxt = (userEditedPrompt && userEditedPrompt.trim() && userEditedPrompt.trim() !== DEFAULT_SYS.trim())
+    ? userEditedPrompt
+    : getEffectiveSystemPrompt();
   const{wardFpObj}=getActiveFpObjects();
   const refCase=getRefCase();
   const injectMode=refCase?getRefInjectMode():'none';
@@ -3943,7 +4209,10 @@ async function generateLetter(){
   const injectMode=refCase?getRefInjectMode():'none';
   const refFpObj=(injectMode==='fingerprint'||injectMode==='both')?parseFpJson(refCase?.fingerprint||''):null;
   const headers={'Content-Type':'application/json','x-api-key':key,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'};
-  const baseSystem=document.getElementById('systemPrompt').value||DEFAULT_SYS;
+  const userEditedPrompt = document.getElementById('systemPrompt').value;
+  const baseSystem = (userEditedPrompt && userEditedPrompt.trim() && userEditedPrompt.trim() !== DEFAULT_SYS.trim())
+    ? userEditedPrompt
+    : getEffectiveSystemPrompt();
   let fullSystem=baseSystem;
   if(wardFpObj) fullSystem+=buildWardFpSystemAddendum(wardFpObj);
   if(refFpObj)  fullSystem+=buildFpSystemAddendum(refFpObj);
@@ -4018,7 +4287,10 @@ function renderPromptView(){
 }
 function refreshPrompt(){
   if(!S.anonText){document.getElementById('promptView').value='Completa gli Step 1–2.';return;}
-  const baseSystem=document.getElementById('systemPrompt').value||DEFAULT_SYS;
+  const userEditedPrompt = document.getElementById('systemPrompt').value;
+  const baseSystem = (userEditedPrompt && userEditedPrompt.trim() && userEditedPrompt.trim() !== DEFAULT_SYS.trim())
+    ? userEditedPrompt
+    : getEffectiveSystemPrompt();
   const{wardFpObj}=getActiveFpObjects();
   const refCase=getRefCase();
   const injectMode=refCase?getRefInjectMode():'none';
@@ -4062,7 +4334,8 @@ function flashBtn(btn){
 // VERIFICA
 // ═══════════════════════════════════════════════════
 
-const VERIFICA_SYSTEM = `Sei un clinico esperto che verifica la coerenza tra una cartella clinica anonimizzata e una lettera di dimissione.
+// NOTE: `let` for bootstrap override
+let VERIFICA_SYSTEM = `Sei un clinico esperto che verifica la coerenza tra una cartella clinica anonimizzata e una lettera di dimissione.
 Analizza ogni affermazione fattuale nella lettera (diagnosi, farmaci, dosi, date, valori di laboratorio, procedure, parametri vitali, anamnesi) e verificala contro la cartella.
 
 Restituisci SOLO un array JSON valido, senza testo prima o dopo, senza backtick.
@@ -4390,8 +4663,7 @@ function formatPastedLetter(){
   S.letter=formatLetterFromChat(raw);
   // Clean up excessive blank lines
   S.letter=S.letter.replace(/\n{3,}/g,'\n\n').trim();
-  // Apply patient data placeholders
-  S.letter=applyPatientData(S.letter, S.patientData);
+  // Patient data placeholders ([PAZIENTE_NOME], [DATA_NASCITA]) are kept until export/finalize
   // Replace [CITTA] and [REPARTO]
   const resolvedWard2=getActiveWardName();
   S.letter=S.letter.replace(/\[CITTA\]/g,'Padova');
@@ -5007,7 +5279,7 @@ function newLetter(){
 
   // Panel 1 — Anonymization
   const anonTxt=document.getElementById('anonText');if(anonTxt)anonTxt.value='';
-  const anonSt=document.getElementById('anonStatus');if(anonSt)anonSt.style.borderColor='var(--border)';
+  const anonSt=document.getElementById('anonStatus');if(anonSt){anonSt.style.borderColor='var(--border)';anonSt.style.display='none';}
   const anonStTxt=document.getElementById('anonStatusTxt');if(anonStTxt)anonStTxt.textContent='';
   const anonSpin=document.getElementById('anonSpin');if(anonSpin)anonSpin.style.display='none';
 
@@ -5499,9 +5771,11 @@ async function deleteReport(id){
 function updateAdminVisibility(){
   const nav8 = document.getElementById('nav8');
   const nav9 = document.getElementById('nav9');
+  const nav10 = document.getElementById('nav10');
   const isAdmin = S.currentUser && ADMIN_USERS.includes(S.currentUser);
   if(nav8) nav8.style.display = isAdmin ? '' : 'none';
   if(nav9) nav9.style.display = isAdmin ? '' : 'none';
+  if(nav10) nav10.style.display = isAdmin ? '' : 'none';
 }
 
 // ═══════════════════════════════════════════════════
@@ -6417,120 +6691,1142 @@ function setCaseImportStatus(msg, pct, color) {
 // FINGERPRINT V2 — 3-phase reasoning + synthetic model
 // ═══════════════════════════════════════════════════
 
-const FINGERPRINT_PROMPT_V2 = `Sei un esperto di comunicazione clinica neurologica. Ti fornisco due documenti:
+// NOTE: `let` for bootstrap override
+let FINGERPRINT_PROMPT_V3 = `Sei un esperto di comunicazione clinica neurologica. Ti fornisco due documenti:
 1. Una cartella clinica anonimizzata (diari, esami, referti)
 2. La lettera di dimissione effettivamente scritta da un neurologo basandosi su quella cartella
 
-Il tuo compito è duplice: capire il RAGIONAMENTO CLINICO che ha guidato la scrittura della lettera, e estrarne un MODELLO SINTETICO riutilizzabile.
+Il tuo compito è estrarre il "DECORSO PATOLOGIA-SPECIFICO" della lettera in formato JSON strutturato. Questo decorso serve come guida riutilizzabile per scrivere nuove lettere di pazienti con la stessa patologia.
+
+IMPORTANTE: lo schema generale della lettera (anamnesi, terapia domiciliare, motivo del ricovero, EO ingresso, esami ematochimici e strumentali, decorso, EO dimissione, terapia alla dimissione, controlli, raccomandazioni, firme) è già fissato nel prompt di sistema. Concentrati SOLO su ciò che è specifico per questa patologia.
 
 ---
 
-FASE 1 — REVERSE ENGINEERING DEL RAGIONAMENTO
-
-Analizza la lettera rispetto alla cartella e identifica:
-
-A) CRITERI DI SELEZIONE: quali eventi della cartella sono entrati nella lettera e quali no? Qual è il principio implicito (gravità, rilevanza per il curante, novità diagnostica, implicazioni terapeutiche)?
-
-B) STRUTTURA LOGICA: come è organizzata l'informazione? (es: cronologica vs per problemi, dal più grave al più gestibile, dal certo all'incerto)
-
-C) CONNETTORI DI RAGIONAMENTO: quali frasi transitorie collegano un'osservazione a una decisione? (es: "pertanto si è deciso di...", "in considerazione di...", "alla luce di...")
-
-D) GESTIONE DELL'INCERTEZZA: come vengono presentati i risultati dubbi, gli esami pendenti, i rifiuti del paziente, le diagnosi non ancora confermate?
-
-E) CALIBRAZIONE DEL DETTAGLIO: dove il neurologo va nel dettaglio tecnico e dove sintetizza? Qual è il criterio?
-
----
-
-FASE 2 — MODELLO SINTETICO
-
-Produci una lettera-modello fittizia che NON contenga dati clinici reali del caso, ma che replichi fedelmente:
-- la struttura e la sequenza delle sezioni
-- il livello di dettaglio per sezione
-- le frasi di apertura e chiusura di ogni sezione (con [PLACEHOLDER] per i contenuti clinici)
-- i connettori logici caratteristici
-- il formato della terapia (tabella/bullet, campi usati, ordine)
-- il tono e il registro del follow-up e delle raccomandazioni
-
-La lettera-modello deve essere abbastanza concreta da poter essere usata come guida per scrivere una nuova lettera da zero su un caso diverso dello stesso tipo, dallo stesso reparto.
-
----
-
-FASE 3 — ANNOTATION LAYER
-
-Per ogni sezione della lettera-modello, aggiungi una riga di annotazione (prefissata con →) che spieghi la logica redazionale di quella sezione:
-- perché quella sezione esiste
-- cosa il neurologo sta comunicando al curante
-- quali decisioni implicite stanno dietro la formulazione scelta
-
----
-
-FORMATO OUTPUT
-
-Restituisci un oggetto JSON con questa struttura:
+OUTPUT — produci SOLO un oggetto JSON con questi 10 campi (nessun preambolo, nessun commento, nessun backtick):
 
 {
-  "ragionamento": {
-    "criteri_selezione": "...",
-    "struttura_logica": "...",
-    "gestione_incertezza": "...",
-    "calibrazione_dettaglio": "..."
-  },
-  "lettera_modello": "<testo completo della lettera-modello con placeholder e righe → di annotazione>",
-  "frasi_chiave": {
-    "apertura": ["frase tipo 1", "frase tipo 2"],
-    "connettori": ["pertanto...", "alla luce di...", "in considerazione di..."],
-    "incertezza": ["non ulteriormente caratterizzabile con la metodica...", "si consiglia approfondimento..."],
-    "terapia_intro": "frase di introduzione alla tabella terapia",
-    "chiusura": ["frase tipo 1", "frase tipo 2"]
-  },
-  "struttura_terapia": {
-    "campi": ["Farmaco", "Dose", "Posologia", "Orario", "Note"],
-    "note_speciali": "come vengono gestiti farmaci nuovi vs continuativi, sospesi, a scalare, switch terapeutici nella tabella e nel decorso"
-  },
-  "note_stilistiche": "Estrai SOLO: (1) formule fisse ricorrenti nel decorso (es. 'Durante la degenza il paziente è sempre stato apiretico, eupnoico...'); (2) formule fisse per la diagnosi (es. 'a verosimile eziologia...', 'in paziente con...'); (3) formule per switch terapeutici nel decorso e nella terapia alla dimissione (es. 'in considerazione di X è stata sostituita la terapia Y con Z'). NON includere tempi verbali o registro — sono gestiti dal system prompt.",
-  "eon_schema": "schema EON di normalità specifico del reparto estratto dalla lettera o dai diari — se non identificabile lascia il campo vuoto",
-  "qualita": {
-    "lettera_modello": {"livello": "alta|media|bassa", "nota": "spiegazione se livello non è alta"},
-    "ragionamento": {"livello": "alta|media|bassa", "nota": "spiegazione se livello non è alta"},
-    "frasi_chiave": {"livello": "alta|media|bassa", "nota": "spiegazione se livello non è alta"}
-  }
+  "patologia": "Nome breve e descrittivo della patologia/scenario clinico (max 8 parole, es: 'Ictus ischemico cardioembolico in fibrillazione atriale'). Includi i descrittori chiave che rendono questo caso distinguibile da altri della stessa categoria.",
+
+  "diagnosi_pattern": "Formula tipica della diagnosi finale tra virgolette. Usa [PLACEHOLDERS] per i dettagli da adattare al paziente specifico (territorio vascolare, lato, comorbilità). Esempio: 'Ictus ischemico [territorio] [lato] a verosimile eziologia [eziologia] in paziente con [comorbilità rilevante]'.",
+
+  "logica_diagnostica": "Testo discorsivo (100-300 parole) che spiega quali reperti orientano verso questa diagnosi specifica e quali alternative considerare. Includi i criteri positivi (cosa supporta questa diagnosi) e differenziali (cosa esclude alternative). Esempio: 'Per concludere per eziologia cardioembolica devono essere presenti: 1) lesione corticale; 2) fonte cardioembolica documentata (FA, valvulopatia, FE <35%). In assenza di FA documentata: ECG Holter o impiantabile, ricerca PFO. Se cause cardiache assenti e nessuna stenosi >50% upstream: ESUS. Se stenosi carotidea >50%: aterotrombotico. Se lacuna profonda: lacunare. Se segni dissecazione: dissecazione.'",
+
+  "decorso_esempio": "Paragrafo narrativo (200-500 parole) tratto fedelmente dalla sezione 'Decorso clinico' della lettera fornita. Mantieni lo stile, i connettori, le transizioni. Questo serve come guida stilistica per il modello AI quando scriverà il decorso di nuovi pazienti. Mantieni anche dettagli specifici (farmaci, dosaggi, tempistiche): l'AI sarà istruita a non copiarli letteralmente, ma a usarli come template.",
+
+  "checklist_decorso": [
+    "Step diagnostico-terapeutico tipico per questa patologia (es: 'TC encefalo controllo 24h')",
+    "Altro step (es: 'Avvio terapia anticoagulante')",
+    "..."
+  ],
+
+  "esami_aggiuntivi": [
+    "Esami specifici da cercare/segnalare per questa patologia (es: 'screening immunologico se paziente <60a')",
+    "Altro esame (es: 'Lp(a), omocisteina')",
+    "..."
+  ],
+
+  "diari_da_monitorare": [
+    "Quadri tipici da cercare nelle note di diario per questa patologia. Esempio: 'Tono dell'umore: stroke ha alta incidenza di depressione post-stroke, da cercare nei diari segnali di apatia, anedonia, calo motivazionale → se documentato, inserire in diagnosi e decorso'",
+    "Altro quadro (es: 'Delirium: pazienti anziani spesso sviluppano delirium ipo/iperattivo')",
+    "..."
+  ],
+
+  "raccomandazioni_specifiche": [
+    "Raccomandazione tipica per questa patologia (es: 'target LDL <70 mg/dL')",
+    "Altra raccomandazione (es: 'controllo CPK e transaminasi a 1 mese se statina')",
+    "..."
+  ],
+
+  "terapia_pattern": "Pattern di terapia alla dimissione tipico per questa patologia. Esempio: 'Anticoagulante (DOAC nella maggior parte dei casi, warfarin se valvolare/protesi meccanica) + statina ad alto dosaggio + IPP. Se cardioembolico: DOAC sostituisce ASA. Se PFO chiuso: DAPT 6 mesi. NO doppia antiaggregazione.'",
+
+  "note": "Vincoli speciali (es: 'NIHSS sempre alla dimissione, mRS solo dimissione. Sezione neurosonologica obbligatoria. Visita controllo ambulatorio malattie cerebrovascolari.')."
 }
 
 ---
 
-REGOLE FERREE:
-- NON includere nella lettera-modello nessun dato clinico reale (diagnosi specifiche, farmaci del caso, valori numerici reali, date)
-- USA [PLACEHOLDER_TIPO] descrittivi come [DIAGNOSI_PRINCIPALE], [PROCEDURA_ESEGUITA], [ESITO_ESAME], [FARMACO_CLASSE]
-- La lettera-modello deve essere lunga abbastanza da coprire tutti i pattern strutturali, non una versione abbreviata
-- Le frasi_chiave devono essere frasi reali estratte o parafrasate dalla lettera originale, non inventate
-- override_rules NON è più presente nel fingerprint — le regole editoriali sono fisse nel system prompt e non sovrascrivibili da un singolo caso
-- eon_schema: inserisci lo schema EON di normalità del reparto estratto dalla lettera o dai diari — se non identificabile lascia il campo vuoto
-- NON specificare tempi verbali in note_stilistiche — il system prompt di generazione impone il passato prossimo come regola assoluta non sovrascrivibile
-- qualita: per ogni campo valuta onestamente il livello (alta/media/bassa) e spiega brevemente i limiti se non alta
-- Solo JSON valido, senza testo prima o dopo, senza backtick
+REGOLE GENERALI:
+- Estrai solo informazione patologia-specifica, non duplicare quello che è già nel prompt di sistema
+- Se un campo non è applicabile per questa patologia, restituisci array vuoto [] o stringa vuota ""
+- Sii concreto e clinicamente preciso
+- NON includere [PAZIENTE_NOME] o [DATA_NASCITA] o altri placeholder generici nel decorso_esempio
+- decorso_esempio deve essere prosa narrativa fedele all'originale; gli altri campi sono guide strutturate
+- Solo JSON valido, senza testo prima o dopo, senza backtick markdown
 
 ===== CARTELLA CLINICA =====
 [INCOLLA QUI LA CARTELLA CLINICA ANONIMIZZATA]
 
 ===== LETTERA DI DIMISSIONE =====
 [INCOLLA QUI LA LETTERA DI DIMISSIONE]`;
+// Backward compatibility alias
+let FINGERPRINT_PROMPT_V2 = FINGERPRINT_PROMPT_V3;
+
+// ═══════════════════════════════════════════════════════════════
+// PROMPT BOOTSTRAP — load prompts from repo with cache + fallback
+// ═══════════════════════════════════════════════════════════════
+//
+// Architecture:
+//   - DEFAULT_SYS, FINGERPRINT_PROMPT_V3, VERIFICA_SYSTEM are `let` variables
+//     initialized with embedded fallback strings (in case repo unreachable).
+//   - At login, bootstrapPrompts() fetches the latest versions from
+//     the data repo at paths prompts/default_sys.md, prompts/fingerprint_extract.md,
+//     prompts/verifica.md and overrides the variables.
+//   - Cached in sessionStorage for 1h; refresh button forces re-fetch.
+//   - Editor in admin panel allows editing + commit back to repo.
+
+const PROMPT_PATHS = {
+  DEFAULT_SYS:           'prompts/default_sys.md',
+  FINGERPRINT_PROMPT_V3: 'prompts/fingerprint_extract.md',
+  VERIFICA_SYSTEM:       'prompts/verifica.md',
+};
+
+const PROMPT_CACHE_TTL_MS = 60 * 60 * 1000; // 1 hour
+
+// Keep embedded fallbacks (snapshots of initial values) so we can reset to default
+const PROMPT_EMBEDDED_FALLBACKS = {
+  DEFAULT_SYS:           DEFAULT_SYS,
+  FINGERPRINT_PROMPT_V3: FINGERPRINT_PROMPT_V3,
+  VERIFICA_SYSTEM:       VERIFICA_SYSTEM,
+};
+
+// Track which prompts came from repo vs embedded (for UI display)
+let _promptSources = {
+  DEFAULT_SYS: 'embedded',
+  FINGERPRINT_PROMPT_V3: 'embedded',
+  VERIFICA_SYSTEM: 'embedded',
+};
+
+let _promptVersion = null; // metadata from config/version.json
+
+async function fetchPromptFromRepo(cfg, path){
+  // Direct GET to GitHub API; returns text or null
+  try{
+    const fileMeta = await ghApiGet({...cfg, path});
+    if(!fileMeta) return null;
+    let text;
+    if(fileMeta._rawText){
+      text = fileMeta._rawText;
+    } else if(fileMeta.content && fileMeta.content.trim()){
+      text = decodeURIComponent(escape(atob(fileMeta.content.replace(/\n/g,''))));
+    } else {
+      return null;
+    }
+    return text;
+  }catch(e){
+    console.warn(`fetchPromptFromRepo(${path}) failed:`, e.message);
+    return null;
+  }
+}
+
+async function bootstrapPrompts(forceRefresh){
+  // Try to load each prompt from repo, fall back to embedded
+  const cfg = await getGitHubCfg();
+  if(!cfg.token || !cfg.repo){
+    console.log('bootstrapPrompts: no repo config, using embedded prompts');
+    return;
+  }
+
+  // Check cache first (sessionStorage)
+  const cacheKey = 'letteraai_prompt_cache';
+  if(!forceRefresh){
+    try{
+      const cached = sessionStorage.getItem(cacheKey);
+      if(cached){
+        const obj = JSON.parse(cached);
+        if(obj && obj.timestamp && (Date.now() - obj.timestamp) < PROMPT_CACHE_TTL_MS){
+          if(obj.DEFAULT_SYS){           DEFAULT_SYS           = obj.DEFAULT_SYS;           _promptSources.DEFAULT_SYS = 'cache'; }
+          if(obj.FINGERPRINT_PROMPT_V3){ FINGERPRINT_PROMPT_V3 = obj.FINGERPRINT_PROMPT_V3; FINGERPRINT_PROMPT_V2 = FINGERPRINT_PROMPT_V3; _promptSources.FINGERPRINT_PROMPT_V3 = 'cache'; }
+          if(obj.VERIFICA_SYSTEM){       VERIFICA_SYSTEM       = obj.VERIFICA_SYSTEM;       _promptSources.VERIFICA_SYSTEM = 'cache'; }
+          if(obj.version){               _promptVersion = obj.version; }
+          console.log('bootstrapPrompts: loaded from sessionStorage cache');
+          return;
+        }
+      }
+    }catch(e){ /* ignore cache errors */ }
+  }
+
+  // Fetch each prompt from repo
+  const fetched = {};
+  for(const [varName, path] of Object.entries(PROMPT_PATHS)){
+    const text = await fetchPromptFromRepo(cfg, path);
+    if(text){
+      fetched[varName] = text;
+      _promptSources[varName] = 'repo';
+    } else {
+      _promptSources[varName] = 'embedded';
+    }
+  }
+
+  // Apply fetched values to the let variables
+  if(fetched.DEFAULT_SYS)           DEFAULT_SYS           = fetched.DEFAULT_SYS;
+  if(fetched.FINGERPRINT_PROMPT_V3){FINGERPRINT_PROMPT_V3 = fetched.FINGERPRINT_PROMPT_V3; FINGERPRINT_PROMPT_V2 = FINGERPRINT_PROMPT_V3;}
+  if(fetched.VERIFICA_SYSTEM)       VERIFICA_SYSTEM       = fetched.VERIFICA_SYSTEM;
+
+  // Try to fetch version metadata
+  try{
+    const verText = await fetchPromptFromRepo(cfg, 'config/version.json');
+    if(verText){ _promptVersion = JSON.parse(verText); }
+  }catch(e){ /* ignore */ }
+
+  // Save to cache
+  try{
+    sessionStorage.setItem(cacheKey, JSON.stringify({
+      timestamp: Date.now(),
+      DEFAULT_SYS: fetched.DEFAULT_SYS || null,
+      FINGERPRINT_PROMPT_V3: fetched.FINGERPRINT_PROMPT_V3 || null,
+      VERIFICA_SYSTEM: fetched.VERIFICA_SYSTEM || null,
+      version: _promptVersion,
+    }));
+  }catch(e){ /* sessionStorage might be full */ }
+
+  console.log('bootstrapPrompts: sources =', _promptSources);
+}
+
+async function reloadPromptsFromRepo(){
+  // Force-refresh: clear cache and re-fetch
+  sessionStorage.removeItem('letteraai_prompt_cache');
+  await bootstrapPrompts(true);
+}
+
+async function savePromptToRepo(varName, newText, commitMessage){
+  // Commit a prompt back to the data repo
+  const path = PROMPT_PATHS[varName];
+  if(!path) throw new Error('Prompt sconosciuto: ' + varName);
+  const cfg = await getGitHubCfg();
+  if(!cfg.token || !cfg.repo) throw new Error('Credenziali GitHub mancanti');
+
+  const url = `https://api.github.com/repos/${cfg.repo}/contents/${path}`;
+  // Get current SHA if file exists
+  let sha = null;
+  try{
+    const meta = await ghApiGet({...cfg, path});
+    if(meta && meta.sha) sha = meta.sha;
+  }catch(e){ /* file may not exist yet */ }
+
+  const body = {
+    message: commitMessage || `Update ${path} from in-app editor`,
+    content: btoa(unescape(encodeURIComponent(newText))),
+  };
+  if(sha) body.sha = sha;
+
+  const resp = await fetch(url, {
+    method: 'PUT',
+    headers: {
+      Authorization: `token ${cfg.token}`,
+      'Accept': 'application/vnd.github.v3+json',
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(body),
+  });
+  if(!resp.ok) throw new Error(`GitHub PUT ${resp.status}: ${await resp.text()}`);
+
+  // Apply new value immediately
+  if(varName === 'DEFAULT_SYS')           DEFAULT_SYS           = newText;
+  if(varName === 'FINGERPRINT_PROMPT_V3'){FINGERPRINT_PROMPT_V3 = newText; FINGERPRINT_PROMPT_V2 = newText;}
+  if(varName === 'VERIFICA_SYSTEM')       VERIFICA_SYSTEM       = newText;
+  _promptSources[varName] = 'repo';
+
+  // Update cache
+  try{
+    const cacheKey = 'letteraai_prompt_cache';
+    const cached = sessionStorage.getItem(cacheKey);
+    const obj = cached ? JSON.parse(cached) : { timestamp: Date.now() };
+    obj[varName] = newText;
+    obj.timestamp = Date.now();
+    sessionStorage.setItem(cacheKey, JSON.stringify(obj));
+  }catch(e){}
+
+  // Update version.json with timestamp
+  try{
+    await savePromptVersionMeta(varName);
+  }catch(e){ console.warn('Failed to update version.json:', e.message); }
+}
+
+async function savePromptVersionMeta(varName){
+  const cfg = await getGitHubCfg();
+  if(!cfg.token || !cfg.repo) return;
+  const path = 'config/version.json';
+  let meta = { prompts: {} };
+  let sha = null;
+  try{
+    const fileMeta = await ghApiGet({...cfg, path});
+    if(fileMeta){
+      sha = fileMeta.sha;
+      const text = fileMeta._rawText || decodeURIComponent(escape(atob(fileMeta.content.replace(/\n/g,''))));
+      meta = JSON.parse(text);
+      if(!meta.prompts) meta.prompts = {};
+    }
+  }catch(e){ /* file may not exist */ }
+  meta.prompts[varName] = { last_updated: new Date().toISOString(), updated_by: S.currentUser || 'unknown' };
+  const url = `https://api.github.com/repos/${cfg.repo}/contents/${path}`;
+  const body = {
+    message: `Update version.json: ${varName}`,
+    content: btoa(unescape(encodeURIComponent(JSON.stringify(meta, null, 2)))),
+  };
+  if(sha) body.sha = sha;
+  await fetch(url, {
+    method: 'PUT',
+    headers: {
+      Authorization: `token ${cfg.token}`,
+      'Accept': 'application/vnd.github.v3+json',
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(body),
+  });
+  _promptVersion = meta;
+}
+
+// ═══════════════════════════════════════════════════════════════
+// END PROMPT BOOTSTRAP
+// ═══════════════════════════════════════════════════════════════
+
+// ═══════════════════════════════════════════════════════════════
+// TEMPLATE LIBRARY — letter structure templates (admin-managed library)
+// ═══════════════════════════════════════════════════════════════
+//
+// templates/<template_id>.json on the data repo. Each contains:
+//   {
+//     "id": "default",
+//     "name": "Dimissione standard",
+//     "scenario": "dimissione_domicilio" | "trasferimento" | "completamento" | "altro",
+//     "intestazione": "Alla cortese attenzione del Medico Curante",
+//     "saluto": "Egregi Colleghi,",
+//     "apertura": "dimettiamo in data odierna ...",
+//     "ordine_sezioni": [ "diagnosi_quotata", "anamnesi_patologica_remota", ... ],
+//     "chiusura": "Rimaniamo a disposizione e porgiamo cordiali saluti.",
+//     "firma_specializzando_label": "[NOME_SPECIALIZZANDO]",
+//     "firma_dirigente_label": "[NOME_DIRIGENTE]",
+//     "firma_ruolo_sx": "Medico in formazione specialistica",
+//     "firma_ruolo_dx": "Dirigente medico",
+//     "createdAt": "..."
+//   }
+
+const TEMPLATES_DIR = 'templates/';
+const USER_OVERRIDES_DIR = 'user_overrides/';
+const USER_TEMPLATES_DIR = 'user_templates/';
+
+// Available standard sections (order can be customized)
+const TEMPLATE_SECTIONS_AVAILABLE = [
+  { id: 'diagnosi_quotata',           label: 'Diagnosi (in apertura)' },
+  { id: 'anamnesi_patologica_remota', label: 'Anamnesi patologica remota' },
+  { id: 'terapia_domiciliare',        label: 'Terapia domiciliare' },
+  { id: 'motivo_ricovero',            label: 'Motivo del ricovero' },
+  { id: 'ricoveri_precedenti',        label: 'Ricoveri precedenti (auto-skip se assenti)' },
+  { id: 'eo_neurologico_ingresso',    label: 'Esame obiettivo neurologico all\'ingresso' },
+  { id: 'eo_generale_ingresso',       label: 'Esame obiettivo generale all\'ingresso' },
+  { id: 'esami_ematochimici',         label: 'Esami ematochimici' },
+  { id: 'indagini_strumentali',       label: 'Indagini diagnostico-strumentali' },
+  { id: 'decorso_clinico',            label: 'Decorso clinico' },
+  { id: 'eo_neurologico_dimissione',  label: 'Esame obiettivo neurologico alla dimissione' },
+  { id: 'terapia_dimissione',         label: 'Terapia alla dimissione (tabella)' },
+  { id: 'visite_controllo',           label: 'Visite di controllo' },
+  { id: 'raccomandazioni',            label: 'Raccomandazioni' },
+];
+
+// Built-in default template (used as fallback when repo unreachable)
+const DEFAULT_TEMPLATE_EMBEDDED = {
+  id: 'default',
+  name: 'Dimissione standard (default)',
+  scenario: 'dimissione_domicilio',
+  intestazione: 'Alla cortese attenzione del Medico Curante',
+  saluto: 'Egregi Colleghi,',
+  apertura: 'dimettiamo in data odierna il/la sig./sig.ra [PAZIENTE_NOME], di anni [ETÀ] ([DATA_NASCITA]), ricoverato/a presso il nostro reparto in data [DATA_INGRESSO], con diagnosi di:',
+  ordine_sezioni: [
+    'diagnosi_quotata',
+    'anamnesi_patologica_remota',
+    'terapia_domiciliare',
+    'motivo_ricovero',
+    'ricoveri_precedenti',
+    'eo_neurologico_ingresso',
+    'eo_generale_ingresso',
+    'esami_ematochimici',
+    'indagini_strumentali',
+    'decorso_clinico',
+    'eo_neurologico_dimissione',
+    'terapia_dimissione',
+    'visite_controllo',
+    'raccomandazioni',
+  ],
+  chiusura: 'Rimaniamo a disposizione e porgiamo cordiali saluti.',
+  firma_specializzando_label: '[NOME_SPECIALIZZANDO]',
+  firma_dirigente_label: '[NOME_DIRIGENTE]',
+  firma_ruolo_sx: 'Medico in formazione specialistica',
+  firma_ruolo_dx: 'Dirigente medico',
+};
+
+let _templates = [DEFAULT_TEMPLATE_EMBEDDED]; // loaded library of templates (init with embedded default)
+let _userOverride = ''; // current user's additive rules (markdown text)
+let _userTemplateData = null; // current user's template config: { base_template_id, overrides: {...} }
+
+async function bootstrapTemplates(){
+  // Load all templates from repo, fall back to embedded default
+  const cfg = await getGitHubCfg();
+  if(!cfg.token || !cfg.repo){
+    _templates = [DEFAULT_TEMPLATE_EMBEDDED];
+    return;
+  }
+  try{
+    // List files in templates/ directory
+    const url = `https://api.github.com/repos/${cfg.repo}/contents/${TEMPLATES_DIR.replace(/\/$/,'')}`;
+    const resp = await fetch(url, { headers: { Authorization: `token ${cfg.token}`, 'Accept': 'application/vnd.github.v3+json' } });
+    if(!resp.ok){
+      // Directory probably doesn't exist yet — use embedded
+      _templates = [DEFAULT_TEMPLATE_EMBEDDED];
+      console.log('bootstrapTemplates: templates/ directory not found, using embedded default');
+      return;
+    }
+    const list = await resp.json();
+    const jsonFiles = (list||[]).filter(f => f.name && f.name.endsWith('.json') && f.type === 'file');
+    if(jsonFiles.length === 0){
+      _templates = [DEFAULT_TEMPLATE_EMBEDDED];
+      return;
+    }
+    // Fetch each template
+    const fetched = [];
+    for(const f of jsonFiles){
+      try{
+        const text = await fetchPromptFromRepo(cfg, TEMPLATES_DIR + f.name);
+        if(text){
+          const obj = JSON.parse(text);
+          if(obj && obj.id){ fetched.push(obj); }
+        }
+      }catch(e){ console.warn(`Failed to load template ${f.name}:`, e.message); }
+    }
+    if(fetched.length === 0) fetched.push(DEFAULT_TEMPLATE_EMBEDDED);
+    _templates = fetched;
+    console.log(`bootstrapTemplates: loaded ${_templates.length} templates`);
+  }catch(e){
+    console.warn('bootstrapTemplates failed:', e.message);
+    _templates = [DEFAULT_TEMPLATE_EMBEDDED];
+  }
+}
+
+async function loadUserOverride(){
+  if(!S.currentUser){ _userOverride = ''; return; }
+  const cfg = await getGitHubCfg();
+  if(!cfg.token || !cfg.repo){ _userOverride = ''; return; }
+  const path = USER_OVERRIDES_DIR + S.currentUser + '.md';
+  try{
+    const text = await fetchPromptFromRepo(cfg, path);
+    _userOverride = text || '';
+  }catch(e){ _userOverride = ''; }
+}
+
+async function loadUserTemplate(){
+  if(!S.currentUser){ _userTemplateData = null; return; }
+  const cfg = await getGitHubCfg();
+  if(!cfg.token || !cfg.repo){ _userTemplateData = null; return; }
+  const path = USER_TEMPLATES_DIR + S.currentUser + '.json';
+  try{
+    const text = await fetchPromptFromRepo(cfg, path);
+    _userTemplateData = text ? JSON.parse(text) : null;
+  }catch(e){ _userTemplateData = null; }
+}
+
+// Resolve effective template for current user: pick base + apply overrides
+function getEffectiveTemplate(){
+  let base = null;
+  if(_userTemplateData && _userTemplateData.base_template_id){
+    base = _templates.find(t => t.id === _userTemplateData.base_template_id);
+  }
+  if(!base) base = _templates.find(t => t.id === 'default') || _templates[0] || DEFAULT_TEMPLATE_EMBEDDED;
+
+  // Deep copy to avoid mutating library
+  const eff = JSON.parse(JSON.stringify(base));
+
+  // Apply user overrides if present
+  if(_userTemplateData && _userTemplateData.overrides){
+    const ov = _userTemplateData.overrides;
+    Object.keys(ov).forEach(k => { eff[k] = ov[k]; });
+  }
+  return eff;
+}
+
+// Build textual representation of template for injection into system prompt
+function renderTemplateForPrompt(tpl){
+  const sections = (tpl.ordine_sezioni||[]).map(id => {
+    const s = TEMPLATE_SECTIONS_AVAILABLE.find(x => x.id === id);
+    return s ? `${id}: ${s.label}` : id;
+  });
+  let out = '\n\n═══════════════════════════════════════════════════════════════\n';
+  out += 'TEMPLATE DELLA LETTERA — STRUTTURA SCELTA\n';
+  out += '═══════════════════════════════════════════════════════════════\n\n';
+  out += `INTESTAZIONE:\n${tpl.intestazione || ''}\n\n`;
+  out += `SALUTO:\n${tpl.saluto || ''}\n\n`;
+  out += `APERTURA (dopo il saluto, segue la diagnosi tra virgolette):\n${tpl.apertura || ''}\n\n`;
+  out += `ORDINE SEZIONI (segui esattamente questo ordine):\n`;
+  sections.forEach((s,i) => { out += `${i+1}. ${s}\n`; });
+  out += `\nCHIUSURA:\n${tpl.chiusura || ''}\n\n`;
+  out += `FIRMA (due colonne):\n`;
+  out += `Sinistra: ${tpl.firma_specializzando_label || '[NOME_SPECIALIZZANDO]'}\n`;
+  out += `         (${tpl.firma_ruolo_sx || 'Medico in formazione specialistica'})\n`;
+  out += `Destra:  ${tpl.firma_dirigente_label || '[NOME_DIRIGENTE]'}\n`;
+  out += `         (${tpl.firma_ruolo_dx || 'Dirigente medico'})\n`;
+  return out;
+}
+
+// Build user-override addendum (additive personal rules)
+function renderUserOverrideForPrompt(){
+  if(!_userOverride || !_userOverride.trim()) return '';
+  return '\n\n═══════════════════════════════════════════════════════════════\n' +
+         'AGGIUNTE PERSONALI DELL\'UTENTE (override additivo)\n' +
+         '═══════════════════════════════════════════════════════════════\n\n' +
+         _userOverride.trim();
+}
+
+// Compose the full system prompt at runtime
+// Used by all letter generation calls
+function getEffectiveSystemPrompt(){
+  let out = DEFAULT_SYS;
+  out += renderUserOverrideForPrompt();
+  out += renderTemplateForPrompt(getEffectiveTemplate());
+  return out;
+}
+
+// Save user override back to repo
+async function saveUserOverrideToRepo(newText){
+  if(!S.currentUser) throw new Error('Utente non loggato');
+  const cfg = await getGitHubCfg();
+  if(!cfg.token || !cfg.repo) throw new Error('Credenziali GitHub mancanti');
+  const path = USER_OVERRIDES_DIR + S.currentUser + '.md';
+  let sha = null;
+  try{
+    const meta = await ghApiGet({...cfg, path});
+    if(meta && meta.sha) sha = meta.sha;
+  }catch(e){}
+  const url = `https://api.github.com/repos/${cfg.repo}/contents/${path}`;
+  const body = {
+    message: `Update user_overrides for ${S.currentUser}`,
+    content: btoa(unescape(encodeURIComponent(newText || ''))),
+  };
+  if(sha) body.sha = sha;
+  const resp = await fetch(url, {
+    method: 'PUT',
+    headers: { Authorization: `token ${cfg.token}`, 'Accept': 'application/vnd.github.v3+json', 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  });
+  if(!resp.ok) throw new Error(`GitHub PUT ${resp.status}: ${await resp.text()}`);
+  _userOverride = newText || '';
+}
+
+// Save user template config back to repo
+async function saveUserTemplateToRepo(data){
+  if(!S.currentUser) throw new Error('Utente non loggato');
+  const cfg = await getGitHubCfg();
+  if(!cfg.token || !cfg.repo) throw new Error('Credenziali GitHub mancanti');
+  const path = USER_TEMPLATES_DIR + S.currentUser + '.json';
+  let sha = null;
+  try{
+    const meta = await ghApiGet({...cfg, path});
+    if(meta && meta.sha) sha = meta.sha;
+  }catch(e){}
+  const url = `https://api.github.com/repos/${cfg.repo}/contents/${path}`;
+  const text = JSON.stringify(data, null, 2);
+  const body = {
+    message: `Update user_template for ${S.currentUser}`,
+    content: btoa(unescape(encodeURIComponent(text))),
+  };
+  if(sha) body.sha = sha;
+  const resp = await fetch(url, {
+    method: 'PUT',
+    headers: { Authorization: `token ${cfg.token}`, 'Accept': 'application/vnd.github.v3+json', 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  });
+  if(!resp.ok) throw new Error(`GitHub PUT ${resp.status}: ${await resp.text()}`);
+  _userTemplateData = data;
+}
+
+// Reset user template — removes user_templates/<username>.json so default is used
+async function resetUserTemplate(){
+  if(!S.currentUser) throw new Error('Utente non loggato');
+  const cfg = await getGitHubCfg();
+  if(!cfg.token || !cfg.repo) throw new Error('Credenziali GitHub mancanti');
+  const path = USER_TEMPLATES_DIR + S.currentUser + '.json';
+  let sha = null;
+  try{
+    const meta = await ghApiGet({...cfg, path});
+    if(meta && meta.sha) sha = meta.sha;
+  }catch(e){
+    // File doesn't exist — already default
+    _userTemplateData = null;
+    return;
+  }
+  if(!sha){ _userTemplateData = null; return; }
+  const url = `https://api.github.com/repos/${cfg.repo}/contents/${path}`;
+  const resp = await fetch(url, {
+    method: 'DELETE',
+    headers: { Authorization: `token ${cfg.token}`, 'Accept': 'application/vnd.github.v3+json', 'Content-Type': 'application/json' },
+    body: JSON.stringify({ message: `Reset user_template for ${S.currentUser}`, sha }),
+  });
+  if(!resp.ok) throw new Error(`GitHub DELETE ${resp.status}: ${await resp.text()}`);
+  _userTemplateData = null;
+}
+
+// Save library template (admin only)
+async function saveLibraryTemplate(tpl){
+  if(!isAdminUser()) throw new Error('Solo gli amministratori possono modificare i template di libreria');
+  if(!tpl.id) throw new Error('Template senza id');
+  const cfg = await getGitHubCfg();
+  if(!cfg.token || !cfg.repo) throw new Error('Credenziali GitHub mancanti');
+  const path = TEMPLATES_DIR + tpl.id + '.json';
+  let sha = null;
+  try{
+    const meta = await ghApiGet({...cfg, path});
+    if(meta && meta.sha) sha = meta.sha;
+  }catch(e){}
+  const url = `https://api.github.com/repos/${cfg.repo}/contents/${path}`;
+  const text = JSON.stringify(tpl, null, 2);
+  const body = {
+    message: `Save template ${tpl.id}`,
+    content: btoa(unescape(encodeURIComponent(text))),
+  };
+  if(sha) body.sha = sha;
+  const resp = await fetch(url, {
+    method: 'PUT',
+    headers: { Authorization: `token ${cfg.token}`, 'Accept': 'application/vnd.github.v3+json', 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  });
+  if(!resp.ok) throw new Error(`GitHub PUT ${resp.status}: ${await resp.text()}`);
+  // Update local copy
+  const idx = _templates.findIndex(t => t.id === tpl.id);
+  if(idx >= 0) _templates[idx] = tpl; else _templates.push(tpl);
+}
+
+async function deleteLibraryTemplate(templateId){
+  if(!isAdminUser()) throw new Error('Solo gli amministratori possono eliminare template');
+  if(templateId === 'default') throw new Error('Il template di default non può essere eliminato');
+  const cfg = await getGitHubCfg();
+  if(!cfg.token || !cfg.repo) throw new Error('Credenziali GitHub mancanti');
+  const path = TEMPLATES_DIR + templateId + '.json';
+  let sha = null;
+  try{
+    const meta = await ghApiGet({...cfg, path});
+    if(meta && meta.sha) sha = meta.sha;
+  }catch(e){ throw new Error('Template non trovato sul repository'); }
+  const url = `https://api.github.com/repos/${cfg.repo}/contents/${path}`;
+  const resp = await fetch(url, {
+    method: 'DELETE',
+    headers: { Authorization: `token ${cfg.token}`, 'Accept': 'application/vnd.github.v3+json', 'Content-Type': 'application/json' },
+    body: JSON.stringify({ message: `Delete template ${templateId}`, sha }),
+  });
+  if(!resp.ok) throw new Error(`GitHub DELETE ${resp.status}: ${await resp.text()}`);
+  _templates = _templates.filter(t => t.id !== templateId);
+}
+
+// Helper: check if current user is admin
+function isAdminUser(){
+  return ADMIN_USERS.includes((S.currentUser||'').toLowerCase());
+}
+
+// ═══════════════════════════════════════════════════════════════
+// PANEL 10 — Editor Prompt + Template (admin)
+// ═══════════════════════════════════════════════════════════════
+
+let _currentPromptEditorVar = 'DEFAULT_SYS';
+
+function switchPromptEditor(varName){
+  _currentPromptEditorVar = varName;
+  ['DEFAULT_SYS','FINGERPRINT_PROMPT_V3','VERIFICA_SYSTEM'].forEach(v => {
+    const btn = document.getElementById('promptTabBtn_'+v);
+    if(btn) btn.classList.toggle('active', v===varName);
+  });
+  // Load current value into textarea
+  const ta = document.getElementById('promptEditorTextarea');
+  if(varName === 'DEFAULT_SYS') ta.value = DEFAULT_SYS;
+  if(varName === 'FINGERPRINT_PROMPT_V3') ta.value = FINGERPRINT_PROMPT_V3;
+  if(varName === 'VERIFICA_SYSTEM') ta.value = VERIFICA_SYSTEM;
+  updatePromptEditorMeta();
+}
+
+function updatePromptEditorMeta(){
+  const meta = document.getElementById('promptEditorMeta');
+  if(!meta) return;
+  const src = _promptSources[_currentPromptEditorVar] || 'embedded';
+  const ta = document.getElementById('promptEditorTextarea');
+  const len = ta?.value?.length || 0;
+  let info = `Sorgente attuale: <strong>${src}</strong> · Lunghezza: ${len} caratteri`;
+  if(_promptVersion && _promptVersion.prompts && _promptVersion.prompts[_currentPromptEditorVar]){
+    const v = _promptVersion.prompts[_currentPromptEditorVar];
+    info += ` · Ultimo aggiornamento: ${(v.last_updated||'').slice(0,16).replace('T',' ')} da ${v.updated_by||'?'}`;
+  }
+  meta.innerHTML = info;
+  // Also show global version
+  const versionEl = document.getElementById('promptVersionInfo');
+  if(versionEl){
+    if(_promptVersion){
+      versionEl.textContent = 'Versione repo: '+JSON.stringify(_promptVersion.prompts ? Object.keys(_promptVersion.prompts).length+' prompt(s) tracciati' : '—');
+    } else {
+      versionEl.textContent = '';
+    }
+  }
+}
+
+async function reloadPromptsFromRepoUI(){
+  const btn = document.getElementById('reloadPromptsBtn');
+  const spin = document.getElementById('reloadPromptsSpin');
+  btn.disabled = true; spin.style.display = 'inline-block';
+  try{
+    await reloadPromptsFromRepo();
+    await bootstrapTemplates();
+    switchPromptEditor(_currentPromptEditorVar);
+    renderLibraryTemplates();
+    alert('Prompt e template ricaricati dal repo.');
+  }catch(e){
+    alert('Errore nel ricaricamento: '+e.message);
+  }finally{
+    btn.disabled = false; spin.style.display = 'none';
+  }
+}
+
+async function savePromptEditor(){
+  const ta = document.getElementById('promptEditorTextarea');
+  const status = document.getElementById('savePromptStatus');
+  const btn = document.getElementById('savePromptBtn');
+  const spin = document.getElementById('savePromptSpin');
+  if(!ta) return;
+  const text = ta.value;
+  if(!text || !text.trim()){ alert('Il prompt non può essere vuoto.'); return; }
+  if(text.length > 100000){ if(!confirm('Il prompt è molto lungo ('+text.length+' caratteri). Proseguire?')) return; }
+  status.style.display = 'block';
+  status.style.color = 'var(--mid)';
+  status.textContent = 'Salvataggio in corso...';
+  btn.disabled = true; spin.style.display = 'inline-block';
+  try{
+    const message = `Update ${PROMPT_PATHS[_currentPromptEditorVar]} via in-app editor (${S.currentUser})`;
+    await savePromptToRepo(_currentPromptEditorVar, text, message);
+    status.style.color = 'var(--green)';
+    status.textContent = '✓ Salvato sul repo. La nuova versione è attiva immediatamente.';
+    updatePromptEditorMeta();
+  }catch(e){
+    status.style.color = 'var(--red)';
+    status.textContent = '✗ Errore: '+e.message;
+  }finally{
+    btn.disabled = false; spin.style.display = 'none';
+  }
+}
+
+function resetPromptEditorToEmbedded(){
+  if(!confirm('Resetto il contenuto al fallback embedded? (NON salva ancora — usa "Salva su repo" per applicare)')) return;
+  const ta = document.getElementById('promptEditorTextarea');
+  ta.value = PROMPT_EMBEDDED_FALLBACKS[_currentPromptEditorVar] || '';
+  updatePromptEditorMeta();
+}
+
+function discardPromptEditorChanges(){
+  switchPromptEditor(_currentPromptEditorVar);
+}
+
+// ── Library template editor (admin) ────────────────────────────────
+
+function renderLibraryTemplates(){
+  const list = document.getElementById('libraryTemplatesList');
+  if(!list) return;
+  if(!_templates || _templates.length === 0){
+    list.innerHTML = '<div class="ib">Nessun template caricato.</div>';
+    return;
+  }
+  list.innerHTML = _templates.map(t => {
+    const sectCount = (t.ordine_sezioni||[]).length;
+    return '<div style="display:flex;align-items:center;justify-content:space-between;padding:8px 10px;border:1px solid var(--border);border-radius:var(--r);margin-bottom:6px;background:var(--bg-soft);">' +
+      '<div>'+
+        '<div style="font-weight:600;font-size:12px;">'+esc(t.name||t.id)+'</div>'+
+        '<div style="font-family:\'JetBrains Mono\',monospace;font-size:10px;color:var(--dim);">id: '+esc(t.id)+' · scenario: '+esc(t.scenario||'?')+' · '+sectCount+' sezioni</div>'+
+      '</div>'+
+      '<div style="display:flex;gap:6px;">'+
+        '<button class="btn btn-g" style="font-size:10px;padding:4px 10px;" onclick="editLibraryTemplate(\''+esc(t.id)+'\')">✎ Modifica</button>'+
+        (t.id !== 'default' ? '<button class="btn btn-g" style="font-size:10px;padding:4px 10px;color:var(--red);" onclick="confirmDeleteLibraryTemplate(\''+esc(t.id)+'\')">🗑</button>' : '')+
+      '</div>'+
+    '</div>';
+  }).join('');
+}
+
+function newLibraryTemplate(){
+  const id = prompt('ID univoco del template (es: "trasferimento", "completamento"). Solo lettere minuscole, numeri e underscore:');
+  if(!id) return;
+  if(!/^[a-z0-9_]+$/.test(id)){ alert('ID non valido. Usa solo lettere minuscole, numeri e underscore.'); return; }
+  if(_templates.find(t => t.id === id)){ alert('Esiste già un template con questo ID.'); return; }
+  const tpl = JSON.parse(JSON.stringify(DEFAULT_TEMPLATE_EMBEDDED));
+  tpl.id = id;
+  tpl.name = 'Nuovo template ('+id+')';
+  editLibraryTemplate(id, tpl); // pre-seeded, not saved yet
+}
+
+function editLibraryTemplate(templateId, prefilledTpl){
+  // Open a modal-like editor (we use prompt+confirm flow + form rendering inline)
+  const tpl = prefilledTpl || _templates.find(t => t.id === templateId);
+  if(!tpl){ alert('Template non trovato.'); return; }
+  // Create a modal in DOM
+  let modal = document.getElementById('libraryTplEditorModal');
+  if(modal) modal.remove();
+  modal = document.createElement('div');
+  modal.id = 'libraryTplEditorModal';
+  modal.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.5);z-index:9999;display:flex;align-items:flex-start;justify-content:center;padding:30px;overflow-y:auto;';
+  modal.innerHTML =
+    '<div style="background:var(--bg);border:1px solid var(--border);border-radius:var(--r);padding:20px;max-width:800px;width:100%;">'+
+      '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">'+
+        '<div class="ctitle" style="margin:0;">Editor template di libreria</div>'+
+        '<button class="btn btn-g" onclick="closeLibraryTplEditor()" style="font-size:10px;">✕ Chiudi</button>'+
+      '</div>'+
+      '<label>ID</label><input type="text" id="libTpl_id" value="'+esc(tpl.id)+'" '+(prefilledTpl?'':'readonly')+' style="margin-bottom:10px;font-family:\'JetBrains Mono\',monospace;">'+
+      '<label>Nome leggibile</label><input type="text" id="libTpl_name" value="'+esc(tpl.name||'')+'" style="margin-bottom:10px;">'+
+      '<label>Scenario</label><select id="libTpl_scenario" style="margin-bottom:10px;">'+
+        '<option value="dimissione_domicilio"'+(tpl.scenario==='dimissione_domicilio'?' selected':'')+'>Dimissione a domicilio</option>'+
+        '<option value="trasferimento"'+(tpl.scenario==='trasferimento'?' selected':'')+'>Trasferimento ad altro reparto</option>'+
+        '<option value="completamento"'+(tpl.scenario==='completamento'?' selected':'')+'>Lettera di completamento</option>'+
+        '<option value="altro"'+(tpl.scenario==='altro'?' selected':'')+'>Altro</option>'+
+      '</select>'+
+      '<label>Intestazione</label><input type="text" id="libTpl_intestazione" value="'+esc(tpl.intestazione||'')+'" style="margin-bottom:10px;">'+
+      '<label>Saluto</label><input type="text" id="libTpl_saluto" value="'+esc(tpl.saluto||'')+'" style="margin-bottom:10px;">'+
+      '<label>Apertura</label><textarea id="libTpl_apertura" rows="3" style="margin-bottom:10px;">'+esc(tpl.apertura||'')+'</textarea>'+
+      '<label>Chiusura</label><input type="text" id="libTpl_chiusura" value="'+esc(tpl.chiusura||'')+'" style="margin-bottom:10px;">'+
+      '<label>Firma sx (placeholder)</label><input type="text" id="libTpl_firma_sx" value="'+esc(tpl.firma_specializzando_label||'')+'" style="margin-bottom:6px;">'+
+      '<label style="font-size:9px;">Ruolo sx</label><input type="text" id="libTpl_ruolo_sx" value="'+esc(tpl.firma_ruolo_sx||'')+'" style="margin-bottom:10px;">'+
+      '<label>Firma dx (placeholder)</label><input type="text" id="libTpl_firma_dx" value="'+esc(tpl.firma_dirigente_label||'')+'" style="margin-bottom:6px;">'+
+      '<label style="font-size:9px;">Ruolo dx</label><input type="text" id="libTpl_ruolo_dx" value="'+esc(tpl.firma_ruolo_dx||'')+'" style="margin-bottom:10px;">'+
+      '<label>Ordine sezioni (trascina per riordinare; checkbox per includere)</label>'+
+      '<div id="libTpl_sectionsList" style="border:1px solid var(--border);border-radius:var(--r);padding:6px;background:var(--bg-soft);margin-bottom:14px;"></div>'+
+      '<div style="display:flex;gap:8px;flex-wrap:wrap;">'+
+        '<button class="btn btn-p" onclick="saveLibraryTplFromModal('+(prefilledTpl?'true':'false')+')" id="saveLibTplBtn">'+
+          '<span class="spin" id="saveLibTplSpin" style="display:none;"></span>'+
+          '💾 Salva su repo'+
+        '</button>'+
+        '<button class="btn btn-g" onclick="closeLibraryTplEditor()">✕ Annulla</button>'+
+      '</div>'+
+      '<div id="saveLibTplStatus" style="margin-top:10px;font-family:\'JetBrains Mono\',monospace;font-size:11px;display:none;"></div>'+
+    '</div>';
+  document.body.appendChild(modal);
+  renderTemplateSectionsEditor('libTpl_sectionsList', tpl.ordine_sezioni||DEFAULT_TEMPLATE_EMBEDDED.ordine_sezioni);
+}
+
+function closeLibraryTplEditor(){
+  const modal = document.getElementById('libraryTplEditorModal');
+  if(modal) modal.remove();
+}
+
+async function saveLibraryTplFromModal(isNew){
+  const id = document.getElementById('libTpl_id').value.trim();
+  if(!id || !/^[a-z0-9_]+$/.test(id)){ alert('ID non valido.'); return; }
+  const tpl = {
+    id,
+    name: document.getElementById('libTpl_name').value.trim() || id,
+    scenario: document.getElementById('libTpl_scenario').value,
+    intestazione: document.getElementById('libTpl_intestazione').value,
+    saluto: document.getElementById('libTpl_saluto').value,
+    apertura: document.getElementById('libTpl_apertura').value,
+    chiusura: document.getElementById('libTpl_chiusura').value,
+    firma_specializzando_label: document.getElementById('libTpl_firma_sx').value,
+    firma_ruolo_sx: document.getElementById('libTpl_ruolo_sx').value,
+    firma_dirigente_label: document.getElementById('libTpl_firma_dx').value,
+    firma_ruolo_dx: document.getElementById('libTpl_ruolo_dx').value,
+    ordine_sezioni: getSectionOrderFromEditor('libTpl_sectionsList'),
+    updatedAt: new Date().toISOString(),
+  };
+  const status = document.getElementById('saveLibTplStatus');
+  const btn = document.getElementById('saveLibTplBtn');
+  const spin = document.getElementById('saveLibTplSpin');
+  status.style.display = 'block';
+  status.style.color = 'var(--mid)';
+  status.textContent = 'Salvataggio in corso...';
+  btn.disabled = true; spin.style.display = 'inline-block';
+  try{
+    await saveLibraryTemplate(tpl);
+    status.style.color = 'var(--green)';
+    status.textContent = '✓ Salvato.';
+    renderLibraryTemplates();
+    setTimeout(closeLibraryTplEditor, 800);
+  }catch(e){
+    status.style.color = 'var(--red)';
+    status.textContent = '✗ '+e.message;
+  }finally{
+    btn.disabled = false; spin.style.display = 'none';
+  }
+}
+
+async function confirmDeleteLibraryTemplate(templateId){
+  if(!confirm('Eliminare il template "'+templateId+'" dalla libreria? Questa azione non si può annullare.')) return;
+  try{
+    await deleteLibraryTemplate(templateId);
+    renderLibraryTemplates();
+  }catch(e){
+    alert('Errore: '+e.message);
+  }
+}
+
+// ── Sections editor (drag-and-drop with checkboxes) ────────────────
+
+function renderTemplateSectionsEditor(containerId, currentOrder){
+  const container = document.getElementById(containerId);
+  if(!container) return;
+  // Build a list: first the items in currentOrder (in that order), then any new ones not in currentOrder appended (disabled)
+  const orderedIds = (currentOrder||[]).filter(id => TEMPLATE_SECTIONS_AVAILABLE.find(s => s.id === id));
+  const orderedSet = new Set(orderedIds);
+  const remaining = TEMPLATE_SECTIONS_AVAILABLE.filter(s => !orderedSet.has(s.id)).map(s => s.id);
+  const finalOrder = [...orderedIds, ...remaining];
+
+  container.innerHTML = finalOrder.map((id, idx) => {
+    const sectMeta = TEMPLATE_SECTIONS_AVAILABLE.find(s => s.id === id);
+    if(!sectMeta) return '';
+    const enabled = orderedSet.has(id);
+    return '<div class="tpl-section-row" draggable="true" data-section-id="'+esc(id)+'" '+
+      'style="display:flex;align-items:center;gap:8px;padding:6px 8px;background:var(--bg);border:1px solid var(--border);border-radius:4px;margin-bottom:4px;cursor:move;">'+
+      '<span style="color:var(--dim);font-family:\'JetBrains Mono\',monospace;font-size:10px;">⠿</span>'+
+      '<input type="checkbox" '+(enabled?'checked':'')+' data-section-cb="'+esc(id)+'" onchange="onSectionCheckboxChange(\''+esc(containerId)+'\')">'+
+      '<span style="flex:1;font-size:12px;">'+esc(sectMeta.label)+'</span>'+
+      '<span style="font-family:\'JetBrains Mono\',monospace;font-size:9px;color:var(--dim);">'+esc(id)+'</span>'+
+      '</div>';
+  }).join('');
+  // Attach drag handlers
+  attachDragHandlers(container);
+}
+
+function onSectionCheckboxChange(containerId){
+  // No re-render needed; the order is read at save time
+}
+
+function attachDragHandlers(container){
+  let draggedEl = null;
+  container.querySelectorAll('.tpl-section-row').forEach(row => {
+    row.addEventListener('dragstart', (e) => {
+      draggedEl = row;
+      row.style.opacity = '0.4';
+      e.dataTransfer.effectAllowed = 'move';
+    });
+    row.addEventListener('dragend', () => {
+      if(draggedEl) draggedEl.style.opacity = '1';
+      draggedEl = null;
+    });
+    row.addEventListener('dragover', (e) => {
+      e.preventDefault();
+      e.dataTransfer.dropEffect = 'move';
+      const rect = row.getBoundingClientRect();
+      const after = (e.clientY - rect.top) > rect.height / 2;
+      if(draggedEl && draggedEl !== row){
+        if(after){
+          row.parentNode.insertBefore(draggedEl, row.nextSibling);
+        } else {
+          row.parentNode.insertBefore(draggedEl, row);
+        }
+      }
+    });
+    row.addEventListener('drop', (e) => { e.preventDefault(); });
+  });
+}
+
+function getSectionOrderFromEditor(containerId){
+  const container = document.getElementById(containerId);
+  if(!container) return [];
+  const rows = container.querySelectorAll('.tpl-section-row');
+  const out = [];
+  rows.forEach(row => {
+    const id = row.getAttribute('data-section-id');
+    const cb = row.querySelector('input[type="checkbox"]');
+    if(cb && cb.checked) out.push(id);
+  });
+  return out;
+}
+
+// ═══════════════════════════════════════════════════════════════
+// PANEL 11 — Mie personalizzazioni (every user)
+// ═══════════════════════════════════════════════════════════════
+
+function refreshUserPersonalizationsPanel(){
+  // Called when entering panel 11 - load current values into UI
+  const overrideTa = document.getElementById('userOverrideTextarea');
+  if(overrideTa) overrideTa.value = _userOverride || '';
+
+  // Populate template selector
+  const sel = document.getElementById('userTplBaseSelect');
+  if(sel){
+    sel.innerHTML = _templates.map(t => '<option value="'+esc(t.id)+'">'+esc(t.name||t.id)+'</option>').join('');
+    const currentBaseId = (_userTemplateData && _userTemplateData.base_template_id) || 'default';
+    sel.value = currentBaseId;
+  }
+  populateUserTemplateForm();
+}
+
+function populateUserTemplateForm(){
+  const sel = document.getElementById('userTplBaseSelect');
+  const baseId = sel?.value || 'default';
+  const base = _templates.find(t => t.id === baseId) || DEFAULT_TEMPLATE_EMBEDDED;
+  const ov = (_userTemplateData && _userTemplateData.base_template_id === baseId) ? (_userTemplateData.overrides||{}) : {};
+  // Apply base + overrides for display
+  const eff = { ...base, ...ov };
+  document.getElementById('userTplIntestazione').value = eff.intestazione || '';
+  document.getElementById('userTplSaluto').value = eff.saluto || '';
+  document.getElementById('userTplApertura').value = eff.apertura || '';
+  document.getElementById('userTplChiusura').value = eff.chiusura || '';
+  document.getElementById('userTplFirmaSx').value = eff.firma_specializzando_label || '';
+  document.getElementById('userTplRuoloSx').value = eff.firma_ruolo_sx || '';
+  document.getElementById('userTplFirmaDx').value = eff.firma_dirigente_label || '';
+  document.getElementById('userTplRuoloDx').value = eff.firma_ruolo_dx || '';
+  renderTemplateSectionsEditor('userTplSectionsList', eff.ordine_sezioni || base.ordine_sezioni || DEFAULT_TEMPLATE_EMBEDDED.ordine_sezioni);
+}
+
+function onUserTplBaseChange(){
+  populateUserTemplateForm();
+}
+
+async function saveUserOverride(){
+  const ta = document.getElementById('userOverrideTextarea');
+  const status = document.getElementById('saveUserOverrideStatus');
+  const btn = document.getElementById('saveUserOverrideBtn');
+  const spin = document.getElementById('saveUserOverrideSpin');
+  if(!ta) return;
+  status.style.display = 'block'; status.style.color = 'var(--mid)';
+  status.textContent = 'Salvataggio in corso...';
+  btn.disabled = true; spin.style.display = 'inline-block';
+  try{
+    await saveUserOverrideToRepo(ta.value);
+    status.style.color = 'var(--green)';
+    status.textContent = '✓ Salvato. Le tue aggiunte sono ora attive.';
+  }catch(e){
+    status.style.color = 'var(--red)';
+    status.textContent = '✗ '+e.message;
+  }finally{
+    btn.disabled = false; spin.style.display = 'none';
+  }
+}
+
+function discardUserOverrideChanges(){
+  const ta = document.getElementById('userOverrideTextarea');
+  if(ta) ta.value = _userOverride || '';
+}
+
+async function saveUserTemplate(){
+  const baseId = document.getElementById('userTplBaseSelect').value;
+  const base = _templates.find(t => t.id === baseId) || DEFAULT_TEMPLATE_EMBEDDED;
+  // Compute overrides: only include fields that DIFFER from the base
+  const fields = {
+    intestazione: document.getElementById('userTplIntestazione').value,
+    saluto: document.getElementById('userTplSaluto').value,
+    apertura: document.getElementById('userTplApertura').value,
+    chiusura: document.getElementById('userTplChiusura').value,
+    firma_specializzando_label: document.getElementById('userTplFirmaSx').value,
+    firma_ruolo_sx: document.getElementById('userTplRuoloSx').value,
+    firma_dirigente_label: document.getElementById('userTplFirmaDx').value,
+    firma_ruolo_dx: document.getElementById('userTplRuoloDx').value,
+    ordine_sezioni: getSectionOrderFromEditor('userTplSectionsList'),
+  };
+  const overrides = {};
+  Object.keys(fields).forEach(k => {
+    const a = JSON.stringify(fields[k]);
+    const b = JSON.stringify(base[k]);
+    if(a !== b) overrides[k] = fields[k];
+  });
+  const data = { base_template_id: baseId };
+  if(Object.keys(overrides).length > 0) data.overrides = overrides;
+  data.updatedAt = new Date().toISOString();
+
+  const status = document.getElementById('saveUserTemplateStatus');
+  const btn = document.getElementById('saveUserTemplateBtn');
+  const spin = document.getElementById('saveUserTemplateSpin');
+  status.style.display = 'block'; status.style.color = 'var(--mid)';
+  status.textContent = 'Salvataggio in corso...';
+  btn.disabled = true; spin.style.display = 'inline-block';
+  try{
+    await saveUserTemplateToRepo(data);
+    status.style.color = 'var(--green)';
+    const ovCount = Object.keys(overrides).length;
+    status.textContent = '✓ Salvato. Template di base: '+base.name+(ovCount?' · '+ovCount+' override personali':' · nessun override (uso default)');
+  }catch(e){
+    status.style.color = 'var(--red)';
+    status.textContent = '✗ '+e.message;
+  }finally{
+    btn.disabled = false; spin.style.display = 'none';
+  }
+}
+
+async function resetMyUserTemplate(){
+  if(!confirm('Riportare il tuo template al default? Cancellerà le tue personalizzazioni dal repo.')) return;
+  const status = document.getElementById('saveUserTemplateStatus');
+  status.style.display = 'block'; status.style.color = 'var(--mid)';
+  status.textContent = 'Reset in corso...';
+  try{
+    await resetUserTemplate();
+    status.style.color = 'var(--green)';
+    status.textContent = '✓ Resettato al default.';
+    refreshUserPersonalizationsPanel();
+  }catch(e){
+    status.style.color = 'var(--red)';
+    status.textContent = '✗ '+e.message;
+  }
+}
+
+function discardUserTemplateChanges(){
+  refreshUserPersonalizationsPanel();
+}
+
+// ═══════════════════════════════════════════════════════════════
+// END PANELS 10 + 11
+// ═══════════════════════════════════════════════════════════════
+
+// ═══════════════════════════════════════════════════════════════
+// END TEMPLATE LIBRARY
+// ═══════════════════════════════════════════════════════════════
 
 // ── Fingerprint helpers ──────────────────────────────────────────────
 
-// Detect new-style (V2) fingerprint vs old 4-section prose
+// Detect fingerprint schema version
+// V3 (new): has patologia + decorso_esempio fields
+// V2 (legacy): has lettera_modello field
 function parseFpJson(fpStr){
   if(!fpStr) return null;
   try{
     const obj=JSON.parse(fpStr);
-    if(obj.lettera_modello) return obj; // new V2 style
-    return null; // old style or not JSON
+    // V3 detection: patologia + decorso_esempio are mandatory in new schema
+    if(obj.patologia && obj.decorso_esempio){
+      obj._schema = 'v3';
+      return obj;
+    }
+    // V2 legacy detection
+    if(obj.lettera_modello){
+      obj._schema = 'v2';
+      return obj;
+    }
+    return null;
   }catch(e){ return null; }
 }
 
-// Build system-prompt addendum from V2 fp object
-// (reasoning + frasi + stile → injected into system so Claude understands WHY)
+// Build system-prompt addendum from fp object
+// V3: structured pathology-specific guidance (patologia, diagnosi_pattern, logica_diagnostica, decorso_esempio, checklists)
+// V2: legacy reasoning + frasi + stile
 function buildFpSystemAddendum(fpObj){
   if(!fpObj) return '';
+
+  // V3 schema (new structured pathology fingerprint)
+  if(fpObj._schema === 'v3' || fpObj.patologia){
+    let out='\n\n---\n\n## DECORSO PATOLOGIA-SPECIFICO (FINGERPRINT)\n';
+    out+=`\n**Patologia:** ${fpObj.patologia||''}`;
+    if(fpObj.diagnosi_pattern)
+      out+=`\n\n**Pattern diagnostico:**\n${fpObj.diagnosi_pattern}`;
+    if(fpObj.logica_diagnostica)
+      out+=`\n\n**Logica diagnostica (criteri positivi e differenziali):**\n${fpObj.logica_diagnostica}`;
+    if(Array.isArray(fpObj.checklist_decorso) && fpObj.checklist_decorso.length){
+      out+='\n\n**Checklist decorso (step da coprire):**';
+      fpObj.checklist_decorso.forEach(s=>{ out+=`\n- ${s}`; });
+    }
+    if(Array.isArray(fpObj.esami_aggiuntivi) && fpObj.esami_aggiuntivi.length){
+      out+='\n\n**Esami aggiuntivi tipici:**';
+      fpObj.esami_aggiuntivi.forEach(s=>{ out+=`\n- ${s}`; });
+    }
+    if(Array.isArray(fpObj.diari_da_monitorare) && fpObj.diari_da_monitorare.length){
+      out+='\n\n**Quadri da cercare nelle note di diario:**';
+      fpObj.diari_da_monitorare.forEach(s=>{ out+=`\n- ${s}`; });
+    }
+    if(Array.isArray(fpObj.raccomandazioni_specifiche) && fpObj.raccomandazioni_specifiche.length){
+      out+='\n\n**Raccomandazioni alla dimissione tipiche:**';
+      fpObj.raccomandazioni_specifiche.forEach(s=>{ out+=`\n- ${s}`; });
+    }
+    if(fpObj.terapia_pattern)
+      out+=`\n\n**Pattern terapia alla dimissione:**\n${fpObj.terapia_pattern}`;
+    if(fpObj.note)
+      out+=`\n\n**Note speciali:**\n${fpObj.note}`;
+    if(fpObj.decorso_esempio){
+      out+=`\n\n**Decorso esempio (da una lettera reale — usa SOLO come guida stilistica, NON copiare dati specifici):**\n${fpObj.decorso_esempio}`;
+    }
+    return out;
+  }
+
+  // V2 schema (legacy backward compatibility)
   let out='\n\n---\n\n## MODELLO DI RAGIONAMENTO CLINICO (fingerprint di riferimento)\n';
   const r=fpObj.ragionamento||{};
   if(r.criteri_selezione)      out+=`\n**Criteri di selezione:** ${r.criteri_selezione}`;
@@ -6585,26 +7881,34 @@ function importManualFingerprint(){
   try{
     const parsed = JSON.parse(raw.replace(/```json[\s\S]*?```|```/g,'').trim());
 
-    if(parsed.lettera_modello){
-      // ── New V2 schema ──────────────────────────────────────────
+    if(parsed.patologia && parsed.decorso_esempio){
+      // ── New V3 schema (10-field pathology-specific) ─────────────
+      newTplFingerprintJson = JSON.stringify(parsed);
+      newTplSections = []; // clear old sections
+      renderFpV3Preview(parsed);
+      const toks = tok(newTplFingerprintJson);
+      status.style.color='var(--green)';
+      status.textContent=`✓ Decorso importato · ${parsed.patologia} · ~${toks} token`;
+    } else if(parsed.lettera_modello){
+      // ── Legacy V2 schema ───────────────────────────────────────
       newTplFingerprintJson = JSON.stringify(parsed);
       newTplSections = []; // clear old sections
       renderFpV2Preview(parsed);
       const toks = tok(newTplFingerprintJson);
       status.style.color='var(--green)';
-      status.textContent=`✓ Logica importata · lettera-modello + ragionamento · ~${toks} token`;
+      status.textContent=`✓ Decorso importato (formato legacy V2) · ~${toks} token`;
     } else {
       // ── Legacy 4-field schema ──────────────────────────────────
       const map={apertura:'Apertura',decorso:'Decorso tipo',terapia:'Terapia tipo',chiusura:'Chiusura'};
       newTplSections=[];
       for(const [k,label] of Object.entries(map))
         if(parsed[k]) newTplSections.push({id:'ntpl_'+Date.now()+'_'+k,label,text:parsed[k]});
-      if(!newTplSections.length) throw new Error('Nessun campo valido (apertura/decorso/terapia/chiusura o lettera_modello)');
+      if(!newTplSections.length) throw new Error('Nessun campo valido (patologia/decorso_esempio per V3, o apertura/decorso/terapia/chiusura legacy)');
       newTplFingerprintJson = '';
       renderNewTplSections();
       const fp=buildFingerprintFromSections(newTplSections);
       status.style.color='var(--green)';
-      status.textContent=`✓ Logica legacy importata · ${newTplSections.length} sezioni · ~${tok(fp)} token`;
+      status.textContent=`✓ Decorso legacy importato · ${newTplSections.length} sezioni · ~${tok(fp)} token`;
     }
     document.getElementById('manualFingerprintJson').value='';
     document.getElementById('manualFpImportBtn').style.display='none';
@@ -6612,6 +7916,89 @@ function importManualFingerprint(){
     status.style.color='var(--red)';
     status.textContent='✗ JSON non valido: '+e.message;
   }
+}
+
+// ── Render V3 fingerprint preview card (10-field pathology-specific schema) ──
+function renderFpV3Preview(fpObj){
+  const container=document.getElementById('newTplSections');
+  const editorId='fpV3Editor_'+Date.now();
+  const mono="font-family:'JetBrains Mono',monospace";
+
+  function field(id,label,val,rows,extraStyle){
+    rows=rows||3;extraStyle=extraStyle||'';
+    return '<div><div style="'+mono+';font-size:9px;color:var(--dim);margin-bottom:3px;">'+label+'</div>'+
+      '<textarea id="'+id+'" rows="'+rows+'" style="font-size:11px;'+extraStyle+'">'+esc(val||'')+'</textarea></div>';
+  }
+
+  function arrField(id,label,arr){
+    const txt=Array.isArray(arr)?arr.join('\n'):'';
+    return '<div><div style="'+mono+';font-size:9px;color:var(--dim);margin-bottom:3px;">'+label+' (uno per riga)</div>'+
+      '<textarea id="'+id+'" rows="4" style="font-size:11px;">'+esc(txt)+'</textarea></div>';
+  }
+
+  container.innerHTML=
+    '<div id="'+editorId+'" style="border:1px solid var(--accent-d);border-radius:var(--r);overflow:hidden;margin-top:4px;">'+
+    // header
+    '<div style="background:var(--accent-g);padding:8px 12px;display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;">'+
+      '<span style="'+mono+';font-size:10px;color:var(--accent);font-weight:600;text-transform:uppercase;letter-spacing:.1em;">&#10022; Decorso patologia-specifico</span>'+
+      '<div style="display:flex;gap:6px;flex-wrap:wrap;">'+
+        '<span style="'+mono+';font-size:9px;color:var(--dim);">~'+tok(JSON.stringify(fpObj))+' token</span>'+
+        '<button class="btn btn-g" style="font-size:9px;padding:3px 8px;" onclick="saveFpV3Edits(\''+editorId+'\')">&#10003; Salva modifiche</button>'+
+        '<button class="btn btn-g" style="font-size:9px;padding:3px 8px;" onclick="clearFpV2()">&#10005; Rimuovi</button>'+
+      '</div>'+
+    '</div>'+
+    // patologia + diagnosi
+    '<div style="padding:12px;border-bottom:1px solid var(--border);display:grid;grid-template-columns:1fr 2fr;gap:8px;">'+
+      '<div><div style="'+mono+';font-size:9px;color:var(--dim);margin-bottom:3px;">patologia</div>'+
+        '<input type="text" id="fpv3_patologia" value="'+esc(fpObj.patologia||'')+'" style="font-size:11px;"></div>'+
+      field('fpv3_diagnosi_pattern','diagnosi_pattern',fpObj.diagnosi_pattern,2)+
+    '</div>'+
+    // logica diagnostica
+    '<div style="padding:12px;border-bottom:1px solid var(--border);">'+
+      field('fpv3_logica_diagnostica','logica_diagnostica (criteri positivi e differenziali)',fpObj.logica_diagnostica,5)+
+    '</div>'+
+    // decorso esempio
+    '<div style="padding:12px;border-bottom:1px solid var(--border);">'+
+      field('fpv3_decorso_esempio','decorso_esempio (paragrafo narrativo da una lettera reale)',fpObj.decorso_esempio,10,mono+';')+
+    '</div>'+
+    // checklists (4 columns)
+    '<div style="padding:12px;border-bottom:1px solid var(--border);display:grid;grid-template-columns:1fr 1fr;gap:8px;">'+
+      arrField('fpv3_checklist_decorso','checklist_decorso',fpObj.checklist_decorso)+
+      arrField('fpv3_esami_aggiuntivi','esami_aggiuntivi',fpObj.esami_aggiuntivi)+
+      arrField('fpv3_diari_da_monitorare','diari_da_monitorare',fpObj.diari_da_monitorare)+
+      arrField('fpv3_raccomandazioni_specifiche','raccomandazioni_specifiche',fpObj.raccomandazioni_specifiche)+
+    '</div>'+
+    // terapia + note
+    '<div style="padding:12px;display:grid;grid-template-columns:1fr 1fr;gap:8px;">'+
+      field('fpv3_terapia_pattern','terapia_pattern',fpObj.terapia_pattern,4)+
+      field('fpv3_note','note (vincoli speciali)',fpObj.note,4)+
+    '</div>'+
+    '</div>';
+
+  container._fpObj=fpObj;
+}
+
+function saveFpV3Edits(editorId){
+  const container=document.getElementById('newTplSections');
+  function val(id){const el=document.getElementById(id);return el?el.value:'';}
+  function lines(id){return val(id).split('\n').map(s=>s.trim()).filter(Boolean);}
+  const updated={
+    patologia:val('fpv3_patologia'),
+    diagnosi_pattern:val('fpv3_diagnosi_pattern'),
+    logica_diagnostica:val('fpv3_logica_diagnostica'),
+    decorso_esempio:val('fpv3_decorso_esempio'),
+    checklist_decorso:lines('fpv3_checklist_decorso'),
+    esami_aggiuntivi:lines('fpv3_esami_aggiuntivi'),
+    diari_da_monitorare:lines('fpv3_diari_da_monitorare'),
+    raccomandazioni_specifiche:lines('fpv3_raccomandazioni_specifiche'),
+    terapia_pattern:val('fpv3_terapia_pattern'),
+    note:val('fpv3_note'),
+  };
+  newTplFingerprintJson=JSON.stringify(updated);
+  container._fpObj=updated;
+  const btn=document.querySelector('#'+editorId+' .btn-g');
+  if(btn){const o=btn.textContent;btn.textContent='✓ Salvato!';btn.style.color='var(--green)';setTimeout(function(){btn.textContent=o;btn.style.color='';},1500);}
+  updateTokenPanel();
 }
 
 // ── Render V2 fingerprint preview card ──────────────────────────────
@@ -6649,7 +8036,7 @@ function renderFpV2Preview(fpObj){
     '<div id="'+editorId+'" style="border:1px solid var(--accent-d);border-radius:var(--r);overflow:hidden;margin-top:4px;">'+
     // header
     '<div style="background:var(--accent-g);padding:8px 12px;display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;">'+
-      '<span style="'+mono+';font-size:10px;color:var(--accent);font-weight:600;text-transform:uppercase;letter-spacing:.1em;">&#10022; Logica</span>'+
+      '<span style="'+mono+';font-size:10px;color:var(--accent);font-weight:600;text-transform:uppercase;letter-spacing:.1em;">&#10022; Decorso (formato legacy V2)</span>'+
       '<div style="display:flex;gap:6px;flex-wrap:wrap;">'+
         '<span style="'+mono+';font-size:9px;color:var(--dim);">~'+tok(JSON.stringify(fpObj))+' token</span>'+
         '<button class="btn btn-g" style="font-size:9px;padding:3px 8px;" onclick="saveFpEdits(\''+editorId+'\')">&#10003; Salva modifiche</button>'+
@@ -6937,8 +8324,10 @@ function updateAutoRefInfo(){
 }
 
 function setRefInject(mode){
+  // Map deprecated 'both' to 'fingerprint' for backward compatibility
+  if(mode === 'both') mode = 'fingerprint';
   _refInjectMode=mode;
-  ['fingerprint','full','both'].forEach(m=>{
+  ['fingerprint','full'].forEach(m=>{
     const btn=document.getElementById('refInjectBtn_'+m);
     if(btn) btn.classList.toggle('active',m===mode);
   });
