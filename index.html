@@ -3330,119 +3330,245 @@ function formatLabRows(rows){
 
 // ── Formato AOPD: Metodo | Unità | Intervallo | [data1 col] | [data2 col] | ...
 function formatLabRowsAOPD(rows){
-  function clean(v){return String(v==null?'':v).trim();}
+  function clean(v){ return String(v==null?'':v).replace(/nan/gi,'').trim(); }
   function anonHeader(s){
-    return s
-      .replace(/\bRIC_AO_\d+\b/gi,'[ID_RICOVERO]')
-      .replace(/\b\d{7,12}[-/]\d{0,6}\b/g,'[ID_RICOVERO]')
-      .replace(/\b(?:CF|C\.F\.)\s*:?\s*[A-Z0-9]{16}\b/gi,'[CODICE_FISCALE]')
-      .replace(/\b[A-Z]{6}\d{2}[A-Z]\d{2}[A-Z]\d{3}[A-Z]\b/g,'[CODICE_FISCALE]');
+    return s.replace(/\bRIC_AO_\d+\b/gi,'').replace(/\n+/g,' ').replace(/\s+/g,' ').trim();
+  }
+  function isAbn(val, ref){
+    if(!ref||!val) return false;
+    const n = parseFloat(val.replace(',','.'));
+    if(isNaN(n)) return false;
+    const m = ref.match(/([\d.,]+)\s*[-–]\s*([\d.,]+)/);
+    if(!m) return false;
+    return n < parseFloat(m[1].replace(',','.')) || n > parseFloat(m[2].replace(',','.'));
+  }
+  // Known acronyms/siglas that must stay ALL CAPS — used only for section toCamel
+  const ACRONYMS = new Set(['WBC','RBC','MCV','MCH','MCHC','RDW','CRP','PCR','INR','APTT','GFR',
+    'ALT','AST','ALP','CPK','TSH','FT3','FT4','LDL','HDL','VES','LAD','TNI',
+    'NSE','CEA','HBSAG','HCV','HBV','HAV','MDR','ETF','PEC','GGT','EU','CKD','EPI','PH']);
+
+  function isAcronym(word){
+    return ACRONYMS.has(word.toUpperCase()) || (word.length >= 2 && /^[A-Z][A-Z0-9]+$/.test(word));
+  }
+
+  function toCamel(s){
+    // Title case for section names only, preserving known acronyms
+    return s.replace(/\s+/g,' ').trim().replace(/[_\-]/g,' ')
+      .split(' ')
+      .map(w => {
+        if(!w) return '';
+        if(isAcronym(w)) return w.toUpperCase();
+        return w.charAt(0).toUpperCase() + w.slice(1).toLowerCase();
+      })
+      .join(' ');
+  }
+
+  function cleanName(s){
+    // Strip AOPD prefixes (B-, P-, S-, U-) then preserve original capitalisation exactly
+    return s.replace(/^[BPSU]-(?=[A-Za-z])/,'').replace(/\s*\(.*?\)\s*/g,'').trim();
   }
 
   const headerRow = rows[0];
-  // Colonne dati: da col 3 in poi. Ogni header colonna contiene "RIC_AO_XXX\ngiorno mese anno\norario"
-  // Estrai le date leggibili (tutto ciò che segue il codice ricovero)
-  const dateCols = []; // [{colIdx, label}]
+
+  // ── Date columns (col 3+): file order = most-recent first
+  const dateCols = [];
   for(let c = 3; c < headerRow.length; c++){
     const raw = clean(headerRow[c]);
     if(!raw) continue;
-    // Estrai la parte data/ora (dopo il codice ricovero e newline)
-    // Formato: "RIC_AO_20269263 \nlun 23\n feb 2026 \n07:00"
-    // Dopo anonimizzazione: "[ID_RICOVERO] \nlun 23\n feb 2026 \n07:00"
-    const anonRaw = anonHeader(raw);
-    // Rimuovi il codice ricovero (anonimizzato o originale) e lascia solo la parte data
-    let dateLabel = anonRaw
-      .replace(/\[ID_RICOVERO\]/gi,'')
-      .replace(/\bRIC_AO_\d+\b/gi,'')
-      .replace(/\n+/g,' ')
-      .replace(/\s+/g,' ')
-      .trim();
-    if(!dateLabel) dateLabel = `Prelievo ${c - 2}`;
-    dateCols.push({colIdx: c, label: dateLabel});
+    const label = anonHeader(raw);
+    dateCols.push({colIdx: c, label: label||`Prelievo ${c-2}`});
+  }
+  if(!dateCols.length) return formatLabRowsGeneric(rows);
+
+  // ── Always-show-exact exams ──
+  const ALWAYS_EXACT = /colesterol|hdl|ldl|trigliceridi|hba1c|emoglobina glicata|creatinina\b|tsh\b|urea\b/i;
+
+  // ── Section remapping for orphan rows ──
+  const REMAP = [
+    [/albumina.*eu|eritrociti.*eu|leucociti.*eu|batteri.*eu|ph.*eu|densit|glucosio.*eu|proteine.*eu|hb.*eu|chetoni|osmolal|eritrociti$|leucociti$|batteri$/i, 'Esame urine'],
+    [/aptt|d.dim|fibrinogen/i, 'Coagulazione'],
+    [/tsh|ft3|ft4/i, 'Funzionalità tiroidea'],
+    [/procalcitonin/i, 'Indici di flogosi'],
+    [/gfr/i, 'Funzionalità renale'],
+    [/sodio\b|potassio\b|cloro\b|calcio\b|magnesio\b|fosforo\b/i, 'Funzionalità renale'],
+    [/hbsag|anti.hb|anti.hcv|anti.hav|epatite|sorveglianza.*mdr|colturale|batteriuria|screening/i, 'Esami microbiologici'],
+    [/eta.*anni|coombs|tonicita|osmolalita.*calc|creatinina.*gfr|calcolo.*gfr/i, null], // skip
+  ];
+  function remapSection(name){
+    for(const [pat,sec] of REMAP) if(pat.test(name)) return sec;
+    return undefined; // keep current
   }
 
-  if(dateCols.length === 0){
-    // Fallback: tratta come formato generico
-    return formatLabRowsGeneric(rows);
-  }
-
-  // Costruisce il testo: per ogni esame, elenca tutti i valori per data
-  const lines = [];
-  let examCount = 0;
-
-  // Intestazione con le date disponibili
-  const dateLabels = dateCols.map(d => d.label).join(' | ');
-  lines.push(`Date prelievo: ${dateLabels}`);
-  lines.push('');
+  // ── Pass 1: collect all rows into sections, merging duplicates by name+unit ──
+  const sections = []; // [{name, items:[{name,unit,ref,cells:{colIdx->val}}]}]
+  let curSection = null;
 
   for(let i = 1; i < rows.length; i++){
     const row = rows[i].map(c => clean(c));
-    const name = row[0];
-    const unit = row[1];
-    const refRange = row[2];
-    if(!name) continue;
+    const name = row[0]; if(!name) continue;
+    const unit = row[1], ref = row[2];
+    const allVals = dateCols.map(d => clean(row[d.colIdx]||''));
+    const hasNum = allVals.some(v => v && !isNaN(parseFloat(v.replace(',','.'))));
+    const hasText = allVals.some(v => v && isNaN(parseFloat(v.replace(',','.'))));
+    const hasAny = hasNum || hasText;
 
-    // Tutti i valori per tutte le date
-    const vals = dateCols.map(d => clean(row[d.colIdx] || ''));
-
-    // Controlla se è una sezione (nessun valore in nessuna data)
-    const hasAnyValue = vals.some(v => v !== '');
-    const isLongComment = !hasAnyValue && name.length > 40;
-    const isSection = !hasAnyValue && !isLongComment;
-
-    if(isSection){
-      lines.push('');
-      lines.push(`[${name.toUpperCase()}]`);
+    // Section header row
+    if(!hasAny && name.length <= 60 && !/commento/i.test(name)){
+      const remap = remapSection(name);
+      if(remap === null) continue; // skip meta sections
+      curSection = {name: toCamel(name), items:[]};
+      sections.push(curSection);
       continue;
     }
 
-    if(isLongComment){
-      // Commento testuale (es. "Tracciato elettroforetico nella norma...")
-      // Trova quale colonna ha il commento
-      const commentVal = vals.find(v => v.length > 5) || name;
-      lines.push(`  ※ ${name}: ${commentVal}`);
+    // Determine effective section
+    const remap = remapSection(name);
+    if(remap === null) continue; // skip meta rows (età, tonicità, ecc.)
+
+    let targetSection = curSection;
+    if(remap !== undefined){
+      // Find or create remapped section
+      targetSection = sections.find(s => s.name.toLowerCase() === remap.toLowerCase());
+      if(!targetSection){ targetSection={name:remap,items:[]}; sections.push(targetSection); }
+    }
+    if(!targetSection){ targetSection={name:'Altro',items:[]}; sections.push(targetSection); }
+
+    // Comment row
+    if(/commento/i.test(name) || (!hasNum && hasText)){
+      const notReceived = allVals.some(v => /campione non pervenuto|esame annullato/i.test(v));
+      const commentText = notReceived ? 'campione non pervenuto'
+        : allVals.find(v => v && !/campione|annullato/i.test(v)) || '';
+      if(commentText) targetSection.items.push({type:'comment', name, text:commentText});
       continue;
     }
 
-    if(hasAnyValue){
-      examCount++;
-      // Formato: "  Nome esame (Unità) (rif: range): data1=val1 | data2=val2 ..."
-      // Se solo una data ha valore: formato semplice
-      // Se più date hanno valori: mostra tutte con la loro data
+    // Build cells map: colIdx → value
+    const cells = {};
+    dateCols.forEach(d => {
+      const v = clean(row[d.colIdx]||'');
+      if(v) cells[d.colIdx] = v;
+    });
 
-      const nonEmptyVals = dateCols
-        .map((d,idx) => ({label: d.label, val: vals[idx]}))
-        .filter(x => x.val !== '' && x.val !== 'NaN');
-
-      let meta = '';
-      // Avoid duplicate unit if already in name (e.g. "B-Neutrofili %" + unit "%" → "B-Neutrofili % %")
-      const unitClean = unit && unit !== '%' ? unit : (unit === '%' && name.endsWith('%') ? '' : unit);
-      if(unitClean) meta += ` ${unitClean}`;
-      if(refRange) meta += ` (rif: ${refRange})`;
-
-      if(nonEmptyVals.length === 1){
-        // Una sola data: formato compatto
-        const v = nonEmptyVals[0];
-        const abnFlag = isAbnormal(v.val, refRange) ? ' ⚠' : '';
-        lines.push(`  ${name}${meta}: ${v.val} [${v.label}]${abnFlag}`);
-      } else {
-        // Più date: mostra trend
-        // Ordina per data (inversamente — la prima colonna è la più recente nel file AOPD)
-        // Le colonne nel file sono già ordinate dalla più recente alla più vecchia (sinistra=recente)
-        // Invertiamo per mostrare in ordine cronologico (vecchia→recente)
-        const chronological = [...nonEmptyVals].reverse();
-        const trendParts = chronological.map(x => {
-          const flag = isAbnormal(x.val, refRange) ? '⚠' : '';
-          return `${x.val}${flag} [${x.label}]`;
-        });
-        lines.push(`  ${name}${meta}:`);
-        lines.push(`    ${trendParts.join(' → ')}`);
-      }
+    // ── Merge with existing item of same name+unit (different dates) ──
+    const key = name.toLowerCase().replace(/[^a-z0-9]/g,'');
+    const existing = targetSection.items.find(it => it.type==='exam' &&
+      it.key === key);
+    if(existing){
+      // Merge: fill in missing date columns
+      Object.entries(cells).forEach(([ci, v]) => {
+        if(!existing.cells[ci]) existing.cells[ci] = v;
+      });
+      // Use ref from whichever row has it
+      if(!existing.ref && ref) existing.ref = ref;
+      if(!existing.unit && unit) existing.unit = unit;
+    } else {
+      targetSection.items.push({type:'exam', key, name, unit, ref, cells});
     }
   }
 
-  const text = `## ESAMI DI LABORATORIO (da file: ${S_XLS.filename||'referto.xls'})\n` + lines.join('\n');
-  const preview = lines.slice(0, 50).join('\n') + (lines.length > 50 ? `\n  ... e altre ${lines.length - 50} righe` : '');
+  // ── Pass 2: format each section as inline string ──
+  const outputLines = [];
+  let examCount = 0;
+
+  for(const section of sections){
+    if(!section.items.length) continue;
+
+    const parts = []; // inline exam strings for this section
+
+    for(const item of section.items){
+      if(item.type === 'comment'){
+        parts.push(`${cleanName(item.name)}: ${item.text}`);
+        examCount++;
+        continue;
+      }
+
+      // exam item
+      const {name, unit, ref, cells} = item;
+      const cName = cleanName(name);
+
+      // Build chronological values (file=recent→old, so reverse colIdx order for chrono)
+      const chronoVals = [...dateCols].reverse()
+        .map(d => ({colIdx: d.colIdx, val: cells[d.colIdx]||''}))
+        .filter(x => x.val && !isNaN(parseFloat(x.val.replace(',','.'))));
+
+      if(!chronoVals.length) continue;
+      examCount++;
+
+      const lastVal = chronoVals[chronoVals.length-1].val;
+      const firstVal = chronoVals[0].val;
+      const firstAbn = isAbn(firstVal, ref);
+      const someAbn = chronoVals.some(x => isAbn(x.val, ref));
+      const mandatory = ALWAYS_EXACT.test(name);
+
+      const unitStr = (unit && !(name.endsWith('%') && unit==='%')) ? ` ${unit}` : '';
+      const refStr = ref ? ` (${ref})` : '';
+
+      // Skip % rows that are all normal (redundant with absolute)
+      if(/\s%$/.test(name) && !someAbn) continue;
+
+      let display;
+      if(!someAbn){
+        if(mandatory){
+          display = `${cName} ${lastVal}${unitStr}${refStr}`;
+        } else {
+          display = null; // will go into "nella norma" list
+        }
+      } else {
+        // Build trend
+        // Find peak index
+        let peakIdx = chronoVals.length-1, peakSev = 0;
+        const m = ref?.match(/([\d.,]+)\s*[-–]\s*([\d.,]+)/);
+        if(m){
+          const lo = parseFloat(m[1].replace(',','.')), hi = parseFloat(m[2].replace(',','.'));
+          chronoVals.forEach((x,j) => {
+            const v = parseFloat(x.val.replace(',','.'));
+            const sev = Math.max(v-hi, lo-v);
+            if(sev > peakSev){ peakSev=sev; peakIdx=j; }
+          });
+        }
+
+        let trendIndices;
+        if(firstAbn){
+          // Started abnormal: just last
+          trendIndices = [chronoVals.length-1];
+        } else {
+          // Started normal, became abnormal: first → [peak if distinct] → last
+          trendIndices = [0];
+          if(peakIdx !== 0 && peakIdx !== chronoVals.length-1) trendIndices.push(peakIdx);
+          if(chronoVals.length > 1) trendIndices.push(chronoVals.length-1);
+        }
+        trendIndices = [...new Set(trendIndices)].sort((a,b)=>a-b);
+
+        const trendParts = trendIndices.map(j => {
+          const v = chronoVals[j].val;
+          return isAbn(v,ref) ? `**${v}**` : v;
+        });
+
+        display = `${cName} ${trendParts.join(' → ')}${unitStr}${refStr}`;
+      }
+
+      if(display !== null) parts.push(display);
+      else parts.push(`${cName} nella norma`);
+    }
+
+    if(parts.length){
+      // Separate "nella norma" items from specific values
+      // Group: specific values first, then compress all "nella norma" into one item
+      const specific = parts.filter(p => !p.endsWith('nella norma'));
+      const normali = parts.filter(p => p.endsWith('nella norma'))
+        .map(p => p.replace(' nella norma','').trim());
+      const finalParts = [...specific];
+      if(normali.length === 1){
+        finalParts.push(`${normali[0]} nella norma`);
+      } else if(normali.length > 1){
+        finalParts.push(`${normali.join(', ')} nella norma`);
+      }
+      outputLines.push(`– ${section.name}: ${finalParts.join('; ')}.`);
+    }
+  }
+
+  const text = `## ESAMI DI LABORATORIO\n` + outputLines.join('\n');
+  const preview = outputLines.join('\n');
   return {text, preview, examCount};
 }
 
