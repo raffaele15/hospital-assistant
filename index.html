@@ -378,7 +378,7 @@ hr.div{border:none;border-top:1px solid var(--border);margin:18px 0}
   <div class="ptitle">Genera Lettera</div>
   <div class="card" id="letterTemplateCard">
     <div class="ctitle">Modello di Lettera</div>
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:4px;align-items:stretch;" id="letterTemplateGrid">
+    <div style="display:grid;grid-template-columns:1fr 1fr auto;gap:10px;margin-bottom:4px;align-items:stretch;" id="letterTemplateGrid">
       <label id="ltTile_dimissione" style="cursor:pointer;border:2px solid var(--accent);border-radius:var(--r);padding:10px 14px;background:var(--accent-g);display:flex;align-items:center;justify-content:center;margin:0;">
         <input type="radio" name="letterTemplate" value="dimissione" checked style="display:none;" onchange="onLetterTemplateChange()">
         <span style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--accent);font-weight:600;">🏠 DIMISSIONE</span>
@@ -386,6 +386,10 @@ hr.div{border:none;border-top:1px solid var(--border);margin:18px 0}
       <label id="ltTile_trasferimento" style="cursor:pointer;border:2px solid var(--border);border-radius:var(--r);padding:10px 14px;background:var(--surface2);display:flex;align-items:center;justify-content:center;margin:0;">
         <input type="radio" name="letterTemplate" value="trasferimento" style="display:none;" onchange="onLetterTemplateChange()">
         <span style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--dim);font-weight:600;">🏥 TRASFERIMENTO</span>
+      </label>
+      <label id="ltTile_esami_lab" style="cursor:pointer;border:2px solid var(--border);border-radius:var(--r);padding:8px 10px;background:var(--surface2);display:flex;align-items:center;justify-content:center;margin:0;white-space:nowrap;" title="Genera solo la sezione esami ematochimici formattata per la lettera">
+        <input type="radio" name="letterTemplate" value="esami_lab" style="display:none;" onchange="onLetterTemplateChange()">
+        <span style="font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--dim);font-weight:600;">🧪 ESAMI LAB</span>
       </label>
     </div>
     <div id="transferWardRow" style="display:none;margin-top:10px;">
@@ -493,8 +497,23 @@ hr.div{border:none;border-top:1px solid var(--border);margin:18px 0}
       </div>
     </div>
   </div>
-  <div class="card">
-    <div class="ctitle" style="margin:0;display:flex;align-items:center;gap:8px;cursor:pointer;" onclick="toggleSysPrompt()"><span id="sysPromptToggleArrow" style="color:var(--accent);font-size:12px;">▶</span>Istruzioni Generali — modificabili</div>
+  <!-- ── Esami Lab preferences card (shown only in esami_lab mode) ── -->
+  <div class="card" id="examiLabPrefsCard" style="display:none;">
+    <div class="ctitle">Preferenze Esami di Laboratorio</div>
+    <div style="display:flex;flex-direction:column;gap:12px;">
+      <div>
+        <label style="margin-bottom:6px;">Valori da includere</label>
+        <div class="tabs">
+          <button class="tab active" id="eLabBtn_all"      onclick="setELabPref('all')"      title="Riporta tutti i valori degli esami con unità e range">Tutti i valori</button>
+          <button class="tab"        id="eLabBtn_altered"  onclick="setELabPref('altered')"  title="Solo i valori alterati (fuori range) + colesterolo LDL/HDL, trigliceridi, HbA1c, creatinina">Solo patologici</button>
+        </div>
+      </div>
+      <div>
+        <label style="margin-bottom:6px;">Altre preferenze</label>
+        <textarea id="eLabCustomText" rows="2" placeholder="Aggiungi istruzioni specifiche per questa sezione..." style="font-size:11px;" oninput="updateTokenPanel();refreshPrompt()"></textarea>
+      </div>
+    </div>
+  </div><span id="sysPromptToggleArrow" style="color:var(--accent);font-size:12px;">▶</span>Istruzioni Generali — modificabili</div>
     <div id="sysPromptWrap" style="display:none;margin-top:10px;">
       <textarea id="systemPrompt" rows="8" style="font-size:11px;" oninput="clearTimeout(window._sysPromptTimer);window._sysPromptTimer=setTimeout(refreshPrompt,300);"></textarea>
     </div>
@@ -1088,6 +1107,7 @@ hr.div{border:none;border-top:1px solid var(--border);margin:18px 0}
       <button class="tab active" id="promptTabBtn_DEFAULT_SYS" onclick="switchPromptEditor('DEFAULT_SYS')">Prompt di sistema</button>
       <button class="tab" id="promptTabBtn_FINGERPRINT_PROMPT_V3" onclick="switchPromptEditor('FINGERPRINT_PROMPT_V3')">Prompt estrazione decorso</button>
       <button class="tab" id="promptTabBtn_VERIFICA_SYSTEM" onclick="switchPromptEditor('VERIFICA_SYSTEM')">Prompt verifica</button>
+      <button class="tab" id="promptTabBtn_ESAMI_LAB_SYS" onclick="switchPromptEditor('ESAMI_LAB_SYS')">Prompt esami lab</button>
     </div>
 
     <div id="promptEditorMeta" style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--dim);margin-bottom:6px;"></div>
@@ -1455,7 +1475,7 @@ DATI MANCANTI: scrivi "Non documentato." Non inventare valori, dosaggi, tempisti
 
 PLACEHOLDERS: usa [PAZIENTE_NOME] al posto del nome del paziente, [DATA_NASCITA] al posto della data di nascita, [REPARTO] al posto del reparto, [CITTA] al posto della città. Verranno sostituiti automaticamente in fase di esportazione.
 
-SOTTOLINEATURE: usa <u>...</u> SOLO per i valori ematochimici patologici (nome esame + valore, NON il range tra parentesi). Esempio: "<u>Emoglobina 102 g/L</u> (v.n. 140-175)". MAI sottolineare reperti di indagini strumentali.
+VALORI PATOLOGICI: usa **...** (grassetto) per i valori ematochimici patologici (nome esame + valore, NON il range tra parentesi). Esempio: "**Emoglobina 102 g/L** (v.n. 140-175)". MAI formattare i reperti di indagini strumentali.
 
 SOSPENSIONI FARMACI: documenta SEMPRE la motivazione della sospensione di un farmaco nel decorso clinico ("è stata sospesa la [farmaco] per [motivo]").
 
@@ -1598,19 +1618,19 @@ FORMATO — una riga per categoria, con trattino lungo come bullet:
 [Nome categoria]: [esame1], [esame2], [esame3] nella norma; [EsameAnomalo] VALORE unità (v.n. range).
 
 Esempi:
-– Emocromo: nella norma tranne <u>WBC 11,07 x 10^9/L</u> (4,40-11,00), <u>Hb 128 g/L</u> (140-175).
+– Emocromo: nella norma tranne **WBC 11,07 x 10^9/L** (4,40-11,00), **Hb 128 g/L** (140-175).
 – Formula leucocitaria: nella norma.
-– Indici di flogosi: <u>PCR 16,95 mg/L</u> (0,00-4,99).
-– Profilo coagulativo: nella norma tranne <u>INR 1,27</u>.
+– Indici di flogosi: **PCR 16,95 mg/L** (0,00-4,99).
+– Profilo coagulativo: nella norma tranne **INR 1,27**.
 – Profilo metabolico: glucosio, colesterolo totale 196 mg/dL, LDL 125 mg/dL, HDL 64 mg/dL, trigliceridi 49 mg/dL, omocisteina nella norma.
-– Funzionalità renale e ionemia: nella norma tranne <u>Cl 109 mmol/L</u> (96-108).
-– Funzionalità epatica: nella norma tranne <u>ALP 40 U/L</u> (43-115).
+– Funzionalità renale e ionemia: nella norma tranne **Cl 109 mmol/L** (96-108).
+– Funzionalità epatica: nella norma tranne **ALP 40 U/L** (43-115).
 – Enzimi muscolari: LAD e TnI nella norma.
 
 REGOLE GENERALI:
 - Prima gli esami nella norma (ultimo valore se serie temporali) separati da virgola + "nella norma".
 - Poi, separati da punto e virgola, gli esami alterati con valore esatto e range di normalità se presente.
-- I valori alterati (fuori range) vanno sottolineati: usare il tag <u> attorno al SOLO nome esame e al valore, NON attorno al range tra parentesi. Esempio: "<u>Emoglobina 102 g/L</u> (v.n. 140-175)".
+- I valori alterati (fuori range) vanno in grassetto: usare **...** attorno al SOLO nome esame e al valore, NON attorno al range tra parentesi. Esempio: "**Emoglobina 102 g/L** (v.n. 140-175)".
 - Se tutti nella norma: "[Nome categoria]: nella norma."
 - Se categoria non eseguita: ometti la riga.
 - Tutte le categorie presenti nell'input vanno incluse, anche se non elencate negli esempi.
@@ -1631,17 +1651,17 @@ Output: incluso negli esami "nella norma" della categoria.
 CASO B — Serie iniziata patologica (valore patologico fin dal primo prelievo):
 Mostra solo l'ultimo valore con sottolineatura.
 Esempio input: PCR 16,95 → 38,42 → 8,86 mg/L (range 0-4,99) — tutti patologici
-Output: "<u>PCR 8,86 mg/L</u> (0,00-4,99)"
+Output: "**PCR 8,86 mg/L** (0,00-4,99)"
 
 CASO C — Serie iniziata nei range, peggiorata durante la degenza (alterazione INSORTA):
 Mostra il trend completo: primo, peak (se distinto), ultimo.
 Esempio input: WBC 8,2 → 14,5 → 11,0 x10^9/L (range 4,4-11,0) — peggiora poi recupera parzialmente
-Output: "<u>WBC 8,2 → 14,5 → 11,0 x10^9/L</u> (4,4-11,0)"
+Output: "**WBC 8,2 → 14,5 → 11,0 x10^9/L** (4,4-11,0)"
 
 CASO D — Serie iniziata nei range, peggiorata monotonicamente:
 Mostra solo primo e ultimo (peak coincide con ultimo).
 Esempio input: Hb 145 → 110 g/L (range 140-175)
-Output: "<u>Hb 145 → 110 g/L</u> (140-175)"
+Output: "**Hb 145 → 110 g/L** (140-175)"
 
 CASO E — Valore singolo:
 Mostra il valore.
@@ -3233,8 +3253,29 @@ async function ensureSheetJs(){
   });
 }
 async function processXls(file){
-  const spin=document.getElementById('xlsSpin'),stxt=document.getElementById('xlsStatusTxt');
-  const status=document.getElementById('xlsStatus'),preview=document.getElementById('xlsPreview');
+  const spin=document.getElementById('xlsSpin');
+  const stxt=document.getElementById('xlsStatusTxt');
+  const status=document.getElementById('xlsStatus');
+  const preview=document.getElementById('xlsPreview');
+  if(!spin||!stxt||!status||!preview){
+    // Elements were destroyed by a textContent reset — just process silently
+    console.warn('processXls: some UI elements missing, processing without status updates');
+    try{
+      const XLS=await ensureSheetJs();
+      const buf=await file.arrayBuffer();
+      const wb=XLS.read(buf,{type:'array',cellText:true,cellDates:true});
+      const ws=wb.Sheets[wb.SheetNames[0]];
+      const rows=XLS.utils.sheet_to_json(ws,{header:1,defval:'',raw:false});
+      const fmt=formatLabRows(rows);
+      S_XLS.text=fmt.text;S_XLS.filename=file.name;
+      const pc=document.getElementById('xlsPreviewContent');
+      if(pc) pc.textContent=fmt.preview;
+      if(preview) preview.style.display='block';
+      if(status) status.style.display='block';
+      if(stxt){stxt.style.color='var(--green)';stxt.textContent=`✓ ${fmt.examCount} esami estratti da "${file.name}"`;}
+    }catch(err){ alert('Errore XLS: '+err.message); }
+    return;
+  }
   status.style.display='block';spin.style.display='inline-block';
   stxt.style.color='var(--mid)';stxt.textContent='Caricamento SheetJS...';
   try{
@@ -3253,40 +3294,200 @@ async function processXls(file){
   }catch(err){spin.style.display='none';stxt.style.color='var(--red)';stxt.textContent='✗ '+err.message;}
 }
 function formatLabRows(rows){
-  function stripIds(s){
+  // ── Anonimizzazione: rimuove solo ID ricovero e codice fiscale
+  // NON tocca date, valori, unità, range
+  function anonHeader(s){
     return s
       .replace(/\bRIC_AO_\d+\b/gi,'[ID_RICOVERO]')
       .replace(/\b\d{7,12}[-/]\d{0,6}\b/g,'[ID_RICOVERO]')
       .replace(/\b(?:CF|C\.F\.)\s*:?\s*[A-Z0-9]{16}\b/gi,'[CODICE_FISCALE]')
       .replace(/\b[A-Z]{6}\d{2}[A-Z]\d{2}[A-Z]\d{3}[A-Z]\b/g,'[CODICE_FISCALE]');
   }
-  let dataStart=0;
-  for(let i=0;i<Math.min(rows.length,15);i++){
-    const r=rows[i].map(c=>String(c).trim().toLowerCase());
-    if(r.some(c=>c.includes('metodo')||c.includes('unit')||c.includes('intervallo')||c.includes('riferimento'))){dataStart=i+1;break;}
+
+  // Pulisce una singola cella
+  function clean(v){return String(v==null?'':v).trim();}
+
+  if(!rows||rows.length===0) return{text:'',preview:'',examCount:0};
+
+  // ── Rilevamento formato: cerca la riga di intestazione ──
+  // Formato AOPD: row[0] = ['Metodo','Unità','Intervallo', 'RIC_AO_XXX\ndata1', 'RIC_AO_XXX\ndata2', ...]
+  // Formato generico: row[0] = qualsiasi altra struttura
+  const headerRow = rows[0].map(c => clean(c).toLowerCase());
+  const isAOPD = (
+    headerRow[0].includes('metodo') &&
+    (headerRow[1].includes('unit') || headerRow[1].includes('unità')) &&
+    (headerRow[2].includes('interval') || headerRow[2].includes('rifer'))
+  );
+
+  if(isAOPD){
+    return formatLabRowsAOPD(rows);
+  } else {
+    return formatLabRowsGeneric(rows);
   }
-  const lines=[];let examCount=0;
-  for(let i=dataStart;i<rows.length;i++){
-    const row=rows[i].map(c=>stripIds(String(c).trim()));
-    const[name,value,,unit,refRange]=row;
-    if(!name)continue;
-    const isComment=name&&!value&&name.length>40;
-    const isSection=name&&!value&&!unit&&!isComment;
-    const isExam=name&&value&&value!=='';
-    if(isComment){lines.push(`  ※ ${name}`);continue;}
-    if(isSection){lines.push(`\n[${name.toUpperCase()}]`);continue;}
-    if(isExam){
+}
+
+// ── Formato AOPD: Metodo | Unità | Intervallo | [data1 col] | [data2 col] | ...
+function formatLabRowsAOPD(rows){
+  function clean(v){return String(v==null?'':v).trim();}
+  function anonHeader(s){
+    return s
+      .replace(/\bRIC_AO_\d+\b/gi,'[ID_RICOVERO]')
+      .replace(/\b\d{7,12}[-/]\d{0,6}\b/g,'[ID_RICOVERO]')
+      .replace(/\b(?:CF|C\.F\.)\s*:?\s*[A-Z0-9]{16}\b/gi,'[CODICE_FISCALE]')
+      .replace(/\b[A-Z]{6}\d{2}[A-Z]\d{2}[A-Z]\d{3}[A-Z]\b/g,'[CODICE_FISCALE]');
+  }
+
+  const headerRow = rows[0];
+  // Colonne dati: da col 3 in poi. Ogni header colonna contiene "RIC_AO_XXX\ngiorno mese anno\norario"
+  // Estrai le date leggibili (tutto ciò che segue il codice ricovero)
+  const dateCols = []; // [{colIdx, label}]
+  for(let c = 3; c < headerRow.length; c++){
+    const raw = clean(headerRow[c]);
+    if(!raw) continue;
+    // Estrai la parte data/ora (dopo il codice ricovero e newline)
+    // Formato: "RIC_AO_20269263 \nlun 23\n feb 2026 \n07:00"
+    // Dopo anonimizzazione: "[ID_RICOVERO] \nlun 23\n feb 2026 \n07:00"
+    const anonRaw = anonHeader(raw);
+    // Rimuovi il codice ricovero (anonimizzato o originale) e lascia solo la parte data
+    let dateLabel = anonRaw
+      .replace(/\[ID_RICOVERO\]/gi,'')
+      .replace(/\bRIC_AO_\d+\b/gi,'')
+      .replace(/\n+/g,' ')
+      .replace(/\s+/g,' ')
+      .trim();
+    if(!dateLabel) dateLabel = `Prelievo ${c - 2}`;
+    dateCols.push({colIdx: c, label: dateLabel});
+  }
+
+  if(dateCols.length === 0){
+    // Fallback: tratta come formato generico
+    return formatLabRowsGeneric(rows);
+  }
+
+  // Costruisce il testo: per ogni esame, elenca tutti i valori per data
+  const lines = [];
+  let examCount = 0;
+
+  // Intestazione con le date disponibili
+  const dateLabels = dateCols.map(d => d.label).join(' | ');
+  lines.push(`Date prelievo: ${dateLabels}`);
+  lines.push('');
+
+  for(let i = 1; i < rows.length; i++){
+    const row = rows[i].map(c => clean(c));
+    const name = row[0];
+    const unit = row[1];
+    const refRange = row[2];
+    if(!name) continue;
+
+    // Tutti i valori per tutte le date
+    const vals = dateCols.map(d => clean(row[d.colIdx] || ''));
+
+    // Controlla se è una sezione (nessun valore in nessuna data)
+    const hasAnyValue = vals.some(v => v !== '');
+    const isLongComment = !hasAnyValue && name.length > 40;
+    const isSection = !hasAnyValue && !isLongComment;
+
+    if(isSection){
+      lines.push('');
+      lines.push(`[${name.toUpperCase()}]`);
+      continue;
+    }
+
+    if(isLongComment){
+      // Commento testuale (es. "Tracciato elettroforetico nella norma...")
+      // Trova quale colonna ha il commento
+      const commentVal = vals.find(v => v.length > 5) || name;
+      lines.push(`  ※ ${name}: ${commentVal}`);
+      continue;
+    }
+
+    if(hasAnyValue){
       examCount++;
-      let line=`  ${name}: ${value}`;
-      if(unit)line+=` ${unit}`;
-      if(refRange)line+=` (rif: ${refRange})`;
-      if(isAbnormal(value,refRange))line+=' ⚠';
+      // Formato: "  Nome esame (Unità) (rif: range): data1=val1 | data2=val2 ..."
+      // Se solo una data ha valore: formato semplice
+      // Se più date hanno valori: mostra tutte con la loro data
+
+      const nonEmptyVals = dateCols
+        .map((d,idx) => ({label: d.label, val: vals[idx]}))
+        .filter(x => x.val !== '' && x.val !== 'NaN');
+
+      let meta = '';
+      // Avoid duplicate unit if already in name (e.g. "B-Neutrofili %" + unit "%" → "B-Neutrofili % %")
+      const unitClean = unit && unit !== '%' ? unit : (unit === '%' && name.endsWith('%') ? '' : unit);
+      if(unitClean) meta += ` ${unitClean}`;
+      if(refRange) meta += ` (rif: ${refRange})`;
+
+      if(nonEmptyVals.length === 1){
+        // Una sola data: formato compatto
+        const v = nonEmptyVals[0];
+        const abnFlag = isAbnormal(v.val, refRange) ? ' ⚠' : '';
+        lines.push(`  ${name}${meta}: ${v.val} [${v.label}]${abnFlag}`);
+      } else {
+        // Più date: mostra trend
+        // Ordina per data (inversamente — la prima colonna è la più recente nel file AOPD)
+        // Le colonne nel file sono già ordinate dalla più recente alla più vecchia (sinistra=recente)
+        // Invertiamo per mostrare in ordine cronologico (vecchia→recente)
+        const chronological = [...nonEmptyVals].reverse();
+        const trendParts = chronological.map(x => {
+          const flag = isAbnormal(x.val, refRange) ? '⚠' : '';
+          return `${x.val}${flag} [${x.label}]`;
+        });
+        lines.push(`  ${name}${meta}:`);
+        lines.push(`    ${trendParts.join(' → ')}`);
+      }
+    }
+  }
+
+  const text = `## ESAMI DI LABORATORIO (da file: ${S_XLS.filename||'referto.xls'})\n` + lines.join('\n');
+  const preview = lines.slice(0, 50).join('\n') + (lines.length > 50 ? `\n  ... e altre ${lines.length - 50} righe` : '');
+  return {text, preview, examCount};
+}
+
+// ── Formato generico (fallback per file non-AOPD)
+function formatLabRowsGeneric(rows){
+  function clean(v){return String(v==null?'':v).trim();}
+  function anonAll(s){
+    return s
+      .replace(/\bRIC_AO_\d+\b/gi,'[ID_RICOVERO]')
+      .replace(/\b\d{7,12}[-/]\d{0,6}\b/g,'[ID_RICOVERO]')
+      .replace(/\b(?:CF|C\.F\.)\s*:?\s*[A-Z0-9]{16}\b/gi,'[CODICE_FISCALE]')
+      .replace(/\b[A-Z]{6}\d{2}[A-Z]\d{2}[A-Z]\d{3}[A-Z]\b/g,'[CODICE_FISCALE]');
+  }
+
+  let dataStart = 0;
+  for(let i = 0; i < Math.min(rows.length, 15); i++){
+    const r = rows[i].map(c => clean(c).toLowerCase());
+    if(r.some(c => c.includes('metodo') || c.includes('unit') || c.includes('intervallo') || c.includes('riferimento'))){
+      dataStart = i + 1;
+      break;
+    }
+  }
+
+  const lines = [];
+  let examCount = 0;
+  for(let i = dataStart; i < rows.length; i++){
+    const row = rows[i].map(c => anonAll(clean(c)));
+    const [name, unit, refRange, ...vals] = row;
+    if(!name) continue;
+    const hasAnyValue = vals.some(v => v && v !== '');
+    const isLongComment = !hasAnyValue && name.length > 40;
+    const isSection = !hasAnyValue && !isLongComment;
+    if(isLongComment){lines.push(`  ※ ${name}`);continue;}
+    if(isSection){lines.push('');lines.push(`[${name.toUpperCase()}]`);continue;}
+    if(hasAnyValue){
+      examCount++;
+      const v = vals.find(x => x && x !== '') || '';
+      let line = `  ${name}: ${v}`;
+      if(unit) line += ` ${unit}`;
+      if(refRange) line += ` (rif: ${refRange})`;
+      if(isAbnormal(v, refRange)) line += ' ⚠';
       lines.push(line);
     }
   }
-  const text=`## ESAMI DI LABORATORIO (da file: ${S_XLS.filename||'referto.xls'})\n`+lines.join('\n');
-  const preview=lines.slice(0,40).join('\n')+(lines.length>40?`\n  ... e altri ${lines.length-40} righe`:'');
-  return{text,preview,examCount};
+  const text = `## ESAMI DI LABORATORIO (da file: ${S_XLS.filename||'referto.xls'})\n` + lines.join('\n');
+  const preview = lines.slice(0, 40).join('\n') + (lines.length > 40 ? `\n  ... e altre ${lines.length - 40} righe` : '');
+  return {text, preview, examCount};
 }
 function isAbnormal(value,refRange){
   if(!refRange||!value)return false;
@@ -3814,20 +4015,30 @@ function updateTokenPanel(){
   if(!S.anonText)return;
   const model=document.getElementById('modelSelect').value;
   const price=PRICING[model]||PRICING['claude-sonnet-4-6'];
-  const userEditedPrompt = document.getElementById('systemPrompt').value;
-  const sysTxt = (userEditedPrompt && userEditedPrompt.trim() && userEditedPrompt.trim() !== DEFAULT_SYS.trim())
-    ? userEditedPrompt
-    : getEffectiveSystemPrompt();
+  const isLabMode = getLetterTemplateType() === 'esami_lab';
+  let sysTxt, userTxt;
+  if(isLabMode){
+    sysTxt = ESAMI_LAB_SYS + buildEsamiLabPrefsBlock();
+    userTxt = buildEsamiLabUserPrompt();
+  } else {
+    const userEditedPrompt = document.getElementById('systemPrompt').value;
+    sysTxt = (userEditedPrompt && userEditedPrompt.trim() && userEditedPrompt.trim() !== DEFAULT_SYS.trim())
+      ? userEditedPrompt
+      : getEffectiveSystemPrompt();
+    userTxt = buildUserPromptStr();
+  }
   const{wardFpObj}=getActiveFpObjects();
   const refCase=getRefCase();
   const injectMode=refCase?getRefInjectMode():'none';
   const refFpObj=(injectMode==='fingerprint'||injectMode==='both')?parseFpJson(refCase?.fingerprint||''):null;
   const wardAddendum=wardFpObj?buildWardFpSystemAddendum(wardFpObj):'';
   const caseAddendum=refFpObj?buildFpSystemAddendum(refFpObj):'';
-  const tSys=tok(sysTxt+wardAddendum+caseAddendum);
-  const tFp=refFpObj?tok(refFpObj.lettera_modello||''):0;
-  const tFullCase=(refCase&&(injectMode==='full'||injectMode==='both'))?tok((refCase.folder||'')+(refCase.letter||'')):0;
-  const tTemplate=tok(buildLetterTemplate()),tClinical=tok(S.anonText),tOut=parseInt(document.getElementById('maxTokensSelect')?.value)||8000;
+  const tSys=tok(isLabMode ? sysTxt : sysTxt+wardAddendum+caseAddendum);
+  const tFp=(!isLabMode && refFpObj)?tok(refFpObj.lettera_modello||''):0;
+  const tFullCase=(!isLabMode && refCase&&(injectMode==='full'||injectMode==='both'))?tok((refCase.folder||'')+(refCase.letter||'')):0;
+  const tTemplate=isLabMode?0:tok(buildLetterTemplate());
+  const tClinical=isLabMode?tok(userTxt):tok(S.anonText);
+  const tOut=parseInt(document.getElementById('maxTokensSelect')?.value)||8000;
 
   // Suggerisci il valore ottimale
   const suggested = estimateOutputTokens();
@@ -3874,15 +4085,51 @@ function updateTokenPanel(){
 // ═══════════════════════════════════════════════════
 function onLetterTemplateChange(){
   const val = document.querySelector('input[name="letterTemplate"]:checked')?.value||'dimissione';
-  ['dimissione','trasferimento'].forEach(t=>{
+  const isLabMode = val === 'esami_lab';
+
+  // Update tile styles
+  ['dimissione','trasferimento','esami_lab'].forEach(t=>{
     const tile=document.getElementById('ltTile_'+t);
+    if(!tile) return;
     const active=(t===val);
     tile.style.borderColor=active?'var(--accent)':'var(--border)';
     tile.style.background=active?'var(--accent-g)':'var(--surface2)';
     tile.querySelector('span').style.color=active?'var(--accent)':'var(--dim)';
   });
+
+  // Show/hide transfer ward row
   document.getElementById('transferWardRow').style.display=(val==='trasferimento')?'block':'none';
-  updateTokenPanel();refreshPrompt();
+
+  // Show/hide ref case card and normal prefs card in lab mode
+  const refCaseCard = document.getElementById('refCaseCard');
+  const tempPrefsCard = document.getElementById('tempPrefsCard');
+  const examiLabPrefsCard = document.getElementById('examiLabPrefsCard');
+  if(refCaseCard)    refCaseCard.style.display    = isLabMode ? 'none' : '';
+  if(tempPrefsCard)  tempPrefsCard.style.display  = isLabMode ? 'none' : '';
+  if(examiLabPrefsCard) examiLabPrefsCard.style.display = isLabMode ? '' : 'none';
+
+  // Rename gen button
+  const genBtn = document.getElementById('genBtn');
+  const genConfirmBtn = document.getElementById('genConfirmBtn');
+  if(genBtn) genBtn.textContent = isLabMode ? '🧪 Genera Sezione Esami' : '✦ Genera Lettera con AI';
+  if(genConfirmBtn) genConfirmBtn.innerHTML = (isLabMode ? '🧪 Genera Sezione Esami' : 'Avanti → Genera con AI');
+
+  updateTokenPanel(); refreshPrompt();
+}
+
+let _eLabMode = 'all'; // 'all' | 'altered'
+
+function setELabPref(mode){
+  _eLabMode = mode;
+  ['all','altered'].forEach(m => {
+    const btn = document.getElementById('eLabBtn_'+m);
+    if(btn) btn.classList.toggle('active', m === mode);
+  });
+  updateTokenPanel(); refreshPrompt();
+}
+
+function getELabCustomText(){
+  return document.getElementById('eLabCustomText')?.value?.trim() || '';
 }
 
 function getLetterTemplateType(){
@@ -4204,19 +4451,31 @@ async function generateLetter(){
   btn.disabled=true;spin.style.display='inline-block';
   showGenOverlay();
   document.getElementById('genErr').style.display='none';
-  const{wardFpObj}=getActiveFpObjects();
-  const refCase=getRefCase();
-  const injectMode=refCase?getRefInjectMode():'none';
-  const refFpObj=(injectMode==='fingerprint'||injectMode==='both')?parseFpJson(refCase?.fingerprint||''):null;
+
+  const isLabMode = getLetterTemplateType() === 'esami_lab';
   const headers={'Content-Type':'application/json','x-api-key':key,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'};
-  const userEditedPrompt = document.getElementById('systemPrompt').value;
-  const baseSystem = (userEditedPrompt && userEditedPrompt.trim() && userEditedPrompt.trim() !== DEFAULT_SYS.trim())
-    ? userEditedPrompt
-    : getEffectiveSystemPrompt();
-  let fullSystem=baseSystem;
-  if(wardFpObj) fullSystem+=buildWardFpSystemAddendum(wardFpObj);
-  if(refFpObj)  fullSystem+=buildFpSystemAddendum(refFpObj);
-  fullSystem+=buildPreferencesPromptBlock();
+
+  let fullSystem, userMessages;
+
+  if(isLabMode){
+    // Lab mode: specialised prompt + simple user message
+    fullSystem = ESAMI_LAB_SYS + buildEsamiLabPrefsBlock();
+    userMessages = [{role:'user', content: buildEsamiLabUserPrompt()}];
+  } else {
+    const{wardFpObj}=getActiveFpObjects();
+    const refCase=getRefCase();
+    const injectMode=refCase?getRefInjectMode():'none';
+    const refFpObj=(injectMode==='fingerprint'||injectMode==='both')?parseFpJson(refCase?.fingerprint||''):null;
+    const userEditedPrompt = document.getElementById('systemPrompt').value;
+    const baseSystem = (userEditedPrompt && userEditedPrompt.trim() && userEditedPrompt.trim() !== DEFAULT_SYS.trim())
+      ? userEditedPrompt
+      : getEffectiveSystemPrompt();
+    fullSystem=baseSystem;
+    if(wardFpObj) fullSystem+=buildWardFpSystemAddendum(wardFpObj);
+    if(refFpObj)  fullSystem+=buildFpSystemAddendum(refFpObj);
+    fullSystem+=buildPreferencesPromptBlock();
+    userMessages=buildMessages();
+  }
   try{
     const resp=await fetch('https://api.anthropic.com/v1/messages',{
       method:'POST',headers,
@@ -4225,7 +4484,7 @@ async function generateLetter(){
         max_tokens:parseInt(document.getElementById('maxTokensSelect').value)||8000,
         temperature:parseInt(document.getElementById('tempSlider').value)/10,
         system:fullSystem,
-        messages:buildMessages(),
+        messages:userMessages,
       }),
     });
     if(!resp.ok) await handleApiError(resp);
@@ -4287,6 +4546,17 @@ function renderPromptView(){
 }
 function refreshPrompt(){
   if(!S.anonText){document.getElementById('promptView').value='Completa gli Step 1–2.';return;}
+
+  const isLabMode = getLetterTemplateType() === 'esami_lab';
+
+  if(isLabMode){
+    // Lab mode: use ESAMI_LAB_SYS + simple user prompt with just the lab data
+    pSys = ESAMI_LAB_SYS + buildEsamiLabPrefsBlock();
+    pUsr = buildEsamiLabUserPrompt();
+    renderPromptView(); updateTokenPanel();
+    return;
+  }
+
   const userEditedPrompt = document.getElementById('systemPrompt').value;
   const baseSystem = (userEditedPrompt && userEditedPrompt.trim() && userEditedPrompt.trim() !== DEFAULT_SYS.trim())
     ? userEditedPrompt
@@ -4302,6 +4572,74 @@ function refreshPrompt(){
   pSys=pSysLocal;
   pUsr=buildUserPromptStr();
   renderPromptView();updateTokenPanel();
+}
+
+// Build preferences addendum for lab-only mode
+function buildEsamiLabPrefsBlock(){
+  const parts = [];
+  if(_eLabMode === 'altered'){
+    parts.push('\n\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\nPREFERENZE UTENTE\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n');
+    parts.push('- Riporta SOLO i valori alterati (fuori range) e i 6 obbligatori (Colesterolo totale, HDL, LDL, Trigliceridi, HbA1c, Creatinina). Per ogni categoria con tutti i valori nella norma scrivi "[Categoria]: nella norma".');
+  }
+  const custom = getELabCustomText();
+  if(custom){
+    if(!parts.length) parts.push('\n\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\nPREFERENZE UTENTE\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n');
+    parts.push('- ALTRE PREFERENZE: ' + custom);
+  }
+  return parts.join('\n');
+}
+
+// Build user prompt for lab-only mode
+function buildEsamiLabUserPrompt(){
+  let out = '## CARTELLA CLINICA (solo esami di laboratorio rilevanti)\n\n';
+  // Prefer uploaded XLS lab data if available
+  if(S_XLS && S_XLS.text){
+    out += S_XLS.text + '\n\n';
+  }
+  // Also include relevant lab sections from the anonymized text
+  if(S.anonText){
+    // Extract only lab-related sections from the anon text
+    const labSections = extractLabSectionsFromText(S.anonText);
+    if(labSections){
+      out += '## ESAMI DALLA CARTELLA CLINICA ANONIMIZZATA\n\n' + labSections + '\n\n';
+    } else {
+      out += '## CARTELLA CLINICA ANONIMIZZATA (completa — estrai solo gli esami di laboratorio)\n\n' + S.anonText + '\n\n';
+    }
+  }
+  out += 'Genera SOLO la sezione degli esami ematochimici formattata per la lettera di dimissione, seguendo le regole del prompt di sistema.';
+  return out;
+}
+
+// Extract lab-relevant sections from anonymized text to reduce tokens
+function extractLabSectionsFromText(text){
+  if(!text) return null;
+  // Look for common lab section markers
+  const labMarkers = [
+    /esami\s+(?:ematochimici|di\s+laboratorio|emato)/i,
+    /durante\s+la\s+degenza.*?(?:esami|accertamenti)/i,
+    /emocromo/i,
+    /profilo\s+(?:metabolico|coagulativo|lipidico|carenziale)/i,
+    /indici\s+di\s+flogosi/i,
+  ];
+  const lines = text.split('\n');
+  let inLabSection = false;
+  const labLines = [];
+  let consecutiveNonLab = 0;
+  for(const line of lines){
+    const isLabLine = labMarkers.some(r => r.test(line)) ||
+      /(?:WBC|RBC|Hb|Ht|MCV|MCH|MCHC|PLT|GB|GR|Piastrine|PCR|VES|INR|APTT|Fibrinogeno|D-dimero|Glucosio|Colesterolo|HDL|LDL|Trigliceridi|Creatinina|Urea|Na|K|Cl|Ca|AST|ALT|GGT|ALP|Bilirubina|CPK|LAD|TnI|TSH|FT3|FT4|HbA1c|Ferritina|Vitamina|Folati|Albumina|Proteine\s+totali)/i.test(line) ||
+      /(?:nella\s+norma|v\.n\.|v\.r\.|rif\.:|\(0,00-|\(4,40-|\(140-|\(150-)/i.test(line);
+    if(isLabLine){ inLabSection = true; consecutiveNonLab = 0; labLines.push(line); }
+    else if(inLabSection){
+      consecutiveNonLab++;
+      if(consecutiveNonLab <= 3) labLines.push(line); // allow a few blank/header lines
+      else if(consecutiveNonLab > 8){ inLabSection = false; consecutiveNonLab = 0; }
+      else labLines.push(line);
+    }
+  }
+  const result = labLines.join('\n').trim();
+  // Only return extracted version if it's significantly shorter than full text
+  return (result.length > 200 && result.length < text.length * 0.8) ? result : null;
 }
 async function copyFull(){refreshPrompt();await navigator.clipboard.writeText(document.getElementById('promptView').value);flashBtn(event?.target);}
 async function copyUser(){refreshPrompt();await navigator.clipboard.writeText(pUsr);flashBtn(event?.target);}
@@ -4353,6 +4691,50 @@ Severity:
 
 Non segnalare frasi generiche, formule di cortesia, struttura della lettera o stile.
 Segnala solo contenuto clinico fattuale. Se la lettera è completamente fedele alla cartella, restituisci [].`;
+
+// NOTE: `let` for bootstrap override
+let ESAMI_LAB_SYS = `Sei un assistente clinico esperto. Il tuo compito è generare SOLO la sezione "esami ematochimici" formattata per una lettera di dimissione italiana, partendo dagli esami di laboratorio presenti nella cartella clinica.
+
+Restituisci SOLO il testo della sezione esami, senza intestazione lettera, senza decorso, senza terapia, senza raccomandazioni. Nient'altro.
+
+═══════════════════════════════════════════════════════════════
+FORMATO OBBLIGATORIO
+═══════════════════════════════════════════════════════════════
+
+Inizia con la frase:
+"Durante la degenza il/la paziente è stato/a sottoposto/a ai seguenti esami ematochimici e microbiologici:"
+
+Poi elenca gli esami raggruppati per categoria, con trattino lungo "–" come bullet:
+
+– Emocromo: nella norma tranne **WBC 11,07 x 10^9/L** (4,40-11,00), **Hb 128 g/L** (140-175).
+– Formula leucocitaria: nella norma.
+– Indici di flogosi: **PCR 16,95 mg/L** (0,00-4,99).
+– Profilo coagulativo: nella norma tranne **INR 1,27**.
+– Profilo metabolico: glucosio, colesterolo totale 196 mg/dL, LDL 125 mg/dL, HDL 64 mg/dL, trigliceridi 49 mg/dL nella norma.
+– Funzionalità renale e ionemia: nella norma.
+– Funzionalità epatica: nella norma.
+– Enzimi muscolari: LAD e TnI nella norma.
+– Funzionalità tiroidea: nella norma.
+– Esami microbiologici: HBsAg, Ab anti-HCV, T. pallidum negativi.
+
+═══════════════════════════════════════════════════════════════
+REGOLE
+═══════════════════════════════════════════════════════════════
+
+VALORI PATOLOGICI: usa **...** (grassetto) attorno al nome esame + valore, NON attorno al range tra parentesi.
+
+ESAMI SEMPRE RIPORTATI CON VALORE ESATTO (anche se nella norma):
+Colesterolo totale, HDL, LDL, Trigliceridi, Emoglobina glicata (HbA1c), Creatinina.
+
+VALORI MULTIPLI IN SERIE TEMPORALE:
+Mostra il trend (con frecce) SOLO se la serie è iniziata nei range e poi è diventata patologica durante la degenza.
+Esempio: "**PCR 4,2 → 38,4 → 12,1 mg/L** (0,00-4,99)"
+Se la serie era già patologica dal primo valore: mostra solo l'ultimo valore.
+Se la serie è sempre rimasta nei range: includi nella norma senza trend.
+
+CATEGORIE: raggruppa per le categorie standard (Emocromo, Formula leucocitaria, Indici di flogosi, Profilo coagulativo, Profilo metabolico, Funzionalità renale e ionemia, Funzionalità epatica, Enzimi muscolari, Profilo eritrocitario/carenziale, Funzionalità tiroidea, Profilo proteico, Esame urine, Esami microbiologici). Se una categoria non ha esami disponibili, omettila.
+
+DISCORSO: italiano clinico formale. MAI inventare valori non presenti nella cartella.`;
 
 let S_verifFlags = [];
 
@@ -6071,9 +6453,14 @@ function clearAll(){
   // Reset XLS status
   const xlsStatus=document.getElementById('xlsStatus');
   if(xlsStatus) xlsStatus.style.display='none';
+  const xlsStatusTxt=document.getElementById('xlsStatusTxt');
+  if(xlsStatusTxt) xlsStatusTxt.textContent='';
+  const xlsSpin=document.getElementById('xlsSpin');
+  if(xlsSpin) xlsSpin.style.display='none';
   const xlsPreview=document.getElementById('xlsPreview');
-  if(xlsPreview){xlsPreview.style.display='none';xlsPreview.textContent='';}
-  // Reset anonimizzazione
+  if(xlsPreview) xlsPreview.style.display='none';
+  const xlsPreviewContent=document.getElementById('xlsPreviewContent');
+  if(xlsPreviewContent) xlsPreviewContent.textContent='';  // Reset anonimizzazione
   document.getElementById('origText').innerHTML='—';
   document.getElementById('anonText').value='';
   document.getElementById('anonStatusTxt').textContent='Pronto.';
@@ -6777,6 +7164,7 @@ const PROMPT_PATHS = {
   DEFAULT_SYS:           'prompts/default_sys.md',
   FINGERPRINT_PROMPT_V3: 'prompts/fingerprint_extract.md',
   VERIFICA_SYSTEM:       'prompts/verifica.md',
+  ESAMI_LAB_SYS:         'prompts/esami_lab.md',
 };
 
 const PROMPT_CACHE_TTL_MS = 60 * 60 * 1000; // 1 hour
@@ -6786,6 +7174,7 @@ const PROMPT_EMBEDDED_FALLBACKS = {
   DEFAULT_SYS:           DEFAULT_SYS,
   FINGERPRINT_PROMPT_V3: FINGERPRINT_PROMPT_V3,
   VERIFICA_SYSTEM:       VERIFICA_SYSTEM,
+  ESAMI_LAB_SYS:         ESAMI_LAB_SYS,
 };
 
 // Track which prompts came from repo vs embedded (for UI display)
@@ -6793,6 +7182,7 @@ let _promptSources = {
   DEFAULT_SYS: 'embedded',
   FINGERPRINT_PROMPT_V3: 'embedded',
   VERIFICA_SYSTEM: 'embedded',
+  ESAMI_LAB_SYS: 'embedded',
 };
 
 let _promptVersion = null; // metadata from config/version.json
@@ -6836,6 +7226,7 @@ async function bootstrapPrompts(forceRefresh){
           if(obj.DEFAULT_SYS){           DEFAULT_SYS           = obj.DEFAULT_SYS;           _promptSources.DEFAULT_SYS = 'cache'; }
           if(obj.FINGERPRINT_PROMPT_V3){ FINGERPRINT_PROMPT_V3 = obj.FINGERPRINT_PROMPT_V3; FINGERPRINT_PROMPT_V2 = FINGERPRINT_PROMPT_V3; _promptSources.FINGERPRINT_PROMPT_V3 = 'cache'; }
           if(obj.VERIFICA_SYSTEM){       VERIFICA_SYSTEM       = obj.VERIFICA_SYSTEM;       _promptSources.VERIFICA_SYSTEM = 'cache'; }
+          if(obj.ESAMI_LAB_SYS){         ESAMI_LAB_SYS         = obj.ESAMI_LAB_SYS;         _promptSources.ESAMI_LAB_SYS = 'cache'; }
           if(obj.version){               _promptVersion = obj.version; }
           console.log('bootstrapPrompts: loaded from sessionStorage cache');
           return;
@@ -6860,6 +7251,7 @@ async function bootstrapPrompts(forceRefresh){
   if(fetched.DEFAULT_SYS)           DEFAULT_SYS           = fetched.DEFAULT_SYS;
   if(fetched.FINGERPRINT_PROMPT_V3){FINGERPRINT_PROMPT_V3 = fetched.FINGERPRINT_PROMPT_V3; FINGERPRINT_PROMPT_V2 = FINGERPRINT_PROMPT_V3;}
   if(fetched.VERIFICA_SYSTEM)       VERIFICA_SYSTEM       = fetched.VERIFICA_SYSTEM;
+  if(fetched.ESAMI_LAB_SYS)         ESAMI_LAB_SYS         = fetched.ESAMI_LAB_SYS;
 
   // Try to fetch version metadata
   try{
@@ -6923,6 +7315,7 @@ async function savePromptToRepo(varName, newText, commitMessage){
   if(varName === 'DEFAULT_SYS')           DEFAULT_SYS           = newText;
   if(varName === 'FINGERPRINT_PROMPT_V3'){FINGERPRINT_PROMPT_V3 = newText; FINGERPRINT_PROMPT_V2 = newText;}
   if(varName === 'VERIFICA_SYSTEM')       VERIFICA_SYSTEM       = newText;
+  if(varName === 'ESAMI_LAB_SYS')         ESAMI_LAB_SYS         = newText;
   _promptSources[varName] = 'repo';
 
   // Update cache
@@ -7325,15 +7718,16 @@ let _currentPromptEditorVar = 'DEFAULT_SYS';
 
 function switchPromptEditor(varName){
   _currentPromptEditorVar = varName;
-  ['DEFAULT_SYS','FINGERPRINT_PROMPT_V3','VERIFICA_SYSTEM'].forEach(v => {
+  ['DEFAULT_SYS','FINGERPRINT_PROMPT_V3','VERIFICA_SYSTEM','ESAMI_LAB_SYS'].forEach(v => {
     const btn = document.getElementById('promptTabBtn_'+v);
     if(btn) btn.classList.toggle('active', v===varName);
   });
   // Load current value into textarea
   const ta = document.getElementById('promptEditorTextarea');
-  if(varName === 'DEFAULT_SYS') ta.value = DEFAULT_SYS;
+  if(varName === 'DEFAULT_SYS')           ta.value = DEFAULT_SYS;
   if(varName === 'FINGERPRINT_PROMPT_V3') ta.value = FINGERPRINT_PROMPT_V3;
-  if(varName === 'VERIFICA_SYSTEM') ta.value = VERIFICA_SYSTEM;
+  if(varName === 'VERIFICA_SYSTEM')       ta.value = VERIFICA_SYSTEM;
+  if(varName === 'ESAMI_LAB_SYS')         ta.value = ESAMI_LAB_SYS;
   updatePromptEditorMeta();
 }
 
