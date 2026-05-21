@@ -3259,41 +3259,81 @@ async function processXls(file){
   const stxt=document.getElementById('xlsStatusTxt');
   const status=document.getElementById('xlsStatus');
   const preview=document.getElementById('xlsPreview');
-  if(!spin||!stxt||!status||!preview){
-    // Elements were destroyed by a textContent reset — just process silently
-    console.warn('processXls: some UI elements missing, processing without status updates');
-    try{
-      const XLS=await ensureSheetJs();
-      const buf=await file.arrayBuffer();
-      const wb=XLS.read(buf,{type:'array',cellText:true,cellDates:true});
-      const ws=wb.Sheets[wb.SheetNames[0]];
-      const rows=XLS.utils.sheet_to_json(ws,{header:1,defval:'',raw:false});
-      const fmt=formatLabRows(rows);
-      S_XLS.text=fmt.text;S_XLS.filename=file.name;
-      const pc=document.getElementById('xlsPreviewContent');
-      if(pc) pc.textContent=fmt.preview;
-      if(preview) preview.style.display='block';
-      if(status) status.style.display='block';
-      if(stxt){stxt.style.color='var(--green)';stxt.textContent=`✓ ${fmt.examCount} esami estratti da "${file.name}"`;}
-    }catch(err){ alert('Errore XLS: '+err.message); }
-    return;
-  }
-  status.style.display='block';spin.style.display='inline-block';
-  stxt.style.color='var(--mid)';stxt.textContent='Caricamento SheetJS...';
+
+  function setStatus(color, msg){ if(stxt){ stxt.style.color=color; stxt.textContent=msg; } }
+  function setSpin(on){ if(spin) spin.style.display=on?'inline-block':'none'; }
+
+  if(status) status.style.display='block';
+  setSpin(true);
+  setStatus('var(--mid)', 'Caricamento SheetJS...');
+
   try{
-    const XLS=await ensureSheetJs();stxt.textContent='Parsing '+file.name+'...';
-    const buf=await file.arrayBuffer();
-    const wb=XLS.read(buf,{type:'array',cellText:true,cellDates:true});
-    const ws=wb.Sheets[wb.SheetNames[0]];
-    const rows=XLS.utils.sheet_to_json(ws,{header:1,defval:'',raw:false});
-    const fmt=formatLabRows(rows);
-    S_XLS.text=fmt.text;S_XLS.filename=file.name;
-    spin.style.display='none';stxt.style.color='var(--green)';
-    stxt.textContent=`✓ ${fmt.examCount} esami estratti da "${file.name}"`;
-    document.getElementById('xlsPreviewContent').textContent=fmt.preview;
-    preview.style.display='block';
-    document.getElementById('xlsFileInput').value='';
-  }catch(err){spin.style.display='none';stxt.style.color='var(--red)';stxt.textContent='✗ '+err.message;}
+    const XLS = await ensureSheetJs();
+    setStatus('var(--mid)', 'Parsing '+file.name+'...');
+    const buf = await file.arrayBuffer();
+    const wb = XLS.read(buf, {type:'array', cellText:true, cellDates:true});
+    const ws = wb.Sheets[wb.SheetNames[0]];
+    const rows = XLS.utils.sheet_to_json(ws, {header:1, defval:'', raw:false});
+
+    // Convert to raw text for the AI — no elaboration
+    const {text, preview: prevText, rowCount} = xlsToRawText(rows, file.name);
+    S_XLS.text = text;
+    S_XLS.filename = file.name;
+    // Also keep raw rows for the esami_lab mode formatter
+    S_XLS.rawRows = rows;
+
+    setSpin(false);
+    setStatus('var(--green)', `✓ ${rowCount} righe caricate da "${file.name}"`);
+    const pc = document.getElementById('xlsPreviewContent');
+    if(pc) pc.textContent = prevText;
+    if(preview) preview.style.display='block';
+    if(document.getElementById('xlsFileInput')) document.getElementById('xlsFileInput').value='';
+  }catch(err){
+    setSpin(false);
+    setStatus('var(--red)', '✗ '+err.message);
+  }
+}
+
+// ── Convert XLS rows to raw tab-separated text for AI consumption ──
+// Only anonymisation: strip RIC_AO_XXXXXX from column headers
+// Everything else (values, units, ranges, dates) passes through unchanged
+function xlsToRawText(rows, filename){
+  function clean(v){ return String(v==null?'':v).replace(/\n+/g,' ').trim(); }
+  function anonHeader(s){
+    return s.replace(/\bRIC_AO_\d+\b\s*/gi,'').replace(/\s+/g,' ').trim();
+  }
+
+  if(!rows || rows.length === 0) return {text:'', preview:'', rowCount:0};
+
+  const lines = [];
+  let dataRowCount = 0;
+
+  for(let i = 0; i < rows.length; i++){
+    const row = rows[i];
+    if(!row || row.every(c => !clean(c))) continue; // skip empty rows
+
+    const cells = row.map((c,ci) => {
+      const s = clean(c);
+      // Anonymise only the header row (row 0), only the date columns (col 3+)
+      if(i === 0 && ci >= 3) return anonHeader(s);
+      return s;
+    });
+
+    lines.push(cells.join('\t'));
+    if(i > 0) dataRowCount++;
+  }
+
+  const text = `## ESAMI DI LABORATORIO\n`
+    + `(Formato: Metodo | Unità | Range | data1 | data2 | ... — colonne data più recenti a sinistra)\n\n`
+    + lines.join('\n');
+
+  // Preview: first 30 lines with tab → spaces for readability
+  const preview = lines.slice(0, 30)
+    .map(l => l.replace(/\t/g, '   '))
+    .join('\n')
+    + (lines.length > 30 ? `\n... e altre ${lines.length-30} righe` : '');
+
+  return {text, preview, rowCount: dataRowCount};
 }
 function formatLabRows(rows){
   // ── Anonimizzazione: rimuove solo ID ricovero e codice fiscale
@@ -4717,21 +4757,22 @@ function buildEsamiLabPrefsBlock(){
   return parts.join('\n');
 }
 
-// Build user prompt for lab-only mode
+// Build user prompt for lab-only mode — uses elaborated formatter
 function buildEsamiLabUserPrompt(){
-  let out = '## CARTELLA CLINICA (solo esami di laboratorio rilevanti)\n\n';
-  // Prefer uploaded XLS lab data if available
-  if(S_XLS && S_XLS.text){
+  let out = '## ESAMI DI LABORATORIO\n\n';
+  if(S_XLS && S_XLS.rawRows && S_XLS.rawRows.length){
+    // Use the full formatter for lab-only mode (AI gets structured data)
+    const fmt = formatLabRows(S_XLS.rawRows);
+    out += fmt.text + '\n\n';
+  } else if(S_XLS && S_XLS.text){
     out += S_XLS.text + '\n\n';
   }
-  // Also include relevant lab sections from the anonymized text
   if(S.anonText){
-    // Extract only lab-related sections from the anon text
     const labSections = extractLabSectionsFromText(S.anonText);
     if(labSections){
       out += '## ESAMI DALLA CARTELLA CLINICA ANONIMIZZATA\n\n' + labSections + '\n\n';
     } else {
-      out += '## CARTELLA CLINICA ANONIMIZZATA (completa — estrai solo gli esami di laboratorio)\n\n' + S.anonText + '\n\n';
+      out += '## CARTELLA CLINICA ANONIMIZZATA\n\n' + S.anonText + '\n\n';
     }
   }
   out += 'Genera SOLO la sezione degli esami ematochimici formattata per la lettera di dimissione, seguendo le regole del prompt di sistema.';
@@ -4821,48 +4862,61 @@ Non segnalare frasi generiche, formule di cortesia, struttura della lettera o st
 Segnala solo contenuto clinico fattuale. Se la lettera è completamente fedele alla cartella, restituisci [].`;
 
 // NOTE: `let` for bootstrap override
-let ESAMI_LAB_SYS = `Sei un assistente clinico esperto. Il tuo compito è generare SOLO la sezione "esami ematochimici" formattata per una lettera di dimissione italiana, partendo dagli esami di laboratorio presenti nella cartella clinica.
+let ESAMI_LAB_SYS = `Sei un assistente clinico esperto. Il tuo compito è generare SOLO la sezione "esami ematochimici" formattata per una lettera di dimissione italiana, partendo dalla tabella grezza degli esami di laboratorio.
 
 Restituisci SOLO il testo della sezione esami, senza intestazione lettera, senza decorso, senza terapia, senza raccomandazioni. Nient'altro.
 
 ═══════════════════════════════════════════════════════════════
-FORMATO OBBLIGATORIO
+FORMATO INPUT
+═══════════════════════════════════════════════════════════════
+
+La tabella è in formato tab-separated con queste colonne:
+- Col 0: Nome esame (es. "B-MCV", "P-CRP", "S-TSH")
+- Col 1: Unità di misura
+- Col 2: Range di riferimento (es. "4.40 - 11.00")
+- Col 3, 4, 5...: Valori per ogni data di prelievo (la colonna più a sinistra = più recente)
+
+Le date sono nelle intestazioni di colonna (riga 0). Le righe senza valori numerici sono intestazioni di categoria.
+
+═══════════════════════════════════════════════════════════════
+FORMATO OUTPUT OBBLIGATORIO
 ═══════════════════════════════════════════════════════════════
 
 Inizia con la frase:
 "Durante la degenza il/la paziente è stato/a sottoposto/a ai seguenti esami ematochimici e microbiologici:"
 
-Poi elenca gli esami raggruppati per categoria, con trattino lungo "–" come bullet:
+Poi elenca gli esami raggruppati per categoria, con trattino lungo "–" come bullet, tutti gli esami di ogni categoria su UNA SOLA RIGA separati da virgola:
 
-– Emocromo: nella norma tranne **WBC 11,07 x 10^9/L** (4,40-11,00), **Hb 128 g/L** (140-175).
-– Formula leucocitaria: nella norma.
-– Indici di flogosi: **PCR 16,95 mg/L** (0,00-4,99).
-– Profilo coagulativo: nella norma tranne **INR 1,27**.
-– Profilo metabolico: glucosio, colesterolo totale 196 mg/dL, LDL 125 mg/dL, HDL 64 mg/dL, trigliceridi 49 mg/dL nella norma.
-– Funzionalità renale e ionemia: nella norma.
-– Funzionalità epatica: nella norma.
-– Enzimi muscolari: LAD e TnI nella norma.
-– Funzionalità tiroidea: nella norma.
-– Esami microbiologici: HBsAg, Ab anti-HCV, T. pallidum negativi.
+– Emocromo: Hb 132 g/L (140-175), MCV nella norma, MCH nella norma, piastrine nella norma, WBC nella norma.
+– Indici di flogosi: **PCR 1,01 → 47,90 → 29,65 mg/L** (0,00-4,99), procalcitonina nella norma.
+– Coagulazione: **INR 1,40** RATIO (0,90-1,20), **D-dimero 643 → 1885 µg/L FEU** (190-600), fibrinogeno nella norma, APTT ratio nella norma.
 
 ═══════════════════════════════════════════════════════════════
 REGOLE
 ═══════════════════════════════════════════════════════════════
 
-VALORI PATOLOGICI: usa **...** (grassetto) attorno al nome esame + valore, NON attorno al range tra parentesi.
+VALORI PATOLOGICI: usa **...** (grassetto) attorno al nome esame + valori patologici (NON il range tra parentesi).
 
-ESAMI SEMPRE RIPORTATI CON VALORE ESATTO (anche se nella norma):
-Colesterolo totale, HDL, LDL, Trigliceridi, Emoglobina glicata (HbA1c), Creatinina.
+NOMI ESAMI: riporta il nome come nel file (es. "MCV", "Hb in PEC", "gGT"), rimuovendo solo il prefisso "B-", "P-", "S-", "U-".
 
-VALORI MULTIPLI IN SERIE TEMPORALE:
-Mostra il trend (con frecce) SOLO se la serie è iniziata nei range e poi è diventata patologica durante la degenza.
-Esempio: "**PCR 4,2 → 38,4 → 12,1 mg/L** (0,00-4,99)"
-Se la serie era già patologica dal primo valore: mostra solo l'ultimo valore.
-Se la serie è sempre rimasta nei range: includi nella norma senza trend.
+ESAMI CON VALORE SEMPRE ESPLICITO (anche se nella norma):
+Colesterolo totale, HDL, LDL, trigliceridi, HbA1c, creatinina, TSH, urea.
 
-CATEGORIE: raggruppa per le categorie standard (Emocromo, Formula leucocitaria, Indici di flogosi, Profilo coagulativo, Profilo metabolico, Funzionalità renale e ionemia, Funzionalità epatica, Enzimi muscolari, Profilo eritrocitario/carenziale, Funzionalità tiroidea, Profilo proteico, Esame urine, Esami microbiologici). Se una categoria non ha esami disponibili, omettila.
+TREND (valori in progressione temporale — ordine cronologico, dal più vecchio al più recente):
+- Mostra il trend SOLO se la serie è iniziata nei range e poi è diventata patologica.
+  Formato: primo_valore → **picco** → ultimo_valore (con → tra i valori).
+- Se sempre patologica dall'inizio: mostra solo l'ultimo valore.
+- Se sempre nella norma: "nella norma" (eccetto esami con valore sempre esplicito).
 
-DISCORSO: italiano clinico formale. MAI inventare valori non presenti nella cartella.`;
+COMPRESSIONE: gli esami tutti nella norma nella stessa categoria si elencano al fondo della riga separati da virgola seguiti da "nella norma". Es: "Hb **132** g/L (140-175); MCV, MCH, MCHC, RDW, WBC nella norma."
+
+SEPARATORI: usa ";" per separare esami con valori specifici dagli esami "nella norma" nella stessa categoria.
+
+CATEGORIE: usa le categorie del file. Se la tabella contiene categorie aggiuntive non elencate nei titoli di sezione standard, includile comunque (es. "Marcatori tumorali", "Sierologia", "Profilo immunologico").
+
+"CAMPIONE NON PERVENUTO" / "ESAME ANNULLATO": riportalo come "nome esame: campione non pervenuto".
+
+DISCORSO: italiano clinico formale. MAI inventare valori non presenti nella tabella.`;
 
 let S_verifFlags = [];
 
@@ -6987,19 +7041,15 @@ async function processCaseXls(file) {
     const ws   = wb.Sheets[wb.SheetNames[0]];
     const rows = XLS.utils.sheet_to_json(ws, { header:1, defval:'', raw:false });
 
-    // Reuse existing formatLabRows but with the case-local filename
-    const savedFilename = S_XLS.filename;
-    S_XLS.filename = file.name;           // temporarily borrow
-    const fmt = formatLabRows(rows);
-    S_XLS.filename = savedFilename;       // restore
+    // Use raw text (no client-side elaboration — AI handles interpretation)
+    const {text, rowCount} = xlsToRawText(rows, file.name);
+    CASE_IMPORT.xlsText = text;
 
-    CASE_IMPORT.xlsText = fmt.text;
-
-    document.getElementById('caseImportXlsName').textContent = `✓ ${fmt.examCount} esami`;
+    document.getElementById('caseImportXlsName').textContent = `✓ ${rowCount} righe`;
     document.getElementById('caseImportXlsName').style.color = 'var(--green)';
     document.getElementById('caseImportXlsInput').value = '';
 
-    setCaseImportStatus(`✓ XLS: ${fmt.examCount} esami estratti`, 100, 'green');
+    setCaseImportStatus(`✓ XLS: ${rowCount} righe caricate`, 100, 'green');
     mergeCaseImportIntoFolder();
   } catch(err) {
     setCaseImportStatus('✗ XLS: ' + err.message, 0, 'red');
